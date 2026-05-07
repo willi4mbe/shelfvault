@@ -15,8 +15,8 @@ ShelfVault is a free, self-hosted web application for cataloging a personal phys
 
 ## Repository status
 
-This repository currently contains the planning kit used before coding starts.
-The first implementation task is `tickets/TICKET-001-scaffold-laravel.md`.
+The Laravel foundation from `tickets/TICKET-001-scaffold-laravel.md` is in place.
+The installer, admin authentication, catalog CRUD, barcode scanning, and external integrations are not implemented yet.
 
 ## Recommended workflow
 
@@ -30,7 +30,7 @@ The first implementation task is `tickets/TICKET-001-scaffold-laravel.md`.
 ## Technical target
 
 - PHP 8.3+
-- Laravel
+- Laravel 13
 - Livewire
 - Alpine.js
 - Tailwind CSS
@@ -38,6 +38,50 @@ The first implementation task is `tickets/TICKET-001-scaffold-laravel.md`.
 - PostgreSQL compatibility later
 - ZXing JS for barcode scanning
 - Docker Compose for NAS/server deployments
+
+## Local development
+
+Install PHP 8.3+, Composer, Node.js, and NPM.
+
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+npm install
+npm run build
+php artisan serve
+```
+
+The application will be available at `http://localhost:8000`.
+
+For a Vite development server, run this in a second terminal:
+
+```bash
+npm run dev
+```
+
+## Docker development skeleton
+
+Docker Compose is prepared for local development with PHP-FPM, Nginx, and MariaDB.
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+docker compose exec app php artisan key:generate
+docker compose exec app php artisan migrate
+```
+
+The Docker web entrypoint is `http://localhost:8080`.
+
+## Verification
+
+```bash
+composer test
+php artisan test
+npm run build
+```
+
+Do not commit `.env`, generated application keys, database dumps, uploaded files, `vendor/`, or `node_modules/`.
 
 ## License
 
