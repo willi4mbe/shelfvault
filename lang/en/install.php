@@ -63,6 +63,7 @@ return [
         'database_name' => 'The database name was not found. Create the database first, then try again.',
         'database_generic' => 'ShelfVault could not connect to the database. Check the details and try again.',
         'migration_failed' => 'ShelfVault could not prepare the database tables.',
+        'admin_creation_failed' => 'ShelfVault could not create the admin account. Check the database and try again.',
         'admin_exists' => 'An admin account already exists.',
     ],
     'status' => [
