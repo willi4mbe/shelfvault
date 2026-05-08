@@ -4,26 +4,48 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Services\Installer\DatabaseConnectionTester;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Mockery\MockInterface;
 use Tests\TestCase;
 
 class InstallWizardTest extends TestCase
 {
+    private string $defaultLockPath;
+
+    private string $databasePath;
+
     private string $lockPath;
 
     protected function setUp(): void
     {
         parent::setUp();
 
+        $this->defaultLockPath = storage_path('app/shelfvault/installed.lock');
+        $this->databasePath = storage_path('framework/testing/shelfvault-install.sqlite');
         $this->lockPath = storage_path('framework/testing/shelfvault-installed.lock');
+        File::delete($this->defaultLockPath);
+        File::ensureDirectoryExists(dirname($this->databasePath));
+        File::delete($this->databasePath);
+        File::put($this->databasePath, '');
+
+        config([
+            'database.default' => 'sqlite',
+            'database.connections.sqlite.database' => $this->databasePath,
+            'shelfvault.installer.lock_path' => $this->lockPath,
+        ]);
+
+        DB::purge('sqlite');
+        DB::reconnect('sqlite');
         config(['shelfvault.installer.lock_path' => $this->lockPath]);
         File::delete($this->lockPath);
     }
 
     protected function tearDown(): void
     {
+        File::delete($this->defaultLockPath);
         File::delete($this->lockPath);
+        File::delete($this->databasePath);
 
         parent::tearDown();
     }
@@ -55,12 +77,16 @@ class InstallWizardTest extends TestCase
 
         $this->assertSame('fr', session('install.locale'));
 
-        $this->get('/install')
+        $this->withSession([
+            'install.database' => [
+                'connection' => 'sqlite',
+                'database' => $this->databasePath,
+            ],
+        ])->get('/install/admin')
             ->assertOk()
-            ->assertSee('Configuration initiale')
-            ->assertSee('Configurez votre bibliothèque physique')
-            ->assertSee('Extension PHP : ctype')
-            ->assertSee('Serveur prêt');
+            ->assertSee('Langue de l’admin')
+            ->assertDontSee('Langue par défaut')
+            ->assertDontSee('Default language');
     }
 
     public function test_install_is_blocked_after_setup_lock_exists(): void
@@ -68,7 +94,7 @@ class InstallWizardTest extends TestCase
         File::ensureDirectoryExists(dirname($this->lockPath));
         File::put($this->lockPath, now()->toIso8601String());
 
-        $this->get('/install')->assertRedirect(route('admin.placeholder'));
+        $this->get('/install')->assertRedirect(route('login'));
     }
 
     public function test_invalid_database_credentials_return_a_useful_error(): void
@@ -91,10 +117,12 @@ class InstallWizardTest extends TestCase
 
     public function test_installation_creates_admin_and_lock_file(): void
     {
+        config(['session.driver' => 'file']);
+
         $this->withSession([
             'install.database' => [
                 'connection' => 'sqlite',
-                'database' => ':memory:',
+                'database' => $this->databasePath,
             ],
         ])->post('/install/complete', [
             'login' => 'admin',
@@ -104,12 +132,12 @@ class InstallWizardTest extends TestCase
             'preferred_locale' => 'fr',
             'app_name' => 'ShelfVault',
             'app_url' => 'http://localhost',
-            'app_locale' => 'en',
-        ])->assertRedirect(route('admin.placeholder'));
+        ])->assertRedirect(route('login'));
 
-        $admin = User::query()->first();
+        $admins = User::query()->get();
 
-        $this->assertNotNull($admin);
+        $this->assertCount(1, $admins);
+        $admin = $admins->first();
         $this->assertSame('admin', $admin->login);
         $this->assertSame('admin@example.test', $admin->email);
         $this->assertSame('fr', $admin->preferred_locale);

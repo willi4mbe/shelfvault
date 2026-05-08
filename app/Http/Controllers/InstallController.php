@@ -76,7 +76,6 @@ class InstallController extends Controller
             'settings' => [
                 'app_name' => 'ShelfVault',
                 'app_url' => config('app.url', 'http://localhost'),
-                'app_locale' => 'en',
             ],
         ]);
     }
@@ -94,13 +93,12 @@ class InstallController extends Controller
             'preferred_locale' => ['required', Rule::in(array_keys(config('shelfvault.locales')))],
             'app_name' => ['required', 'string', 'max:80'],
             'app_url' => ['required', 'url', 'max:255'],
-            'app_locale' => ['required', Rule::in(array_keys(config('shelfvault.locales')))],
         ], [], [
-            'preferred_locale' => __('install.fields.preferred_language'),
-            'app_locale' => __('install.fields.default_language'),
+            'preferred_locale' => __('install.fields.admin_language'),
         ]);
 
         $data = $validator->validate();
+        $appLocale = $data['preferred_locale'] ?: app()->getLocale();
 
         $installationManager->install(
             $request->session()->get('install.database'),
@@ -113,13 +111,13 @@ class InstallController extends Controller
             [
                 'app_name' => $data['app_name'],
                 'app_url' => $data['app_url'],
-                'app_locale' => $data['app_locale'],
+                'app_locale' => $appLocale,
             ],
         );
 
         $request->session()->forget('install');
 
-        return redirect()->route('admin.placeholder');
+        return redirect()->route('login');
     }
 
     /**

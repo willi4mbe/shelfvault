@@ -38,7 +38,7 @@
                 </label>
 
                 <label class="block sm:col-span-2">
-                    <span class="text-sm font-bold text-zinc-700">{{ __('install.fields.preferred_language') }}</span>
+                    <span class="text-sm font-bold text-zinc-700">{{ __('install.fields.admin_language') }}</span>
                     <select name="preferred_locale" class="install-input mt-2">
                         @foreach ($locales as $code => $label)
                             <option value="{{ $code }}" @selected(old('preferred_locale', 'en') === $code)>{{ $label }}</option>
@@ -63,14 +63,6 @@
                     <input name="app_url" value="{{ old('app_url', $settings['app_url']) }}" inputmode="url" class="install-input mt-2">
                 </label>
 
-                <label class="block sm:col-span-2">
-                    <span class="text-sm font-bold text-zinc-700">{{ __('install.fields.default_language') }}</span>
-                    <select name="app_locale" class="install-input mt-2">
-                        @foreach ($locales as $code => $label)
-                            <option value="{{ $code }}" @selected(old('app_locale', $settings['app_locale']) === $code)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </label>
             </div>
         </div>
 
