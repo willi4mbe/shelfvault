@@ -20,12 +20,22 @@ The app must be installable in two official ways:
 - The app must be mobile-first and PWA-ready.
 - The app must be usable on iOS and Android browsers.
 - The app must be free to self-host.
+- ShelfVault is bilingual by design.
+- All pages in the project must exist in English and French.
+- Every visible string must be translated in `lang/en` and `lang/fr`.
+- No visible text may be hardcoded in views, controllers, or components.
+- English is the default language.
+- French must be maintained at the same quality level as English.
 
 ## Technical rules
 
 - Use PHP 8.3+.
 - Use Laravel.
 - Prefer Livewire + Alpine.js + Tailwind CSS for UI.
+- The web installer is the visual reference for the project.
+- All pages must follow the same premium, sober, mobile-first style and stay aligned with the installer.
+- Never introduce a page with the default Laravel look, a generic dashboard look, or an interface that is not aligned with the installer.
+- All pages must use ShelfVault branding, the same card principles, spacing, buttons, typography, and responsive behavior.
 - Use MariaDB/MySQL as the default database target.
 - Keep PostgreSQL support possible by avoiding database-specific SQL unless necessary.
 - Use Eloquent models and migrations.

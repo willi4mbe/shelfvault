@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\AdminAuthController;
+use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\InstallController;
 use Illuminate\Support\Facades\Route;
 
@@ -16,6 +18,8 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/admin', function () {
-    return view('admin.placeholder');
-})->name('admin.placeholder');
+Route::get('/admin/login', [AdminAuthController::class, 'show'])->name('login');
+Route::post('/admin/login', [AdminAuthController::class, 'store'])->name('admin.login');
+Route::post('/admin/logout', [AdminAuthController::class, 'destroy'])->name('admin.logout');
+Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin');
+Route::redirect('/admin/placeholder', '/admin/login')->name('admin.placeholder');

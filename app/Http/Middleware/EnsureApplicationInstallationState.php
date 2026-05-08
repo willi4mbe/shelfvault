@@ -20,7 +20,7 @@ class EnsureApplicationInstallationState
         $installRoute = $request->is('install') || $request->is('install/*');
 
         if ($installed && $installRoute) {
-            return redirect()->route('admin.placeholder');
+            return redirect()->route('login');
         }
 
         if (! $installed && ! $installRoute && ! $this->isPublicApplicationAsset($request)) {

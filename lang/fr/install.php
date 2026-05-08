@@ -29,9 +29,9 @@ return [
     ],
     'admin' => [
         'title' => 'Créer le compte admin',
-        'intro' => 'ShelfVault V1 utilise un seul compte admin. La langue préférée pourra être modifiée plus tard.',
+        'intro' => 'ShelfVault V1 utilise un seul compte admin. La langue de l’application suivra pour l’instant la langue de l’admin.',
         'settings_title' => 'Paramètres de l’application',
-        'settings_intro' => 'Ces valeurs par défaut pourront être ajustées après la configuration.',
+        'settings_intro' => 'Ces valeurs par défaut pourront être ajustées après la configuration. La langue de l’application est définie automatiquement pour l’instant.',
         'submit' => 'Terminer la configuration',
     ],
     'fields' => [
@@ -44,10 +44,9 @@ return [
         'login' => 'Login',
         'email' => 'Email',
         'password_confirmation' => 'Confirmation du mot de passe',
-        'preferred_language' => 'Langue préférée',
+        'admin_language' => 'Langue de l’admin',
         'app_name' => 'Nom de l’application',
         'app_url' => 'URL de l’application',
-        'default_language' => 'Langue par défaut',
     ],
     'language' => [
         'label' => 'Langue de l’assistant',

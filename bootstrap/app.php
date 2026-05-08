@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureApplicationInstallationState;
+use App\Http\Middleware\SetAdminLocale;
 use App\Http\Middleware\SetInstallerLocale;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -16,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             EnsureApplicationInstallationState::class,
             SetInstallerLocale::class,
+            SetAdminLocale::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

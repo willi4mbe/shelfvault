@@ -7,6 +7,7 @@ use App\Services\Installer\DatabaseConnectionTester;
 use App\Services\Installer\EnvWriter;
 use App\Services\Installer\InstallationManager;
 use App\Services\Installer\InstallationState;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Mockery;
 use Mockery\MockInterface;
@@ -15,22 +16,41 @@ use Tests\TestCase;
 
 class InstallWizardTest extends TestCase
 {
+    private string $defaultLockPath;
+
     private string $lockPath;
+
     private string $sqlitePath;
 
     protected function setUp(): void
     {
         parent::setUp();
 
+        $this->defaultLockPath = storage_path('app/shelfvault/installed.lock');
         $this->lockPath = storage_path('framework/testing/shelfvault-installed.lock');
         $this->sqlitePath = storage_path('framework/testing/shelfvault-install.sqlite');
-        config(['shelfvault.installer.lock_path' => $this->lockPath]);
-        File::delete($this->lockPath);
+
+        File::delete($this->defaultLockPath);
+        File::ensureDirectoryExists(dirname($this->sqlitePath));
+        File::ensureDirectoryExists(dirname($this->lockPath));
         File::delete($this->sqlitePath);
+        File::put($this->sqlitePath, '');
+        File::delete($this->lockPath);
+
+        config([
+            'database.default' => 'sqlite',
+            'database.connections.sqlite.database' => $this->sqlitePath,
+            'shelfvault.installer.lock_path' => $this->lockPath,
+            'session.driver' => 'file',
+        ]);
+
+        DB::purge('sqlite');
+        DB::reconnect('sqlite');
     }
 
     protected function tearDown(): void
     {
+        File::delete($this->defaultLockPath);
         File::delete($this->lockPath);
         File::delete($this->sqlitePath);
 
@@ -64,12 +84,16 @@ class InstallWizardTest extends TestCase
 
         $this->assertSame('fr', session('install.locale'));
 
-        $this->get('/install')
+        $this->withSession([
+            'install.database' => [
+                'connection' => 'sqlite',
+                'database' => $this->sqlitePath,
+            ],
+        ])->get('/install/admin')
             ->assertOk()
-            ->assertSee('Configuration initiale')
-            ->assertSee('Configurez votre bibliothèque physique')
-            ->assertSee('Extension PHP : ctype')
-            ->assertSee('Serveur prêt');
+            ->assertSee('Langue de l’admin')
+            ->assertDontSee('Langue par défaut')
+            ->assertDontSee('Default language');
     }
 
     public function test_install_is_blocked_after_setup_lock_exists(): void
@@ -77,7 +101,7 @@ class InstallWizardTest extends TestCase
         File::ensureDirectoryExists(dirname($this->lockPath));
         File::put($this->lockPath, now()->toIso8601String());
 
-        $this->get('/install')->assertRedirect(route('admin.placeholder'));
+        $this->get('/install')->assertRedirect(route('login'));
     }
 
     public function test_invalid_database_credentials_return_a_useful_error(): void
@@ -119,15 +143,14 @@ class InstallWizardTest extends TestCase
             'preferred_locale' => 'fr',
             'app_name' => 'ShelfVault',
             'app_url' => 'http://localhost',
-            'app_locale' => 'en',
-        ])->assertRedirect(route('admin.placeholder'));
+        ])->assertRedirect(route('login'));
 
-        $admin = User::on('sqlite')
-            ->where('login', 'admin')
-            ->where('email', 'admin@example.test')
-            ->first();
+        $admins = User::on('sqlite')->get();
 
-        $this->assertNotNull($admin);
+        $this->assertCount(1, $admins);
+
+        $admin = $admins->first();
+
         $this->assertSame('admin', $admin->login);
         $this->assertSame('admin@example.test', $admin->email);
         $this->assertSame('fr', $admin->preferred_locale);
@@ -171,7 +194,6 @@ class InstallWizardTest extends TestCase
             'preferred_locale' => 'fr',
             'app_name' => 'ShelfVault',
             'app_url' => 'http://localhost',
-            'app_locale' => 'en',
         ])->assertRedirect()->assertSessionHasErrors('installation');
 
         $this->assertFileDoesNotExist($this->lockPath);
