@@ -1,4 +1,4 @@
-# TICKET-002 - WordPress-like install wizard
+# TICKET-002 - Web-based setup wizard
 
 ## Goal
 

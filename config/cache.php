@@ -15,7 +15,9 @@ return [
     |
     */
 
-    'default' => env('CACHE_STORE', 'database'),
+    'default' => file_exists(env('SHELFVAULT_INSTALLED_LOCK', storage_path('app/shelfvault/installed.lock')))
+        ? env('CACHE_STORE', 'file')
+        : 'file',
 
     /*
     |--------------------------------------------------------------------------

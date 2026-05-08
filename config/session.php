@@ -18,7 +18,9 @@ return [
     |
     */
 
-    'driver' => env('SESSION_DRIVER', 'database'),
+    'driver' => file_exists(env('SHELFVAULT_INSTALLED_LOCK', storage_path('app/shelfvault/installed.lock')))
+        ? env('SESSION_DRIVER', 'file')
+        : 'file',
 
     /*
     |--------------------------------------------------------------------------
