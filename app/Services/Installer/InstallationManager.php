@@ -7,6 +7,7 @@ use Illuminate\Encryption\Encrypter;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class InstallationManager
 {
@@ -23,10 +24,11 @@ class InstallationManager
      */
     public function install(array $database, array $admin, array $settings): void
     {
-        $this->configureRuntimeDatabase($database);
+        $connection = $this->configureRuntimeDatabase($database);
         $this->writeEnvironment($database, $settings);
 
         $exitCode = Artisan::call('migrate', [
+            '--database' => $connection,
             '--force' => true,
             '--no-interaction' => true,
         ]);
@@ -37,29 +39,31 @@ class InstallationManager
             ]);
         }
 
-        DB::transaction(function () use ($admin): void {
-            if (User::query()->exists()) {
-                throw ValidationException::withMessages([
-                    'login' => __('install.errors.admin_exists'),
-                ]);
-            }
-
-            User::query()->create([
-                'name' => $admin['login'],
-                'login' => $admin['login'],
-                'email' => $admin['email'],
-                'password' => $admin['password'],
-                'preferred_locale' => $admin['preferred_locale'],
+        try {
+            $this->createAdminAccount($connection, $admin);
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (Throwable $exception) {
+            throw ValidationException::withMessages([
+                'installation' => __('install.errors.admin_creation_failed'),
             ]);
-        });
+        }
+
+        if (! User::on($connection)->where('login', $admin['login'])->where('email', $admin['email'])->exists()) {
+            throw ValidationException::withMessages([
+                'installation' => __('install.errors.admin_creation_failed'),
+            ]);
+        }
 
         $this->installationState->lock();
     }
 
     /**
      * @param  array<string, string>  $database
+     *
+     * @return string
      */
-    private function configureRuntimeDatabase(array $database): void
+    private function configureRuntimeDatabase(array $database): string
     {
         $connection = $database['connection'];
         $config = $this->databaseTester->connectionConfig($database);
@@ -69,7 +73,41 @@ class InstallationManager
             "database.connections.{$connection}" => $config,
         ]);
 
+        DB::setDefaultConnection($connection);
         DB::purge($connection);
+        DB::reconnect($connection);
+
+        return $connection;
+    }
+
+    /**
+     * @param  array<string, string>  $admin
+     */
+    protected function createAdminAccount(string $connection, array $admin): void
+    {
+        try {
+            DB::connection($connection)->transaction(function () use ($connection, $admin): void {
+                if (User::on($connection)->exists()) {
+                    throw ValidationException::withMessages([
+                        'login' => __('install.errors.admin_exists'),
+                    ]);
+                }
+
+                User::on($connection)->create([
+                    'name' => $admin['login'],
+                    'login' => $admin['login'],
+                    'email' => $admin['email'],
+                    'password' => $admin['password'],
+                    'preferred_locale' => $admin['preferred_locale'],
+                ]);
+            });
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (Throwable $exception) {
+            throw ValidationException::withMessages([
+                'installation' => __('install.errors.admin_creation_failed'),
+            ]);
+        }
     }
 
     /**

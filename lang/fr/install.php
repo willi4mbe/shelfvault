@@ -64,6 +64,7 @@ return [
         'database_name' => 'Le nom de base de données est introuvable. Créez la base, puis réessayez.',
         'database_generic' => 'ShelfVault ne parvient pas à se connecter à la base de données. Vérifiez les informations et réessayez.',
         'migration_failed' => 'ShelfVault ne parvient pas à préparer les tables de la base de données.',
+        'admin_creation_failed' => 'ShelfVault ne parvient pas à créer le compte admin. Vérifiez la base de données et réessayez.',
         'admin_exists' => 'Un compte admin existe déjà.',
     ],
     'status' => [

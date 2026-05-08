@@ -4,26 +4,35 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Services\Installer\DatabaseConnectionTester;
+use App\Services\Installer\EnvWriter;
+use App\Services\Installer\InstallationManager;
+use App\Services\Installer\InstallationState;
 use Illuminate\Support\Facades\File;
+use Mockery;
 use Mockery\MockInterface;
+use RuntimeException;
 use Tests\TestCase;
 
 class InstallWizardTest extends TestCase
 {
     private string $lockPath;
+    private string $sqlitePath;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->lockPath = storage_path('framework/testing/shelfvault-installed.lock');
+        $this->sqlitePath = storage_path('framework/testing/shelfvault-install.sqlite');
         config(['shelfvault.installer.lock_path' => $this->lockPath]);
         File::delete($this->lockPath);
+        File::delete($this->sqlitePath);
     }
 
     protected function tearDown(): void
     {
         File::delete($this->lockPath);
+        File::delete($this->sqlitePath);
 
         parent::tearDown();
     }
@@ -91,10 +100,16 @@ class InstallWizardTest extends TestCase
 
     public function test_installation_creates_admin_and_lock_file(): void
     {
+        File::ensureDirectoryExists(dirname($this->sqlitePath));
+
         $this->withSession([
             'install.database' => [
                 'connection' => 'sqlite',
-                'database' => ':memory:',
+                'database' => $this->sqlitePath,
+                'host' => '',
+                'port' => '',
+                'username' => '',
+                'password' => '',
             ],
         ])->post('/install/complete', [
             'login' => 'admin',
@@ -107,12 +122,59 @@ class InstallWizardTest extends TestCase
             'app_locale' => 'en',
         ])->assertRedirect(route('admin.placeholder'));
 
-        $admin = User::query()->first();
+        $admin = User::on('sqlite')
+            ->where('login', 'admin')
+            ->where('email', 'admin@example.test')
+            ->first();
 
         $this->assertNotNull($admin);
         $this->assertSame('admin', $admin->login);
         $this->assertSame('admin@example.test', $admin->email);
         $this->assertSame('fr', $admin->preferred_locale);
+        $this->assertSame(1, User::on('sqlite')->count());
         $this->assertFileExists($this->lockPath);
+    }
+
+    public function test_installation_returns_a_clear_error_and_skips_lock_when_admin_creation_fails(): void
+    {
+        File::ensureDirectoryExists(dirname($this->sqlitePath));
+
+        $manager = Mockery::mock(
+            InstallationManager::class,
+            [
+                $this->app->make(DatabaseConnectionTester::class),
+                $this->app->make(EnvWriter::class),
+                $this->app->make(InstallationState::class),
+            ],
+        )->makePartial()->shouldAllowMockingProtectedMethods();
+
+        $manager->shouldReceive('createAdminAccount')
+            ->once()
+            ->andThrow(new RuntimeException('simulated admin creation failure'));
+
+        $this->app->instance(InstallationManager::class, $manager);
+
+        $this->withSession([
+            'install.database' => [
+                'connection' => 'sqlite',
+                'database' => $this->sqlitePath,
+                'host' => '',
+                'port' => '',
+                'username' => '',
+                'password' => '',
+            ],
+        ])->post('/install/complete', [
+            'login' => 'admin',
+            'email' => 'admin@example.test',
+            'password' => 'correct-horse-battery',
+            'password_confirmation' => 'correct-horse-battery',
+            'preferred_locale' => 'fr',
+            'app_name' => 'ShelfVault',
+            'app_url' => 'http://localhost',
+            'app_locale' => 'en',
+        ])->assertRedirect()->assertSessionHasErrors('installation');
+
+        $this->assertFileDoesNotExist($this->lockPath);
+        $this->assertSame(0, User::on('sqlite')->count());
     }
 }
