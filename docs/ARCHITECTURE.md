@@ -56,6 +56,16 @@ ShelfVault
 
 One admin user in V1.
 
+Installer-created admin fields:
+
+- login
+- email
+- password
+- preferred_locale
+- two_factor_secret nullable, reserved for future 2FA
+- two_factor_recovery_codes nullable, reserved for future 2FA
+- two_factor_confirmed_at nullable, reserved for future 2FA
+
 ### items
 
 - id
@@ -141,7 +151,7 @@ Flexible details depending on item type.
 
 ## Installer requirements
 
-The installer must:
+The web-based setup wizard must:
 
 1. Check PHP version.
 2. Check extensions.
@@ -153,6 +163,8 @@ The installer must:
 8. Create admin account.
 9. Create installation lock.
 10. Redirect to admin login.
+
+The setup wizard must not depend on a configured database for session or cache storage. Before installation is locked, session and cache storage use file-backed drivers. A successful setup creates `storage/app/shelfvault/installed.lock`; after that, `/install` is blocked and normal application routes are available.
 
 ## Security notes
 

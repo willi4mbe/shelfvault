@@ -7,7 +7,7 @@ ShelfVault is a free, self-hosted web application for cataloging a personal phys
 - Free and self-hosted
 - PHP/Laravel application
 - Installable on NAS through Docker Compose
-- Installable on a classic PHP web server with a WordPress-like installer
+- Installable on a classic PHP web server with a web-based setup wizard
 - Mobile-first PWA for iOS and Android
 - One admin account
 - Optional read-only guest sharing
