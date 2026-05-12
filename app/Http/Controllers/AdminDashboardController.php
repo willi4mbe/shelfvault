@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Item;
+use App\Models\ItemLoan;
 use App\Services\Installer\InstallationState;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -52,12 +54,12 @@ class AdminDashboardController extends Controller
     private function stats(): array
     {
         return [
-            ['key' => 'total_items', 'value' => 0, 'tone' => 'blue', 'icon' => 'total_items'],
-            ['key' => 'films', 'value' => 0, 'tone' => 'violet', 'icon' => 'films'],
-            ['key' => 'video_games', 'value' => 0, 'tone' => 'emerald', 'icon' => 'video_games'],
-            ['key' => 'board_games', 'value' => 0, 'tone' => 'amber', 'icon' => 'board_games'],
-            ['key' => 'loans', 'value' => 0, 'tone' => 'rose', 'icon' => 'loans'],
-            ['key' => 'recent_additions', 'value' => 0, 'tone' => 'slate', 'icon' => 'recent_additions'],
+            ['key' => 'total_items', 'value' => Item::query()->count(), 'tone' => 'blue', 'icon' => 'total_items'],
+            ['key' => 'films', 'value' => Item::film()->count(), 'tone' => 'violet', 'icon' => 'films'],
+            ['key' => 'video_games', 'value' => Item::videoGame()->count(), 'tone' => 'emerald', 'icon' => 'video_games'],
+            ['key' => 'board_games', 'value' => Item::boardGame()->count(), 'tone' => 'amber', 'icon' => 'board_games'],
+            ['key' => 'loans', 'value' => ItemLoan::active()->count(), 'tone' => 'rose', 'icon' => 'loans'],
+            ['key' => 'recent_additions', 'value' => Item::recent()->count(), 'tone' => 'slate', 'icon' => 'recent_additions'],
         ];
     }
 
