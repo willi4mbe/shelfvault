@@ -19,7 +19,7 @@
     <body class="admin-body min-h-screen text-zinc-950 antialiased">
         <main class="mx-auto flex min-h-screen w-full max-w-[96rem] px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
             <div class="admin-shell flex w-full flex-1 flex-col gap-4 lg:flex-row">
-                <aside class="admin-sidebar flex min-h-0 flex-col overflow-hidden rounded-[28px] p-4 sm:p-5 lg:w-[19rem] lg:p-6 xl:w-[20rem]">
+                <aside class="admin-sidebar flex min-h-0 flex-col overflow-hidden rounded-[28px] p-4 sm:p-5 lg:w-[15rem] lg:p-4 xl:w-[15.75rem]">
                     <div class="space-y-4">
                         <div class="admin-logo-strip inline-flex h-14 w-fit max-w-full items-center rounded-2xl px-4 py-2">
                             <img src="{{ asset('branding/shelfvault.png') }}" alt="{{ __('admin.brand') }}" class="block h-10 w-auto flex-none object-contain">
@@ -77,9 +77,6 @@
                                                 @include('admin.icon', ['name' => $item['icon'], 'class' => 'admin-nav-link-icon'])
                                                 <span>{{ __('admin.navigation.'.$item['key']) }}</span>
                                             </span>
-                                            @if (($item['soon'] ?? false))
-                                                <span class="admin-nav-link-meta">{{ __('admin.dashboard.soon') }}</span>
-                                            @endif
                                         </div>
                                     @endif
                                 @endforeach

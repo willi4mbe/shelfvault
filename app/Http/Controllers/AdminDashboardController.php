@@ -5,13 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Item;
 use App\Models\ItemLoan;
 use App\Services\Installer\InstallationState;
+use App\Support\AdminNavigation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class AdminDashboardController extends Controller
 {
-    public function index(InstallationState $installationState): RedirectResponse|View
+    public function index(InstallationState $installationState, AdminNavigation $navigation): RedirectResponse|View
     {
         if (! $installationState->installed()) {
             return redirect()->route('install.show');
@@ -22,30 +23,13 @@ class AdminDashboardController extends Controller
         }
 
         return view('admin.dashboard', [
-            'navigation' => $this->navigation(),
+            'navigation' => $navigation->items(request()->route()?->getName()),
             'stats' => $this->stats(),
             'quickAccess' => $this->quickAccess(),
             'overview' => $this->overview(),
             'activity' => $this->activity(),
             'setupStatus' => $this->setupStatus(),
         ]);
-    }
-
-    /**
-     * @return array<int, array{key: string, route: string, visible: bool, active?: bool}>
-     */
-    private function navigation(): array
-    {
-        return array_values(array_filter([
-            ['key' => 'dashboard', 'route' => route('admin'), 'visible' => true, 'active' => true, 'interactive' => true, 'icon' => 'dashboard'],
-            ['key' => 'collection', 'route' => '#', 'visible' => true, 'interactive' => false, 'icon' => 'collection', 'soon' => true],
-            ['key' => 'films', 'route' => '#', 'visible' => false, 'interactive' => false, 'icon' => 'films'],
-            ['key' => 'video_games', 'route' => '#', 'visible' => false, 'interactive' => false, 'icon' => 'video_games'],
-            ['key' => 'board_games', 'route' => '#', 'visible' => false, 'interactive' => false, 'icon' => 'board_games'],
-            ['key' => 'loans', 'route' => '#', 'visible' => true, 'interactive' => false, 'icon' => 'loans', 'soon' => true],
-            ['key' => 'settings', 'route' => '#', 'visible' => true, 'interactive' => false, 'icon' => 'settings', 'soon' => true],
-            ['key' => 'logout', 'route' => '#', 'visible' => true, 'interactive' => true, 'icon' => 'logout', 'logout' => true],
-        ], static fn (array $item): bool => $item['visible']));
     }
 
     /**

@@ -82,6 +82,18 @@
             <path d="M14 9l3 3-3 3"></path>
             <path d="M17 12H9"></path>
             @break
+        @case('edit')
+            <path d="M5 19h4"></path>
+            <path d="M14.5 5.5 18.5 9.5 9 19H5v-4z"></path>
+            <path d="M13 7l4 4"></path>
+            @break
+        @case('trash')
+            <path d="M4.5 7h15"></path>
+            <path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"></path>
+            <path d="M7 7l.8 11.5A1.5 1.5 0 0 0 9.3 20h5.4a1.5 1.5 0 0 0 1.5-1.5L17 7"></path>
+            <path d="M10 10.5v5"></path>
+            <path d="M14 10.5v5"></path>
+            @break
         @case('total_items')
             <path d="M4.5 7.5 12 4l7.5 3.5-7.5 3.5z"></path>
             <path d="M4.5 7.5V16l7.5 3.5 7.5-3.5V7.5"></path>
