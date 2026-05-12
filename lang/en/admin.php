@@ -58,27 +58,27 @@ return [
         'stats' => [
             'total_items' => [
                 'label' => 'Total',
-                'hint' => 'Everything in the physical library.',
+                'hint' => 'Total items in your library.',
             ],
             'films' => [
                 'label' => 'Films',
-                'hint' => 'Cinema and TV will land later.',
+                'hint' => 'Movies saved in your collection.',
             ],
             'video_games' => [
                 'label' => 'Video games',
-                'hint' => 'Console and PC items are reserved for a future pass.',
+                'hint' => 'Video games saved in your collection.',
             ],
             'board_games' => [
                 'label' => 'Board games',
-                'hint' => 'Tabletop inventory is ready to be wired in.',
+                'hint' => 'Board games saved in your collection.',
             ],
             'loans' => [
                 'label' => 'Loans',
-                'hint' => 'Borrowing support will land after the core catalog.',
+                'hint' => 'Items currently on loan.',
             ],
             'recent_additions' => [
                 'label' => 'Recent additions',
-                'hint' => 'The latest items added to the library.',
+                'hint' => 'Recently added items.',
             ],
         ],
         'quick_access' => [

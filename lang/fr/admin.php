@@ -58,27 +58,27 @@ return [
         'stats' => [
             'total_items' => [
                 'label' => 'Total',
-                'hint' => 'Tout ce qui compose la bibliothèque physique.',
+                'hint' => 'Nombre total d’objets dans votre bibliothèque.',
             ],
             'films' => [
                 'label' => 'Films',
-                'hint' => 'Le cinéma et la TV arriveront plus tard.',
+                'hint' => 'Films enregistrés dans votre collection.',
             ],
             'video_games' => [
                 'label' => 'Jeux vidéo',
-                'hint' => 'Les titres console et PC sont réservés à une future passe.',
+                'hint' => 'Jeux vidéo enregistrés dans votre collection.',
             ],
             'board_games' => [
                 'label' => 'Jeux de société',
-                'hint' => 'L’inventaire de plateau est prêt à être branché.',
+                'hint' => 'Jeux de société enregistrés dans votre collection.',
             ],
             'loans' => [
                 'label' => 'Prêts',
-                'hint' => 'La gestion des emprunts arrivera après le catalogue de base.',
+                'hint' => 'Objets actuellement prêtés.',
             ],
             'recent_additions' => [
                 'label' => 'Ajouts récents',
-                'hint' => 'Les derniers éléments ajoutés à la bibliothèque.',
+                'hint' => 'Objets ajoutés récemment.',
             ],
         ],
         'quick_access' => [
