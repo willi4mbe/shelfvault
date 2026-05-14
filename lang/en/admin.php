@@ -7,6 +7,7 @@ return [
     ],
     'navigation' => [
         'home' => 'Home',
+        'public_site' => 'View site',
         'dashboard' => 'Dashboard',
         'collection' => 'Collection',
         'films' => 'Films',
@@ -137,6 +138,7 @@ return [
             'kicker' => 'Manual entry',
             'title' => 'Add item',
             'subtitle' => 'Create a new collection item.',
+            'choose_type' => 'Choose a type',
         ],
         'edit' => [
             'page_title' => 'Edit item',
@@ -152,6 +154,17 @@ return [
             'edit' => 'Edit',
             'delete' => 'Delete',
             'confirm_delete' => 'Delete this item? This cannot be undone.',
+        ],
+        'detail' => [
+            'page_title' => 'Item details',
+            'kicker' => 'Collection item',
+            'cover_hint' => 'Covers are stored locally and can be replaced from the edit form.',
+            'sections' => [
+                'main' => 'Main information',
+                'physical' => 'Physical details',
+                'metadata' => 'Metadata',
+                'notes' => 'Notes',
+            ],
         ],
         'filters' => [
             'search' => 'Search',
@@ -169,6 +182,15 @@ return [
             'all_types' => 'All types',
             'all_statuses' => 'All statuses',
             'none' => 'None',
+            'no_cover' => 'No cover yet',
+        ],
+        'help' => [
+            'cover_image' => 'JPG, PNG or WEBP - max. 4 MB.',
+            'remove_cover' => 'Delete the stored cover and clear the cover field.',
+        ],
+        'values' => [
+            'yes' => 'Yes',
+            'no' => 'No',
         ],
         'table' => [
             'title' => 'Title',
@@ -250,7 +272,12 @@ return [
             'max_players' => 'Maximum players',
             'play_time_minutes' => 'Play time minutes',
             'designer' => 'Designer',
+            'cover_image' => 'Cover',
+            'remove_cover' => 'Remove cover',
             'csv_placeholder' => 'Separate values with commas',
+        ],
+        'unit' => [
+            'minutes' => 'min',
         ],
         'validation' => [
             'heading' => 'Please review the highlighted fields.',
@@ -267,9 +294,14 @@ return [
             'between' => 'The :attribute field must be between the allowed values.',
             'max_string' => 'The :attribute field may not be greater than :max characters.',
             'max_numeric' => 'The :attribute field may not be greater than :max.',
+            'max_file' => 'The :attribute file may not be larger than :max kilobytes.',
             'min_numeric' => 'The :attribute field must be at least :min.',
             'in' => 'The selected :attribute is invalid.',
             'max_players_gte_min_players' => 'The maximum players must be greater than or equal to the minimum players.',
+            'image' => 'The :attribute field must be an image.',
+            'mimes' => 'The :attribute file must be a file of type: :values.',
+            'file' => 'The :attribute field must be a file.',
+            'uploaded' => 'The :attribute could not be uploaded.',
         ],
     ],
 ];

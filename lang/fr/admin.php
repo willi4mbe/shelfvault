@@ -7,6 +7,7 @@ return [
     ],
     'navigation' => [
         'home' => 'Accueil',
+        'public_site' => 'Voir le site',
         'dashboard' => 'Tableau de bord',
         'collection' => 'Collection',
         'films' => 'Films',
@@ -137,6 +138,7 @@ return [
             'kicker' => 'Saisie manuelle',
             'title' => 'Ajouter un objet',
             'subtitle' => 'Créer un nouvel objet de collection.',
+            'choose_type' => 'Choisissez un type',
         ],
         'edit' => [
             'page_title' => 'Modifier un objet',
@@ -152,6 +154,17 @@ return [
             'edit' => 'Modifier',
             'delete' => 'Supprimer',
             'confirm_delete' => 'Supprimer cet objet ? Cette action est irréversible.',
+        ],
+        'detail' => [
+            'page_title' => 'Détail de l’objet',
+            'kicker' => 'Objet de collection',
+            'cover_hint' => 'Les jaquettes sont stockées localement et peuvent être remplacées depuis le formulaire de modification.',
+            'sections' => [
+                'main' => 'Informations principales',
+                'physical' => 'Détails physiques',
+                'metadata' => 'Métadonnées',
+                'notes' => 'Notes',
+            ],
         ],
         'filters' => [
             'search' => 'Recherche',
@@ -169,6 +182,15 @@ return [
             'all_types' => 'Tous les types',
             'all_statuses' => 'Tous les statuts',
             'none' => 'Aucun',
+            'no_cover' => 'Aucune jaquette',
+        ],
+        'help' => [
+            'cover_image' => 'JPG, PNG ou WEBP — max. 4 Mo.',
+            'remove_cover' => 'Supprime la jaquette stockée et vide le champ de jaquette.',
+        ],
+        'values' => [
+            'yes' => 'Oui',
+            'no' => 'Non',
         ],
         'table' => [
             'title' => 'Titre',
@@ -250,7 +272,12 @@ return [
             'max_players' => 'Nombre maximum de joueurs',
             'play_time_minutes' => 'Durée de partie en minutes',
             'designer' => 'Concepteur',
+            'cover_image' => 'Jaquette',
+            'remove_cover' => 'Supprimer la jaquette',
             'csv_placeholder' => 'Séparez les valeurs par des virgules',
+        ],
+        'unit' => [
+            'minutes' => 'min',
         ],
         'validation' => [
             'heading' => 'Veuillez vérifier les champs signalés.',
@@ -267,9 +294,14 @@ return [
             'between' => 'Le champ :attribute doit respecter les bornes autorisées.',
             'max_string' => 'Le champ :attribute ne peut pas dépasser :max caractères.',
             'max_numeric' => 'Le champ :attribute ne peut pas dépasser :max.',
+            'max_file' => 'Le fichier :attribute ne peut pas dépasser :max kilo-octets.',
             'min_numeric' => 'Le champ :attribute doit être au moins :min.',
             'in' => 'La valeur choisie pour :attribute est invalide.',
             'max_players_gte_min_players' => 'Le nombre maximum de joueurs doit être supérieur ou égal au nombre minimum de joueurs.',
+            'image' => 'Le champ :attribute doit être une image.',
+            'mimes' => 'Le fichier :attribute doit être de type :values.',
+            'file' => 'Le champ :attribute doit être un fichier.',
+            'uploaded' => 'Le champ :attribute n’a pas pu être téléversé.',
         ],
     ],
 ];

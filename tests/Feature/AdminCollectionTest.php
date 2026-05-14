@@ -4,8 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\Item;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class AdminCollectionTest extends TestCase
@@ -40,6 +42,7 @@ class AdminCollectionTest extends TestCase
             'shelfvault.installer.lock_path' => $this->lockPath,
         ]);
 
+        Storage::fake('public');
         File::ensureDirectoryExists(config('session.files'));
 
         DB::purge('sqlite');
@@ -107,12 +110,116 @@ class AdminCollectionTest extends TestCase
         $this->actingAs(User::query()->first())
             ->get('/admin/collection')
             ->assertOk()
+            ->assertSee(route('admin.collection.show', $item), false)
             ->assertSee(route('admin.collection.edit', $item), false)
             ->assertSee('The Matrix')
             ->assertSee('aria-label="Edit"', false)
             ->assertSee('aria-label="Delete"', false)
             ->assertDontSee('Apply filters')
             ->assertDontSee('Appliquer les filtres');
+    }
+
+    public function test_collection_list_shows_a_cover_thumbnail_or_placeholder(): void
+    {
+        Storage::disk('public')->put('covers/list-cover.jpg', 'cover-bytes');
+
+        $withCover = Item::factory()->film()->create([
+            'title' => 'With cover',
+            'cover_path' => 'covers/list-cover.jpg',
+        ]);
+
+        $withoutCover = Item::factory()->videoGame()->create([
+            'title' => 'Without cover',
+            'cover_path' => null,
+        ]);
+
+        $this->actingAs(User::query()->first())
+            ->get('/admin/collection')
+            ->assertOk()
+            ->assertSee(Storage::disk('public')->url('covers/list-cover.jpg'), false)
+            ->assertSee(__('admin.collection.placeholders.no_cover'))
+            ->assertSee($withCover->title)
+            ->assertSee($withoutCover->title);
+    }
+
+    public function test_guest_is_redirected_to_login_for_item_detail(): void
+    {
+        $item = Item::factory()->film()->create(['title' => 'Guest hidden']);
+
+        $this->get(route('admin.collection.show', $item))->assertRedirect(route('login'));
+    }
+
+    public function test_admin_can_view_item_detail_in_english(): void
+    {
+        $item = Item::factory()->film()->create([
+            'title' => 'The Matrix',
+            'original_title' => 'The Matrix',
+            'release_year' => 1999,
+            'barcode' => '1234567890123',
+            'physical_format' => 'blu_ray',
+            'edition' => 'Collector',
+            'region' => 'B',
+            'condition' => 'very_good',
+            'location' => 'Living room',
+            'status' => 'owned',
+            'is_favorite' => true,
+            'acquired_at' => '2024-01-15',
+            'personal_notes' => 'Private note',
+            'runtime_minutes' => 136,
+            'director' => 'Lana Wachowski',
+            'studio' => 'Warner Bros.',
+            'age_rating' => 'R',
+            'genres' => ['Action', 'Science fiction'],
+            'cast_members' => ['Keanu Reeves', 'Carrie-Anne Moss'],
+        ]);
+
+        $this->actingAs(User::query()->first())
+            ->get(route('admin.collection.show', $item))
+            ->assertOk()
+            ->assertSee('Main information')
+            ->assertSee('Physical details')
+            ->assertSee('Metadata')
+            ->assertSee('Notes')
+            ->assertSee('The Matrix')
+            ->assertSee('Lana Wachowski')
+            ->assertSee('Warner Bros.')
+            ->assertSee('136')
+            ->assertSee('Keanu Reeves')
+            ->assertSee('Living room')
+            ->assertSee('Notes')
+            ->assertSee('Private note');
+    }
+
+    public function test_admin_can_view_item_detail_in_french(): void
+    {
+        app()->setLocale('fr');
+        User::query()->first()->forceFill(['preferred_locale' => 'fr'])->save();
+
+        $item = Item::factory()->videoGame()->create([
+            'title' => 'Metroid Prime',
+            'physical_format' => 'disc',
+            'platform' => 'Nintendo GameCube',
+            'developer' => 'Retro Studios',
+            'publisher' => 'Nintendo',
+            'age_rating' => 'T',
+            'genres' => ['Action', 'Aventure'],
+            'modes' => ['Solo'],
+            'personal_notes' => 'Note privée',
+        ]);
+
+        $this->actingAs(User::query()->first())
+            ->get(route('admin.collection.show', $item))
+            ->assertOk()
+            ->assertSee('Informations principales')
+            ->assertSee('Détails physiques')
+            ->assertSee('Métadonnées')
+            ->assertSee('Retour à la collection')
+            ->assertSee('Metroid Prime')
+            ->assertSee('Nintendo GameCube')
+            ->assertSee('Retro Studios')
+            ->assertSee('Solo')
+            ->assertSee('Notes')
+            ->assertSee('Note privée');
     }
 
     public function test_collection_introduction_avoids_the_word_manually(): void
@@ -351,6 +458,63 @@ class AdminCollectionTest extends TestCase
         $this->assertSame('loaned', $item->status->value);
     }
 
+    public function test_admin_can_change_type_without_losing_an_existing_cover(): void
+    {
+        Storage::disk('public')->put('covers/preserved-cover.jpg', 'cover-bytes');
+
+        $item = Item::factory()->videoGame()->create([
+            'title' => 'Switch type',
+            'physical_format' => 'digital_copy',
+            'cover_path' => 'covers/preserved-cover.jpg',
+        ]);
+
+        $this->actingAs(User::query()->first())
+            ->put("/admin/collection/{$item->id}", [
+                'type' => 'film',
+                'title' => 'Switch type',
+                'status' => 'owned',
+                'condition' => 'good',
+                'physical_format' => 'digital_copy',
+            ])
+            ->assertRedirect(route('admin.collection.index'));
+
+        $item->refresh();
+
+        $this->assertSame('covers/preserved-cover.jpg', $item->cover_path);
+        $this->assertTrue(Storage::disk('public')->exists('covers/preserved-cover.jpg'));
+        $this->assertSame('film', $item->type->value);
+        $this->assertSame('digital_copy', $item->physical_format);
+    }
+
+    public function test_admin_can_change_type_and_physical_format_without_losing_an_existing_cover(): void
+    {
+        Storage::disk('public')->put('covers/preserved-format-cover.jpg', 'cover-bytes');
+
+        $item = Item::factory()->videoGame()->create([
+            'title' => 'Switch type and format',
+            'physical_format' => 'digital_copy',
+            'cover_path' => 'covers/preserved-format-cover.jpg',
+        ]);
+
+        $this->actingAs(User::query()->first())
+            ->put("/admin/collection/{$item->id}", [
+                'type' => 'film',
+                'title' => 'Switch type and format',
+                'status' => 'owned',
+                'condition' => 'good',
+                'physical_format' => 'blu_ray',
+                'remove_cover' => '0',
+            ])
+            ->assertRedirect(route('admin.collection.index'));
+
+        $item->refresh();
+
+        $this->assertSame('covers/preserved-format-cover.jpg', $item->cover_path);
+        $this->assertTrue(Storage::disk('public')->exists('covers/preserved-format-cover.jpg'));
+        $this->assertSame('film', $item->type->value);
+        $this->assertSame('blu_ray', $item->physical_format);
+    }
+
     public function test_admin_can_delete_an_item(): void
     {
         $item = Item::factory()->film()->create(['title' => 'Delete me']);
@@ -365,6 +529,146 @@ class AdminCollectionTest extends TestCase
             ->assertSee('Delete me was deleted.');
 
         $this->assertDatabaseMissing('items', ['id' => $item->id]);
+    }
+
+    public function test_admin_can_upload_a_cover_when_creating_an_item(): void
+    {
+        $cover = UploadedFile::fake()->image('cover.jpg', 600, 900);
+
+        $this->actingAs(User::query()->first())
+            ->post('/admin/collection', [
+                'type' => 'film',
+                'title' => 'Cover upload',
+                'status' => 'owned',
+                'condition' => 'good',
+                'physical_format' => 'dvd',
+                'cover_image' => $cover,
+            ])
+            ->assertRedirect(route('admin.collection.index'));
+
+        $item = Item::query()->first();
+
+        $this->assertNotNull($item->cover_path);
+        $this->assertStringStartsWith('covers/', $item->cover_path);
+        $this->assertSame('dvd', $item->physical_format);
+        $this->assertTrue(Storage::disk('public')->exists($item->cover_path));
+    }
+
+    public function test_admin_can_replace_an_existing_cover(): void
+    {
+        Storage::disk('public')->put('covers/original-cover.jpg', 'old-cover');
+
+        $item = Item::factory()->film()->create([
+            'title' => 'Replace cover',
+            'physical_format' => 'dvd',
+            'cover_path' => 'covers/original-cover.jpg',
+        ]);
+
+        $newCover = UploadedFile::fake()->image('new-cover.jpg', 500, 800);
+
+        $this->actingAs(User::query()->first())
+            ->put(route('admin.collection.update', $item), [
+                'type' => 'film',
+                'title' => 'Replace cover',
+                'status' => 'owned',
+                'condition' => 'good',
+                'physical_format' => 'dvd',
+                'cover_image' => $newCover,
+            ])
+            ->assertRedirect(route('admin.collection.index'));
+
+        $item->refresh();
+
+        $this->assertNotSame('covers/original-cover.jpg', $item->cover_path);
+        $this->assertSame('dvd', $item->physical_format);
+        $this->assertFalse(Storage::disk('public')->exists('covers/original-cover.jpg'));
+        $this->assertTrue(Storage::disk('public')->exists($item->cover_path));
+    }
+
+    public function test_admin_can_remove_an_existing_cover(): void
+    {
+        Storage::disk('public')->put('covers/remove-cover.jpg', 'old-cover');
+
+        $item = Item::factory()->film()->create([
+            'title' => 'Remove cover',
+            'physical_format' => 'dvd',
+            'cover_path' => 'covers/remove-cover.jpg',
+        ]);
+
+        $this->actingAs(User::query()->first())
+            ->put(route('admin.collection.update', $item), [
+                'type' => 'film',
+                'title' => 'Remove cover',
+                'status' => 'owned',
+                'condition' => 'good',
+                'physical_format' => 'dvd',
+                'remove_cover' => '1',
+            ])
+            ->assertRedirect(route('admin.collection.index'));
+
+        $item->refresh();
+
+        $this->assertNull($item->cover_path);
+        $this->assertFalse(Storage::disk('public')->exists('covers/remove-cover.jpg'));
+    }
+
+    public function test_collection_rejects_a_non_image_cover_upload(): void
+    {
+        $this->actingAs(User::query()->first())
+            ->from('/admin/collection/create')
+            ->post('/admin/collection', [
+                'type' => 'film',
+                'title' => 'Bad cover type',
+                'status' => 'owned',
+                'condition' => 'good',
+                'physical_format' => 'dvd',
+                'cover_image' => UploadedFile::fake()->create('cover.txt', 10, 'text/plain'),
+            ])
+            ->assertRedirect('/admin/collection/create')
+            ->assertSessionHasErrors('cover_image');
+    }
+
+    public function test_collection_rejects_a_failed_cover_upload_with_a_translated_message_in_french(): void
+    {
+        app()->setLocale('fr');
+        User::query()->first()->forceFill(['preferred_locale' => 'fr'])->save();
+
+        $tempPath = tempnam(sys_get_temp_dir(), 'shelfvault-cover');
+        File::put($tempPath, 'broken upload');
+
+        $failedUpload = new UploadedFile($tempPath, 'cover.jpg', 'image/jpeg', UPLOAD_ERR_CANT_WRITE, true);
+
+        $this->actingAs(User::query()->first())
+            ->from('/admin/collection/create')
+            ->post('/admin/collection', [
+                'type' => 'film',
+                'title' => 'Cover upload failure',
+                'status' => 'owned',
+                'condition' => 'good',
+                'physical_format' => 'dvd',
+                'cover_image' => $failedUpload,
+            ])
+            ->assertRedirect('/admin/collection/create')
+            ->assertSessionHasErrors('cover_image')
+            ->assertSessionHasErrors(['cover_image' => __('admin.collection.validation.uploaded', ['attribute' => __('admin.collection.fields.cover_image')])]);
+
+        File::delete($tempPath);
+    }
+
+    public function test_collection_rejects_an_overly_large_cover_upload(): void
+    {
+        $this->actingAs(User::query()->first())
+            ->from('/admin/collection/create')
+            ->post('/admin/collection', [
+                'type' => 'film',
+                'title' => 'Large cover',
+                'status' => 'owned',
+                'condition' => 'good',
+                'physical_format' => 'dvd',
+                'cover_image' => UploadedFile::fake()->image('cover.jpg')->size(4097),
+            ])
+            ->assertRedirect('/admin/collection/create')
+            ->assertSessionHasErrors('cover_image');
     }
 
     public function test_admin_can_search_by_title_and_barcode(): void
@@ -411,6 +715,29 @@ class AdminCollectionTest extends TestCase
             ->assertSee('Loaned game')
             ->assertDontSee('Owned film')
             ->assertDontSee('Archived game');
+    }
+
+    public function test_admin_can_view_board_game_specific_fields_on_detail_page(): void
+    {
+        $item = Item::factory()->boardGame()->create([
+            'title' => 'Catan',
+            'min_players' => 3,
+            'max_players' => 4,
+            'play_time_minutes' => 90,
+            'designer' => 'Klaus Teuber',
+            'publisher' => 'Kosmos',
+            'genres' => ['Strategy', 'Family'],
+        ]);
+
+        $this->actingAs(User::query()->first())
+            ->get(route('admin.collection.show', $item))
+            ->assertOk()
+            ->assertSee('3')
+            ->assertSee('4')
+            ->assertSee('90')
+            ->assertSee('Klaus Teuber')
+            ->assertSee('Kosmos')
+            ->assertSee('Strategy, Family');
     }
 
     public function test_csv_fields_are_converted_to_json_arrays_and_rehydrated_for_editing(): void
@@ -500,6 +827,26 @@ class AdminCollectionTest extends TestCase
             ->assertSee('aria-label="Supprimer"', false);
     }
 
+    public function test_collection_detail_page_is_translated_in_french(): void
+    {
+        app()->setLocale('fr');
+        User::query()->first()->forceFill(['preferred_locale' => 'fr'])->save();
+
+        $item = Item::factory()->film()->create([
+            'title' => 'Film français',
+            'physical_format' => 'dvd',
+        ]);
+
+        $this->actingAs(User::query()->first())
+            ->get(route('admin.collection.show', $item))
+            ->assertOk()
+            ->assertSee('Détail de l’objet')
+            ->assertSee('Informations principales')
+            ->assertSee('Détails physiques')
+            ->assertSee('Métadonnées')
+            ->assertSee('Retour à la collection');
+    }
+
     public function test_collection_pages_are_translated_in_french(): void
     {
         app()->setLocale('fr');
@@ -509,8 +856,42 @@ class AdminCollectionTest extends TestCase
             ->get('/admin/collection/create')
             ->assertOk()
             ->assertSee('Ajouter un objet')
-            ->assertSee('Retour à la collection')
+            ->assertSee('Annuler')
+            ->assertSee('Choisissez un type')
+            ->assertSee('Jaquette')
+            ->assertSee('JPG, PNG ou WEBP — max. 4 Mo.')
+            ->assertDontSee('Supprime la jaquette stockée et vide le champ de jaquette.')
             ->assertSee('Séparez les valeurs par des virgules')
+            ->assertDontSee('AJOUTER UN OBJET')
             ->assertDontSee('Wanted');
+    }
+
+    public function test_collection_create_page_exposes_primary_actions_at_the_top(): void
+    {
+        $this->actingAs(User::query()->first())
+            ->get('/admin/collection/create')
+            ->assertOk()
+            ->assertSee('Add item')
+            ->assertSee('Cancel')
+            ->assertSee('Choose a type')
+            ->assertSee('Cover')
+            ->assertSee('JPG, PNG or WEBP - max. 4 MB.')
+            ->assertDontSee('Delete the stored cover and clear the cover field.')
+            ->assertDontSee('ADD ITEM');
+    }
+
+    public function test_collection_edit_page_exposes_primary_actions_at_the_top(): void
+    {
+        $item = Item::factory()->film()->create(['title' => 'Edit actions']);
+
+        $this->actingAs(User::query()->first())
+            ->get(route('admin.collection.edit', $item))
+            ->assertOk()
+            ->assertSee('Edit item')
+            ->assertSee('Save changes')
+            ->assertSee('Cancel')
+            ->assertSee('Film')
+            ->assertSee('Remove cover')
+            ->assertDontSee('EDIT ITEM');
     }
 }

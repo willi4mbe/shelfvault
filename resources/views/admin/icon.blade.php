@@ -24,6 +24,11 @@
             <path d="M5.5 10.5V20h13V10.5"></path>
             <path d="M9.5 20v-5h5v5"></path>
             @break
+        @case('external_link')
+            <path d="M14 5h5v5"></path>
+            <path d="M10 14 19 5"></path>
+            <path d="M19 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h4"></path>
+            @break
         @case('dashboard')
             <path d="M4 13h6V4H4z"></path>
             <path d="M14 20h6v-9h-6z"></path>

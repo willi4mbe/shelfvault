@@ -38,25 +38,12 @@
                                 {{ __('admin.sidebar.navigation') }}
                             </p>
 
-                            <a href="{{ url('/') }}" class="admin-nav-link" aria-label="{{ __('admin.navigation.home') }}">
-                                <span class="admin-nav-link-label">
-                                    @include('admin.icon', ['name' => 'home', 'class' => 'admin-nav-link-icon'])
-                                    <span>{{ __('admin.navigation.home') }}</span>
-                                </span>
-                            </a>
+                            @php($logoutItem = null)
 
                             @isset($navigation)
                                 @foreach ($navigation as $item)
                                     @if (($item['logout'] ?? false))
-                                        <form method="POST" action="{{ route('admin.logout') }}">
-                                            @csrf
-                                            <button type="submit" class="admin-nav-link admin-nav-link-button">
-                                                <span class="admin-nav-link-label">
-                                                    @include('admin.icon', ['name' => $item['icon'], 'class' => 'admin-nav-link-icon'])
-                                                    <span>{{ __('admin.actions.logout') }}</span>
-                                                </span>
-                                            </button>
-                                        </form>
+                                        @php($logoutItem = $item)
                                     @elseif (($item['interactive'] ?? false))
                                         <a
                                             href="{{ $item['route'] }}"
@@ -83,6 +70,27 @@
                             @endisset
                         </nav>
 
+                        <div class="mt-5 space-y-2 border-t border-white/10 pt-4">
+                            <a href="{{ url('/') }}" class="admin-nav-link admin-nav-link-secondary" aria-label="{{ __('admin.navigation.home') }}">
+                                <span class="admin-nav-link-label">
+                                    @include('admin.icon', ['name' => 'home', 'class' => 'admin-nav-link-icon'])
+                                    <span>{{ __('admin.navigation.home') }}</span>
+                                </span>
+                            </a>
+
+                            @if ($logoutItem)
+                                <form method="POST" action="{{ route('admin.logout') }}">
+                                    @csrf
+                                    <button type="submit" class="admin-nav-link admin-nav-link-button admin-nav-link-secondary">
+                                        <span class="admin-nav-link-label">
+                                            @include('admin.icon', ['name' => $logoutItem['icon'], 'class' => 'admin-nav-link-icon'])
+                                            <span>{{ __('admin.actions.logout') }}</span>
+                                        </span>
+                                    </button>
+                                </form>
+                            @endif
+                        </div>
+
                         @hasSection('sidebar')
                             <div class="mt-4">
                                 @yield('sidebar')
@@ -90,7 +98,7 @@
                         @endif
                     </div>
 
-                    <div class="mt-5 border-t border-white/10 pt-4">
+                    <div class="mt-4 border-t border-white/10 pt-4">
                         <span class="text-xs font-medium text-white/52">
                             {{ __('admin.footer.version') }}
                         </span>
