@@ -136,17 +136,27 @@
                             @foreach ($items as $item)
                                 <tr class="group bg-white transition hover:bg-zinc-50/80">
                                     <td class="px-4 py-4 align-top">
-                                        <div class="min-w-0">
-                                            <a href="{{ route('admin.collection.edit', $item) }}" class="admin-collection-title-clamp block text-sm font-semibold leading-5 text-zinc-950 transition group-hover:text-zinc-700 focus:outline-none focus:underline">
-                                                {{ $item->title }}
-                                            </a>
-                                            <p class="mt-1 text-xs text-zinc-500">
-                                                @if ($item->barcode)
-                                                    {{ __('admin.collection.table.barcode') }}: {{ $item->barcode }}
+                                        <div class="flex min-w-0 items-center gap-3">
+                                            <a href="{{ route('admin.collection.show', $item) }}" class="flex h-14 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100 text-zinc-500 transition hover:border-zinc-300 hover:text-zinc-700 focus:outline-none focus:ring-4 focus:ring-zinc-100" aria-label="{{ $item->title }}">
+                                                @if ($item->coverUrl())
+                                                    <img src="{{ $item->coverUrl() }}" alt="{{ $item->title }}" class="h-full w-full object-cover">
                                                 @else
-                                                    {{ __('admin.collection.table.no_barcode') }}
+                                                    @include('admin.icon', ['name' => 'collection', 'class' => 'h-4 w-4'])
+                                                    <span class="sr-only">{{ __('admin.collection.placeholders.no_cover') }}</span>
                                                 @endif
-                                            </p>
+                                            </a>
+                                            <div class="min-w-0">
+                                                <a href="{{ route('admin.collection.show', $item) }}" class="admin-collection-title-clamp block text-sm font-semibold leading-5 text-zinc-950 transition group-hover:text-zinc-700 focus:outline-none focus:underline">
+                                                    {{ $item->title }}
+                                                </a>
+                                                <p class="mt-1 text-xs text-zinc-500">
+                                                    @if ($item->barcode)
+                                                        {{ __('admin.collection.table.barcode') }}: {{ $item->barcode }}
+                                                    @else
+                                                        {{ __('admin.collection.table.no_barcode') }}
+                                                    @endif
+                                                </p>
+                                            </div>
                                         </div>
                                     </td>
                                     <td class="px-4 py-4 align-top">
@@ -202,19 +212,29 @@
                 </div>
 
                 <div class="space-y-3 md:hidden">
-                    @foreach ($items as $item)
-                        <article class="rounded-[22px] border border-zinc-200 bg-white p-4 shadow-sm">
-                            <div class="flex items-start justify-between gap-3">
-                                <div class="min-w-0">
-                                    <a href="{{ route('admin.collection.edit', $item) }}" class="admin-collection-title-clamp block text-base font-semibold leading-5 text-zinc-950 transition hover:text-zinc-700 focus:outline-none focus:underline">
-                                        {{ $item->title }}
-                                    </a>
-                                    <p class="mt-1 text-sm text-zinc-500">
-                                        {{ __('admin.collection.types.'.$item->type->value) }}
-                                    </p>
-                                </div>
-                                <span class="admin-stat-chip admin-stat-chip-{{ $item->status->value === 'owned' ? 'emerald' : ($item->status->value === 'loaned' ? 'rose' : 'slate') }}">
-                                    {{ __('admin.collection.statuses.'.$item->status->value) }}
+                            @foreach ($items as $item)
+                                <article class="rounded-[22px] border border-zinc-200 bg-white p-4 shadow-sm">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="flex min-w-0 items-start gap-3">
+                                            <a href="{{ route('admin.collection.show', $item) }}" class="flex h-14 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100 text-zinc-500 transition hover:border-zinc-300 hover:text-zinc-700 focus:outline-none focus:ring-4 focus:ring-zinc-100" aria-label="{{ $item->title }}">
+                                                @if ($item->coverUrl())
+                                                    <img src="{{ $item->coverUrl() }}" alt="{{ $item->title }}" class="h-full w-full object-cover">
+                                                @else
+                                                    @include('admin.icon', ['name' => 'collection', 'class' => 'h-4 w-4'])
+                                                    <span class="sr-only">{{ __('admin.collection.placeholders.no_cover') }}</span>
+                                                @endif
+                                            </a>
+                                            <div class="min-w-0">
+                                                <a href="{{ route('admin.collection.show', $item) }}" class="admin-collection-title-clamp block text-base font-semibold leading-5 text-zinc-950 transition hover:text-zinc-700 focus:outline-none focus:underline">
+                                                    {{ $item->title }}
+                                                </a>
+                                                <p class="mt-1 text-sm text-zinc-500">
+                                                    {{ __('admin.collection.types.'.$item->type->value) }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <span class="admin-stat-chip admin-stat-chip-{{ $item->status->value === 'owned' ? 'emerald' : ($item->status->value === 'loaned' ? 'rose' : 'slate') }}">
+                                            {{ __('admin.collection.statuses.'.$item->status->value) }}
                                 </span>
                             </div>
 

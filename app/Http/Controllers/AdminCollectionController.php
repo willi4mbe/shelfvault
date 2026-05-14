@@ -12,6 +12,8 @@ use App\Support\AdminNavigation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
 use Illuminate\View\View;
 
 class AdminCollectionController extends Controller
@@ -70,7 +72,7 @@ class AdminCollectionController extends Controller
             return redirect()->route('login');
         }
 
-        $type = old('type', ItemType::Film->value);
+        $type = old('type', '');
 
         return view('admin.collection.create', [
             'navigation' => $navigation->items($request->route()?->getName()),
@@ -80,6 +82,23 @@ class AdminCollectionController extends Controller
             'conditionOptions' => $this->conditionOptions(),
             'formatOptions' => $this->formatOptions(),
             'selectedType' => $type,
+            'backUrl' => route('admin.collection.index'),
+        ]);
+    }
+
+    public function show(InstallationState $installationState, Request $request, AdminNavigation $navigation, Item $item): RedirectResponse|View
+    {
+        if (! $installationState->installed()) {
+            return redirect()->route('install.show');
+        }
+
+        if (! Auth::check()) {
+            return redirect()->route('login');
+        }
+
+        return view('admin.collection.show', [
+            'navigation' => $navigation->items($request->route()?->getName()),
+            'item' => $item,
             'backUrl' => route('admin.collection.index'),
         ]);
     }
@@ -94,7 +113,12 @@ class AdminCollectionController extends Controller
             return redirect()->route('login');
         }
 
-        $item = Item::query()->create($request->normalizedData());
+        $data = $request->normalizedData();
+        if ($request->hasFile('cover_image')) {
+            $data['cover_path'] = $this->storeCover($request->file('cover_image'));
+        }
+
+        $item = Item::query()->create($data);
 
         return redirect()
             ->route('admin.collection.index')
@@ -135,8 +159,23 @@ class AdminCollectionController extends Controller
             return redirect()->route('login');
         }
 
-        $item->fill($request->normalizedData());
+        $originalCoverPath = $item->cover_path;
+        $data = $request->normalizedData();
+
+        if ($request->hasFile('cover_image')) {
+            $data['cover_path'] = $this->storeCover($request->file('cover_image'));
+        } elseif ($request->boolean('remove_cover')) {
+            $data['cover_path'] = null;
+        } else {
+            $data['cover_path'] = $originalCoverPath;
+        }
+
+        $item->fill($data);
         $item->save();
+
+        if ($originalCoverPath !== $item->cover_path) {
+            $this->deleteStoredCover($originalCoverPath);
+        }
 
         return redirect()
             ->route('admin.collection.index')
@@ -154,6 +193,7 @@ class AdminCollectionController extends Controller
         }
 
         $title = $item->title;
+        $this->deleteStoredCover($item->cover_path);
         $item->delete();
 
         return redirect()
@@ -179,6 +219,28 @@ class AdminCollectionController extends Controller
             'type' => in_array($type, $allowedTypes, true) ? $type : null,
             'status' => in_array($status, $allowedStatuses, true) ? $status : null,
         ];
+    }
+
+    private function storeCover(?UploadedFile $file): ?string
+    {
+        if ($file === null) {
+            return null;
+        }
+
+        return $file->storePublicly('covers', 'public');
+    }
+
+    private function deleteStoredCover(?string $coverPath): void
+    {
+        if ($coverPath === null || filter_var($coverPath, FILTER_VALIDATE_URL)) {
+            return;
+        }
+
+        $disk = Storage::disk('public');
+
+        if ($disk->exists($coverPath)) {
+            $disk->delete($coverPath);
+        }
     }
 
     /**

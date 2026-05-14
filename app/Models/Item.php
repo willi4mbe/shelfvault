@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * @use HasFactory<ItemFactory>
@@ -76,6 +77,23 @@ class Item extends Model
     public function itemLoans(): HasMany
     {
         return $this->hasMany(ItemLoan::class)->latest('loaned_at');
+    }
+
+    public function coverUrl(): ?string
+    {
+        if (! filled($this->cover_path)) {
+            return null;
+        }
+
+        if (filter_var($this->cover_path, FILTER_VALIDATE_URL)) {
+            return $this->cover_path;
+        }
+
+        if (! Storage::disk('public')->exists($this->cover_path)) {
+            return null;
+        }
+
+        return Storage::disk('public')->url($this->cover_path);
     }
 
     public function scopeFilm(Builder $query): Builder

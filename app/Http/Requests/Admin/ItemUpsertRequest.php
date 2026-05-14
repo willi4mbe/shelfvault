@@ -50,6 +50,8 @@ class ItemUpsertRequest extends FormRequest
             'max_players' => ['nullable', 'integer', 'min:1', 'max:99'],
             'play_time_minutes' => ['nullable', 'integer', 'min:1', 'max:9999'],
             'designer' => ['nullable', 'string', 'max:255'],
+            'cover_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'remove_cover' => ['nullable', 'boolean'],
         ];
     }
 
@@ -99,8 +101,13 @@ class ItemUpsertRequest extends FormRequest
             'between' => __('admin.collection.validation.between'),
             'max.string' => __('admin.collection.validation.max_string'),
             'max.numeric' => __('admin.collection.validation.max_numeric'),
+            'max.file' => __('admin.collection.validation.max_file'),
             'min.numeric' => __('admin.collection.validation.min_numeric'),
             'in' => __('admin.collection.validation.in'),
+            'image' => __('admin.collection.validation.image'),
+            'mimes' => __('admin.collection.validation.mimes'),
+            'file' => __('admin.collection.validation.file'),
+            'uploaded' => __('admin.collection.validation.uploaded'),
         ];
     }
 
@@ -138,6 +145,8 @@ class ItemUpsertRequest extends FormRequest
             'max_players' => __('admin.collection.fields.max_players'),
             'play_time_minutes' => __('admin.collection.fields.play_time_minutes'),
             'designer' => __('admin.collection.fields.designer'),
+            'cover_image' => __('admin.collection.fields.cover_image'),
+            'remove_cover' => __('admin.collection.fields.remove_cover'),
         ];
     }
 
