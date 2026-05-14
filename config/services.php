@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'tmdb' => [
+        'api_key' => env('TMDB_API_KEY'),
+        'bearer_token' => env('TMDB_BEARER_TOKEN'),
+        'language' => env('TMDB_LANGUAGE', 'fr-FR'),
+        'region' => env('TMDB_REGION', 'FR'),
+        'image_base_url' => env('TMDB_IMAGE_BASE_URL', 'https://image.tmdb.org/t/p/w500'),
+    ],
+
 ];

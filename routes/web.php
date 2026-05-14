@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AdminAuthController;
+use App\Http\Controllers\AdminBarcodeLookupController;
+use App\Http\Controllers\AdminMetadataLookupController;
 use App\Http\Controllers\AdminCollectionController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\InstallController;
@@ -26,6 +28,12 @@ Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin');
 Route::prefix('admin')->name('admin.')->group(function (): void {
     Route::get('/collection', [AdminCollectionController::class, 'index'])->name('collection.index');
     Route::get('/collection/create', [AdminCollectionController::class, 'create'])->name('collection.create');
+    Route::post('/collection/barcode-lookup', AdminBarcodeLookupController::class)->name('collection.barcode-lookup');
+    Route::post('/collection/metadata/search', [AdminMetadataLookupController::class, 'search'])->name('collection.metadata.search');
+    Route::post('/collection/metadata/import', [AdminMetadataLookupController::class, 'import'])->name('collection.metadata.import');
+    Route::post('/collection/metadata/barcode/lookup', [AdminMetadataLookupController::class, 'barcodeLookup'])->name('collection.metadata.barcode.lookup');
+    Route::post('/collection/metadata/tmdb/search', [AdminMetadataLookupController::class, 'tmdbSearch'])->name('collection.metadata.tmdb.search');
+    Route::post('/collection/metadata/tmdb/import', [AdminMetadataLookupController::class, 'tmdbImport'])->name('collection.metadata.tmdb.import');
     Route::get('/collection/{item}', [AdminCollectionController::class, 'show'])->whereNumber('item')->name('collection.show');
     Route::post('/collection', [AdminCollectionController::class, 'store'])->name('collection.store');
     Route::get('/collection/{item}/edit', [AdminCollectionController::class, 'edit'])->name('collection.edit');

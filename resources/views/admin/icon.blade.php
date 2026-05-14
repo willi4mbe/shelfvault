@@ -134,6 +134,20 @@
             <path d="M4 12a8 8 0 1 0 8-8"></path>
             <path d="M12 4v8l5 3"></path>
             @break
+        @case('scan')
+            <path d="M7 4H5a1 1 0 0 0-1 1v2"></path>
+            <path d="M17 4h2a1 1 0 0 1 1 1v2"></path>
+            <path d="M20 17v2a1 1 0 0 1-1 1h-2"></path>
+            <path d="M7 20H5a1 1 0 0 1-1-1v-2"></path>
+            <path d="M8 8v8"></path>
+            <path d="M11 8v8"></path>
+            <path d="M14 8v8"></path>
+            <path d="M17 8v8"></path>
+            @break
+        @case('search')
+            <circle cx="10.5" cy="10.5" r="5.5"></circle>
+            <path d="M15 15l4.5 4.5"></path>
+            @break
         @case('setup')
             <path d="M4.5 12h6.5l1.5-3 2.5 6 1.5-3H19.5"></path>
             @break

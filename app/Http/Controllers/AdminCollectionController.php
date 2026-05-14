@@ -166,6 +166,8 @@ class AdminCollectionController extends Controller
             $data['cover_path'] = $this->storeCover($request->file('cover_image'));
         } elseif ($request->boolean('remove_cover')) {
             $data['cover_path'] = null;
+        } elseif (filled($data['cover_path']) && $data['cover_path'] !== $originalCoverPath) {
+            $data['cover_path'] = $data['cover_path'];
         } else {
             $data['cover_path'] = $originalCoverPath;
         }

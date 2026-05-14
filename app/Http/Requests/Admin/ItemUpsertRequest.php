@@ -5,6 +5,7 @@ namespace App\Http\Requests\Admin;
 use App\Enums\ItemCondition;
 use App\Enums\ItemStatus;
 use App\Enums\ItemType;
+use Illuminate\Support\Str;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -27,6 +28,8 @@ class ItemUpsertRequest extends FormRequest
             'original_title' => ['nullable', 'string', 'max:255'],
             'release_year' => ['nullable', 'integer', 'between:1800,2100'],
             'barcode' => ['nullable', 'string', 'max:128'],
+            'external_tmdb_id' => ['nullable', 'integer', 'min:1'],
+            'cover_path' => ['nullable', 'string', 'max:255'],
             'physical_format' => ['required', 'string', 'max:64', Rule::in($this->physicalFormatValues())],
             'edition' => ['nullable', 'string', 'max:120'],
             'region' => ['nullable', 'string', 'max:64'],
@@ -34,6 +37,7 @@ class ItemUpsertRequest extends FormRequest
             'location' => ['nullable', 'string', 'max:120'],
             'status' => ['required', Rule::enum(ItemStatus::class)],
             'is_favorite' => ['nullable', 'boolean'],
+            'description' => ['nullable', 'string', 'max:4000'],
             'personal_notes' => ['nullable', 'string'],
             'acquired_at' => ['nullable', 'date'],
             'runtime_minutes' => ['nullable', 'integer', 'min:1', 'max:9999'],
@@ -122,6 +126,8 @@ class ItemUpsertRequest extends FormRequest
             'original_title' => __('admin.collection.fields.original_title'),
             'release_year' => __('admin.collection.fields.release_year'),
             'barcode' => __('admin.collection.fields.barcode'),
+            'external_tmdb_id' => __('admin.collection.fields.external_tmdb_id'),
+            'cover_path' => __('admin.collection.fields.cover_path'),
             'physical_format' => __('admin.collection.fields.physical_format'),
             'edition' => __('admin.collection.fields.edition'),
             'region' => __('admin.collection.fields.region'),
@@ -129,6 +135,7 @@ class ItemUpsertRequest extends FormRequest
             'location' => __('admin.collection.fields.location'),
             'status' => __('admin.collection.fields.status'),
             'is_favorite' => __('admin.collection.fields.is_favorite'),
+            'description' => __('admin.collection.fields.description'),
             'personal_notes' => __('admin.collection.fields.personal_notes'),
             'acquired_at' => __('admin.collection.fields.acquired_at'),
             'runtime_minutes' => __('admin.collection.fields.runtime_minutes'),
@@ -159,10 +166,11 @@ class ItemUpsertRequest extends FormRequest
             'type' => $type,
             'title' => $validated['title'],
             'original_title' => $validated['original_title'] ?? null,
-            'sort_title' => $validated['sort_title'] ?? null,
+            'sort_title' => $this->nullableString($validated['sort_title'] ?? null) ?? $this->sortTitleFromTitle($validated['title']),
             'description' => $validated['description'] ?? null,
             'release_year' => $this->integerValue($validated['release_year'] ?? null),
             'barcode' => $this->nullableString($validated['barcode'] ?? null),
+            'external_tmdb_id' => $this->integerValue($validated['external_tmdb_id'] ?? null),
             'cover_path' => $validated['cover_path'] ?? null,
             'physical_format' => $this->nullableString($validated['physical_format'] ?? null),
             'edition' => $this->nullableString($validated['edition'] ?? null),
@@ -179,7 +187,6 @@ class ItemUpsertRequest extends FormRequest
             'genres' => $this->csvToArray($validated['genres'] ?? null),
             'studio' => $this->nullableString($validated['studio'] ?? null),
             'age_rating' => $this->nullableString($validated['age_rating'] ?? null),
-            'external_tmdb_id' => null,
             'platform' => $this->nullableString($validated['platform'] ?? null),
             'developer' => $this->nullableString($validated['developer'] ?? null),
             'publisher' => $this->nullableString($validated['publisher'] ?? null),
@@ -205,7 +212,7 @@ class ItemUpsertRequest extends FormRequest
                 'genres' => $this->csvToArray($this->input('genres')),
                 'studio' => $this->nullableString($this->input('studio')),
                 'age_rating' => $this->nullableString($this->input('age_rating')),
-                'external_tmdb_id' => null,
+                'external_tmdb_id' => $this->integerValue($this->input('external_tmdb_id')),
                 'platform' => null,
                 'developer' => null,
                 'publisher' => null,
@@ -300,5 +307,12 @@ class ItemUpsertRequest extends FormRequest
         ), static fn (string $entry): bool => $entry !== ''));
 
         return $values === [] ? null : $values;
+    }
+
+    private function sortTitleFromTitle(string $title): ?string
+    {
+        $title = trim($title);
+
+        return $title === '' ? null : Str::lower($title);
     }
 }
