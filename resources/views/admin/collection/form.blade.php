@@ -134,54 +134,6 @@
                 <section class="admin-media-section p-5 sm:p-6">
                     <div class="admin-media-section-header">
                         <span x-bind:class="'admin-icon-badge admin-icon-badge-' + currentChip">
-                            @include('admin.icon', ['name' => 'collection', 'class' => 'admin-icon'])
-                        </span>
-                        <h2 class="admin-media-section-label">
-                            {{ __('admin.collection.fields.cover_image') }}
-                        </h2>
-                    </div>
-
-                    <div class="mt-5 space-y-3">
-                        <div class="admin-media-cover-shell p-5 sm:p-6">
-                            <div class="admin-media-cover-frame">
-                                <template x-if="coverPreviewUrl">
-                                    <img :src="coverPreviewUrl" alt="{{ $item->title ?: __('admin.collection.create.title') }}" class="admin-media-cover-image">
-                                </template>
-                                <template x-if="!coverPreviewUrl">
-                                    <div class="admin-media-cover-placeholder">
-                                        <span class="admin-media-placeholder-mark">
-                                            @include('admin.icon', ['name' => 'collection', 'class' => 'h-6 w-6'])
-                                        </span>
-                                        <div class="space-y-2">
-                                            <p class="admin-media-cover-placeholder-title">{{ __('admin.collection.placeholders.no_cover') }}</p>
-                                            <p class="admin-media-cover-placeholder-text">{{ __('admin.collection.detail.cover_hint') }}</p>
-                                        </div>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-
-                        <label class="block space-y-2">
-                            <span class="sr-only">{{ __('admin.collection.fields.cover_image') }}</span>
-                            <input type="file" name="cover_image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" class="{{ $commonInputClass }} py-2.5">
-                        </label>
-
-                        <p class="text-sm leading-6 text-zinc-600">
-                            {{ __('admin.collection.help.cover_image') }}
-                        </p>
-
-                        @if ($mode === 'edit')
-                            <label class="inline-flex items-center gap-3 rounded-full border border-zinc-200 bg-white/80 px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm">
-                                <input type="checkbox" name="remove_cover" value="1" @checked(old('remove_cover', false)) class="h-4 w-4 rounded border-zinc-300 text-zinc-950 focus:ring-zinc-500">
-                                <span>{{ __('admin.collection.fields.remove_cover') }}</span>
-                            </label>
-                        @endif
-                    </div>
-                </section>
-
-                <section class="admin-media-section p-5 sm:p-6">
-                    <div class="admin-media-section-header">
-                        <span x-bind:class="'admin-icon-badge admin-icon-badge-' + currentChip">
                             @include('admin.icon', ['name' => 'search', 'class' => 'admin-icon'])
                         </span>
                         <h2 class="admin-media-section-label">
@@ -191,7 +143,7 @@
 
                     <div class="mt-5 space-y-4">
                         <p class="text-sm leading-6 text-zinc-600">
-                            {{ __('admin.collection.metadata.physical_fields_manual') }}
+                            {{ __('admin.collection.metadata.search_movie_by_title') }}
                         </p>
 
                         <button
@@ -200,7 +152,7 @@
                             @click="searchTitle()"
                             :disabled="titleBusy"
                         >
-                            {{ __('admin.collection.metadata.search_on_tmdb') }}
+                            {{ __('admin.collection.lookup.search') }}
                         </button>
 
                         <div class="space-y-1 text-xs leading-5 text-zinc-500">
@@ -263,6 +215,54 @@
                                 </template>
                             </div>
                         </div>
+                    </div>
+                </section>
+
+                <section class="admin-media-section p-5 sm:p-6">
+                    <div class="admin-media-section-header">
+                        <span x-bind:class="'admin-icon-badge admin-icon-badge-' + currentChip">
+                            @include('admin.icon', ['name' => 'collection', 'class' => 'admin-icon'])
+                        </span>
+                        <h2 class="admin-media-section-label">
+                            {{ __('admin.collection.fields.cover_image') }}
+                        </h2>
+                    </div>
+
+                    <div class="mt-5 space-y-3">
+                        <div class="admin-media-cover-shell p-5 sm:p-6">
+                            <div class="admin-media-cover-frame">
+                                <template x-if="coverPreviewUrl">
+                                    <img :src="coverPreviewUrl" alt="{{ $item->title ?: __('admin.collection.create.title') }}" class="admin-media-cover-image">
+                                </template>
+                                <template x-if="!coverPreviewUrl">
+                                    <div class="admin-media-cover-placeholder">
+                                        <span class="admin-media-placeholder-mark">
+                                            @include('admin.icon', ['name' => 'collection', 'class' => 'h-6 w-6'])
+                                        </span>
+                                        <div class="space-y-2">
+                                            <p class="admin-media-cover-placeholder-title">{{ __('admin.collection.placeholders.no_cover') }}</p>
+                                            <p class="admin-media-cover-placeholder-text">{{ __('admin.collection.detail.cover_hint') }}</p>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <label class="block space-y-2">
+                            <span class="sr-only">{{ __('admin.collection.fields.cover_image') }}</span>
+                            <input type="file" name="cover_image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" class="{{ $commonInputClass }} py-2.5">
+                        </label>
+
+                        <p class="text-sm leading-6 text-zinc-600">
+                            {{ __('admin.collection.help.cover_image') }}
+                        </p>
+
+                        @if ($mode === 'edit')
+                            <label class="inline-flex items-center gap-3 rounded-full border border-zinc-200 bg-white/80 px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm">
+                                <input type="checkbox" name="remove_cover" value="1" @checked(old('remove_cover', false)) class="h-4 w-4 rounded border-zinc-300 text-zinc-950 focus:ring-zinc-500">
+                                <span>{{ __('admin.collection.fields.remove_cover') }}</span>
+                            </label>
+                        @endif
                     </div>
                 </section>
             </aside>

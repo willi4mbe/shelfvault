@@ -25,7 +25,7 @@ class MetadataImportMapper
         $castMembers = collect(Arr::get($credits, 'cast', []))
             ->pluck('name')
             ->filter()
-            ->take(8)
+            ->take(5)
             ->values()
             ->all();
         $director = collect(Arr::get($credits, 'crew', []))
@@ -105,21 +105,39 @@ class MetadataImportMapper
         $region = strtoupper((string) config('services.tmdb.region', ''));
         $results = Arr::get($releaseDates, 'results', []);
 
-        foreach ($results as $releaseDate) {
-            $releaseRegion = strtoupper((string) Arr::get($releaseDate, 'iso_3166_1', ''));
+        if ($region !== '') {
+            foreach ($results as $releaseRegion) {
+                $releaseRegionCode = strtoupper((string) Arr::get($releaseRegion, 'iso_3166_1', ''));
 
-            if ($region !== '' && $releaseRegion !== $region) {
-                continue;
+                if ($releaseRegionCode !== $region) {
+                    continue;
+                }
+
+                $certification = $this->firstCertification(Arr::get($releaseRegion, 'release_dates', []));
+
+                if ($certification !== null) {
+                    return $certification;
+                }
             }
+        }
 
-            $certification = trim((string) Arr::get($releaseDate, 'certification', ''));
+        foreach ($results as $releaseRegion) {
+            $certification = $this->firstCertification(Arr::get($releaseRegion, 'release_dates', []));
 
-            if ($certification !== '') {
+            if ($certification !== null) {
                 return $certification;
             }
         }
 
-        foreach ($results as $releaseDate) {
+        return null;
+    }
+
+    /**
+     * @param  array<int, mixed>  $releaseDates
+     */
+    private function firstCertification(array $releaseDates): ?string
+    {
+        foreach ($releaseDates as $releaseDate) {
             $certification = trim((string) Arr::get($releaseDate, 'certification', ''));
 
             if ($certification !== '') {

@@ -169,6 +169,7 @@ return [
         'metadata' => [
             'tmdb_label' => 'TMDb',
             'tmdb_search' => 'TMDb search',
+            'search_movie_by_title' => 'Search for a movie by title.',
             'search_title' => 'Film metadata',
             'search_metadata' => 'Search metadata',
             'search_on_tmdb' => 'Search on TMDb',

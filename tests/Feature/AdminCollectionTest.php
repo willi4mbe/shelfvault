@@ -431,12 +431,13 @@ class AdminCollectionTest extends TestCase
         $this->actingAs(User::query()->first())
             ->get('/admin/collection/create')
             ->assertOk()
-            ->assertSee(__('admin.collection.metadata.search_on_tmdb'))
             ->assertSee(__('admin.collection.metadata.tmdb_search'))
+            ->assertSee(__('admin.collection.metadata.search_movie_by_title'))
+            ->assertSee(__('admin.collection.lookup.search'))
             ->assertSee(__('admin.collection.metadata.physical_fields_manual'))
             ->assertSeeInOrder([
-                __('admin.collection.fields.cover_image'),
                 __('admin.collection.metadata.tmdb_search'),
+                __('admin.collection.fields.cover_image'),
                 __('admin.collection.detail.sections.main'),
                 __('admin.collection.detail.sections.physical'),
                 __('admin.collection.detail.sections.metadata'),
@@ -454,7 +455,9 @@ class AdminCollectionTest extends TestCase
             ->assertDontSee('@click="searchBarcode({ force: true })"', false)
             ->assertDontSee('@click="openScanner()"', false)
             ->assertDontSee(__('admin.collection.scanner.scan'))
-            ->assertDontSee(__('admin.collection.metadata.search_by_barcode'))
+            ->assertDontSee(__('admin.collection.lookup.search_by_barcode'))
+            ->assertDontSee(__('admin.collection.metadata.barcode_source_unavailable'))
+            ->assertDontSee(__('admin.collection.scanner.manual_entry_available'))
             ->assertDontSee(__('admin.collection.metadata.search_title'))
             ->assertDontSee('admin-media-lookup-panel')
             ->assertDontSee('admin-media-scanner-panel')
@@ -463,9 +466,14 @@ class AdminCollectionTest extends TestCase
         $this->actingAs(User::query()->first())
             ->get("/admin/collection/{$item->id}/edit")
             ->assertOk()
-            ->assertSee(__('admin.collection.metadata.search_on_tmdb'))
             ->assertSee(__('admin.collection.metadata.tmdb_search'))
+            ->assertSee(__('admin.collection.metadata.search_movie_by_title'))
+            ->assertSee(__('admin.collection.lookup.search'))
             ->assertSee(__('admin.collection.metadata.physical_fields_manual'))
+            ->assertSeeInOrder([
+                __('admin.collection.metadata.tmdb_search'),
+                __('admin.collection.fields.cover_image'),
+            ])
             ->assertSeeInOrder([
                 __('admin.collection.fields.title'),
                 __('admin.collection.fields.original_title'),
@@ -478,7 +486,9 @@ class AdminCollectionTest extends TestCase
             ->assertDontSee('@click="searchBarcode({ force: true })"', false)
             ->assertDontSee('@click="openScanner()"', false)
             ->assertDontSee(__('admin.collection.scanner.scan'))
-            ->assertDontSee(__('admin.collection.metadata.search_by_barcode'))
+            ->assertDontSee(__('admin.collection.lookup.search_by_barcode'))
+            ->assertDontSee(__('admin.collection.metadata.barcode_source_unavailable'))
+            ->assertDontSee(__('admin.collection.scanner.manual_entry_available'))
             ->assertDontSee('admin-media-lookup-panel')
             ->assertDontSee('admin-media-scanner-panel')
             ->assertDontSee(__('admin.collection.metadata.search_title'));
@@ -492,9 +502,13 @@ class AdminCollectionTest extends TestCase
         $this->actingAs(User::query()->first())
             ->get('/admin/collection/create')
             ->assertOk()
-            ->assertSee(__('admin.collection.metadata.search_on_tmdb'))
+            ->assertSee(__('admin.collection.metadata.tmdb_search'))
+            ->assertSee(__('admin.collection.metadata.search_movie_by_title'))
+            ->assertSee(__('admin.collection.lookup.search'))
             ->assertSee(__('admin.collection.fields.barcode'))
             ->assertDontSee(__('admin.collection.scanner.scan'))
+            ->assertDontSee(__('admin.collection.lookup.search_by_barcode'))
+            ->assertDontSee(__('admin.collection.metadata.barcode_source_unavailable'))
             ->assertDontSee(__('admin.collection.metadata.search_title'));
     }
 
@@ -941,8 +955,10 @@ class AdminCollectionTest extends TestCase
             ->assertSee('Jaquette')
             ->assertSee('JPG, PNG ou WEBP — max. 4 Mo.')
             ->assertSee('Recherche TMDb')
+            ->assertSee('Recherchez un film par titre.')
             ->assertSee('Champs physiques à compléter manuellement.')
-            ->assertSee('Rechercher sur TMDb')
+            ->assertSee('Rechercher')
+            ->assertDontSee('Rechercher sur TMDb')
             ->assertDontSee('Rechercher par code-barres')
             ->assertDontSee('Scanner un code-barres')
             ->assertDontSee('Fermer')
@@ -967,8 +983,10 @@ class AdminCollectionTest extends TestCase
             ->assertSee('Cover')
             ->assertSee('JPG, PNG or WEBP - max. 4 MB.')
             ->assertSee('TMDb search')
+            ->assertSee('Search for a movie by title.')
             ->assertSee('Physical details to complete manually.')
-            ->assertSee('Search on TMDb')
+            ->assertSee('Search')
+            ->assertDontSee('Search on TMDb')
             ->assertDontSee('Search by barcode')
             ->assertDontSee('Manual entry available')
             ->assertDontSee('Delete the stored cover and clear the cover field.')
@@ -989,7 +1007,10 @@ class AdminCollectionTest extends TestCase
             ->assertSee('Cancel')
             ->assertSee('Film')
             ->assertSee('Remove cover')
-            ->assertSee('Search on TMDb')
+            ->assertSee('TMDb search')
+            ->assertSee('Search for a movie by title.')
+            ->assertSee('Search')
+            ->assertDontSee('Search on TMDb')
             ->assertDontSee('Search by barcode')
             ->assertDontSee('Wishlist')
             ->assertDontSee('wanted')

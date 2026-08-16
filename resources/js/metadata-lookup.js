@@ -42,6 +42,23 @@ function fieldHasValue(field) {
     return String(field.value ?? '').trim() !== '';
 }
 
+function namedFieldElements(form, name) {
+    if (!form) {
+        return [];
+    }
+
+    const selectorName = String(name).replace(/["\\]/g, '\\$&');
+    const fields = Array.from(form.querySelectorAll(`[name="${selectorName}"]`));
+
+    if (fields.length > 0) {
+        return fields;
+    }
+
+    const field = form.elements.namedItem(name);
+
+    return field ? [field] : [];
+}
+
 function jsonHeaders(csrfToken = '') {
     return {
         Accept: 'application/json',
@@ -82,6 +99,8 @@ export function metadataLookup(config = {}) {
             enterValidBarcode: config.labels?.enterValidBarcode ?? '',
             searchError: config.labels?.searchError ?? '',
             metadataImported: config.labels?.metadataImported ?? '',
+            coverImported: config.labels?.coverImported ?? '',
+            coverNotImported: config.labels?.coverNotImported ?? '',
             posterImportFailed: config.labels?.posterImportFailed ?? '',
             cameraUnavailable: config.labels?.cameraUnavailable ?? '',
             cameraPermissionDenied: config.labels?.cameraPermissionDenied ?? '',
@@ -159,7 +178,7 @@ export function metadataLookup(config = {}) {
             }
         },
         formElement() {
-            return this.$el.closest('form');
+            return this.$el.closest('form') ?? this.$el.querySelector('form');
         },
         currentTypeValue() {
             return String(this.type ?? '').trim();
@@ -184,14 +203,14 @@ export function metadataLookup(config = {}) {
                 return String(this[name] ?? '').trim();
             }
 
-            const field = this.formElement()?.elements.namedItem(name);
+            const field = namedFieldElements(this.formElement(), name)[0] ?? null;
 
             return field ? String(field.value ?? '').trim() : '';
         },
         setFieldValue(name, value, { force = false, dispatchChange = false } = {}) {
-            const field = this.formElement()?.elements.namedItem(name);
+            const fields = namedFieldElements(this.formElement(), name);
 
-            if (!field) {
+            if (fields.length === 0) {
                 return;
             }
 
@@ -201,20 +220,22 @@ export function metadataLookup(config = {}) {
                 return;
             }
 
-            if (!force && fieldHasValue(field)) {
-                return;
-            }
+            fields.forEach((field) => {
+                if (!force && fieldHasValue(field)) {
+                    return;
+                }
 
-            field.value = normalizedValue;
+                field.value = normalizedValue;
+
+                field.dispatchEvent(new Event('input', { bubbles: true }));
+
+                if (dispatchChange) {
+                    field.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            });
 
             if (Object.prototype.hasOwnProperty.call(this, name)) {
                 this[name] = normalizedValue;
-            }
-
-            field.dispatchEvent(new Event('input', { bubbles: true }));
-
-            if (dispatchChange) {
-                field.dispatchEvent(new Event('change', { bubbles: true }));
             }
         },
         clearTitleState() {
@@ -513,6 +534,8 @@ export function metadataLookup(config = {}) {
 
             if (data.cover_path && data.cover_url) {
                 this.setFieldValue('cover_path', data.cover_path, { force: true });
+                this.coverPath = normalizeLookupValue(data.cover_path);
+                this.coverPreviewUrl = normalizeLookupValue(data.cover_url);
                 this.formElement()?.dispatchEvent(
                     new CustomEvent('barcode-cover-preview', {
                         bubbles: true,

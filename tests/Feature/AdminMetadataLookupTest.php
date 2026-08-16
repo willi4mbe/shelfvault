@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Models\Item;
+use App\Services\Metadata\MetadataImportMapper;
 use App\Services\Metadata\Providers\LocalItemBarcodeLookupProvider;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -203,9 +204,94 @@ class AdminMetadataLookupTest extends TestCase
         });
     }
 
+    public function test_tmdb_movie_mapping_limits_cast_members_to_the_first_five_actors(): void
+    {
+        $mapped = (new MetadataImportMapper())->mapTmdbMovie(
+            $this->tmdbMoviePayload(),
+            [
+                'cast' => [
+                    ['name' => 'Actor 1'],
+                    ['name' => 'Actor 2'],
+                    ['name' => 'Actor 3'],
+                    ['name' => 'Actor 4'],
+                    ['name' => 'Actor 5'],
+                    ['name' => 'Actor 6'],
+                ],
+            ],
+        );
+
+        $this->assertSame([
+            'Actor 1',
+            'Actor 2',
+            'Actor 3',
+            'Actor 4',
+            'Actor 5',
+        ], $mapped['cast_members']);
+    }
+
+    public function test_tmdb_movie_mapping_reads_the_configured_region_certification_from_nested_release_dates(): void
+    {
+        config(['services.tmdb.region' => 'FR']);
+
+        $mapped = (new MetadataImportMapper())->mapTmdbMovie(
+            $this->tmdbMoviePayload(),
+            [],
+            [
+                'results' => [
+                    [
+                        'iso_3166_1' => 'US',
+                        'release_dates' => [
+                            ['certification' => 'R'],
+                        ],
+                    ],
+                    [
+                        'iso_3166_1' => 'FR',
+                        'release_dates' => [
+                            ['certification' => ''],
+                            ['certification' => '12'],
+                        ],
+                    ],
+                ],
+            ],
+        );
+
+        $this->assertSame('12', $mapped['age_rating']);
+    }
+
+    public function test_tmdb_movie_mapping_falls_back_to_any_region_certification(): void
+    {
+        config(['services.tmdb.region' => 'FR']);
+
+        $mapped = (new MetadataImportMapper())->mapTmdbMovie(
+            $this->tmdbMoviePayload(),
+            [],
+            [
+                'results' => [
+                    [
+                        'iso_3166_1' => 'FR',
+                        'release_dates' => [
+                            ['certification' => ''],
+                        ],
+                    ],
+                    [
+                        'iso_3166_1' => 'US',
+                        'release_dates' => [
+                            ['certification' => 'R'],
+                        ],
+                    ],
+                ],
+            ],
+        );
+
+        $this->assertSame('R', $mapped['age_rating']);
+    }
+
     public function test_tmdb_import_maps_film_metadata_and_imports_a_poster_locally(): void
     {
-        config(['services.tmdb.api_key' => 'test-key']);
+        config([
+            'services.tmdb.api_key' => 'test-key',
+            'services.tmdb.region' => 'FR',
+        ]);
 
         Http::fake([
             'https://api.themoviedb.org/3/movie/603*' => Http::response([
@@ -228,6 +314,9 @@ class AdminMetadataLookupTest extends TestCase
                         ['name' => 'Keanu Reeves'],
                         ['name' => 'Carrie-Anne Moss'],
                         ['name' => 'Laurence Fishburne'],
+                        ['name' => 'Hugo Weaving'],
+                        ['name' => 'Gloria Foster'],
+                        ['name' => 'Joe Pantoliano'],
                     ],
                     'crew' => [
                         ['job' => 'Director', 'name' => 'Lana Wachowski'],
@@ -236,8 +325,19 @@ class AdminMetadataLookupTest extends TestCase
                 ],
                 'release_dates' => [
                     'results' => [
-                        ['iso_3166_1' => 'BE', 'certification' => '12'],
-                        ['iso_3166_1' => 'US', 'certification' => 'R'],
+                        [
+                            'iso_3166_1' => 'US',
+                            'release_dates' => [
+                                ['certification' => 'R'],
+                            ],
+                        ],
+                        [
+                            'iso_3166_1' => 'FR',
+                            'release_dates' => [
+                                ['certification' => ''],
+                                ['certification' => '12'],
+                            ],
+                        ],
                     ],
                 ],
             ], 200),
@@ -265,8 +365,14 @@ class AdminMetadataLookupTest extends TestCase
             ->assertJsonPath('data.director', 'Lana Wachowski')
             ->assertJsonPath('data.external_tmdb_id', 603)
             ->assertJsonPath('data.age_rating', '12')
-            ->assertJsonPath('data.genres.0', 'Action')
-            ->assertJsonPath('data.cast_members.0', 'Keanu Reeves')
+            ->assertJsonPath('data.genres', ['Action', 'Science fiction'])
+            ->assertJsonPath('data.cast_members', [
+                'Keanu Reeves',
+                'Carrie-Anne Moss',
+                'Laurence Fishburne',
+                'Hugo Weaving',
+                'Gloria Foster',
+            ])
             ->assertJsonMissingPath('data.physical_format')
             ->assertJsonMissingPath('data.edition')
             ->assertJsonMissingPath('data.region')
@@ -394,5 +500,19 @@ class AdminMetadataLookupTest extends TestCase
             ->assertJsonPath('data.cover_path', 'covers/barcode-import.jpg')
             ->assertJsonPath('data.cover_url', Storage::disk('public')->url('covers/barcode-import.jpg'))
             ->assertJsonPath('data.description', 'Barcode import description');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function tmdbMoviePayload(): array
+    {
+        return [
+            'id' => 603,
+            'title' => 'The Matrix',
+            'original_title' => 'The Matrix',
+            'overview' => 'A computer hacker learns about the true nature of reality.',
+            'release_date' => '1999-03-31',
+        ];
     }
 }
