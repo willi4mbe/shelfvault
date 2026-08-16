@@ -127,6 +127,7 @@
         @endif
 
         <input type="hidden" name="external_tmdb_id" value="{{ old('external_tmdb_id', $item->external_tmdb_id) }}">
+        <input type="hidden" name="external_igdb_id" value="{{ old('external_igdb_id', $item->external_igdb_id) }}">
         <input type="hidden" name="cover_path" x-model="coverPath">
 
         <section class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1.95fr)]">
@@ -137,13 +138,13 @@
                             @include('admin.icon', ['name' => 'search', 'class' => 'admin-icon'])
                         </span>
                         <h2 class="admin-media-section-label">
-                            {{ __('admin.collection.metadata.tmdb_search') }}
+                            {{ __('admin.collection.metadata.title_search') }}
                         </h2>
                     </div>
 
                     <div class="mt-5 space-y-4">
                         <p class="text-sm leading-6 text-zinc-600">
-                            {{ __('admin.collection.metadata.search_movie_by_title') }}
+                            {{ __('admin.collection.metadata.search_by_title_help') }}
                         </p>
 
                         <button
@@ -195,6 +196,8 @@
                                                     </div>
 
                                                     <p x-cloak x-show="candidate.original_title && candidate.original_title !== candidate.title" class="truncate text-xs text-zinc-500" x-text="candidate.original_title"></p>
+                                                    <p x-cloak x-show="candidate.platforms && candidate.platforms.length" class="truncate text-xs text-zinc-500" x-text="candidate.platforms.join(', ')"></p>
+                                                    <p x-cloak x-show="candidate.developer || candidate.publisher" class="truncate text-xs text-zinc-500" x-text="[candidate.developer, candidate.publisher].filter(Boolean).join(' / ')"></p>
                                                 </div>
 
                                                 <p x-cloak x-show="candidate.overview" class="line-clamp-3 text-xs leading-5 text-zinc-600" x-text="candidate.overview"></p>
@@ -204,7 +207,7 @@
                                                         type="button"
                                                         class="admin-media-button admin-media-button-primary text-sm"
                                                         @click="chooseCandidate(candidate)"
-                                                        :disabled="importBusy && activeCandidateId !== (candidate.tmdb_id ?? candidate.id)"
+                                                        :disabled="importBusy && activeCandidateId !== (candidate.tmdb_id ?? candidate.igdb_id ?? candidate.id)"
                                                     >
                                                         {{ __('admin.collection.lookup.choose') }}
                                                     </button>
