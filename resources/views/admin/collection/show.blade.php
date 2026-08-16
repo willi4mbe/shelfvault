@@ -78,12 +78,7 @@
 
         $specificRows = match ($typeValue) {
             'film' => array_values(array_filter([
-                ['label' => __('admin.collection.fields.runtime_minutes'), 'value' => $item->runtime_minutes ? $item->runtime_minutes.' '.__('admin.collection.unit.minutes') : null],
-                ['label' => __('admin.collection.fields.director'), 'value' => $item->director],
-                ['label' => __('admin.collection.fields.studio'), 'value' => $item->studio],
-                ['label' => __('admin.collection.fields.age_rating'), 'value' => $item->age_rating],
-                ['label' => __('admin.collection.fields.genres'), 'value' => is_array($item->genres) && $item->genres !== [] ? implode(', ', $item->genres) : null],
-                ['label' => __('admin.collection.fields.cast_members'), 'value' => is_array($item->cast_members) && $item->cast_members !== [] ? implode(', ', $item->cast_members) : null],
+                ['label' => __('admin.collection.fields.external_tmdb_id'), 'value' => $item->external_tmdb_id],
             ], static fn (array $row): bool => filled($row['value']))),
             'video_game' => array_values(array_filter([
                 ['label' => __('admin.collection.fields.platform'), 'value' => $item->platform],
@@ -105,6 +100,18 @@
         };
 
         $typeBadgeClass = $typeConfig['chip'];
+        $genres = is_array($item->genres) ? array_values(array_filter($item->genres, static fn ($genre): bool => filled($genre))) : [];
+        $castMembers = is_array($item->cast_members) ? array_values(array_filter($item->cast_members, static fn ($member): bool => filled($member))) : [];
+        $featuredCastMembers = array_slice($castMembers, 0, 5);
+        $hiddenCastMembersCount = max(count($castMembers) - count($featuredCastMembers), 0);
+        $runtimeLabel = $item->runtime_minutes ? $item->runtime_minutes.' '.__('admin.collection.unit.minutes') : null;
+        $filmHighlights = $typeValue === 'film'
+            ? array_values(array_filter([
+                ['label' => __('admin.collection.fields.director'), 'value' => $item->director],
+                ['label' => __('admin.collection.fields.runtime_minutes'), 'value' => $runtimeLabel],
+                ['label' => __('admin.collection.fields.age_rating'), 'value' => $item->age_rating],
+            ], static fn (array $row): bool => filled($row['value'])))
+            : [];
     @endphp
 
     <div class="relative isolate space-y-6" style="--media-accent: {{ $typeConfig['rgb'] }};">
@@ -216,6 +223,77 @@
             </div>
 
             <div class="space-y-6">
+                @if ($typeValue === 'film' && (filled($item->description) || $genres !== [] || $filmHighlights !== [] || $featuredCastMembers !== [] || filled($item->studio)))
+                    <section class="admin-media-section p-5 sm:p-6">
+                        <div class="admin-media-section-header">
+                            <span class="admin-icon-badge admin-icon-badge-{{ $typeBadgeClass }}">
+                                @include('admin.icon', ['name' => 'overview', 'class' => 'admin-icon'])
+                            </span>
+                            <h2 class="admin-media-section-label">
+                                {{ __('admin.collection.detail.sections.film_overview') }}
+                            </h2>
+                        </div>
+
+                        <div class="mt-5 space-y-5">
+                            @if ($genres !== [])
+                                <div class="flex flex-wrap gap-2">
+                                    @foreach ($genres as $genre)
+                                        <span class="admin-stat-chip admin-stat-chip-sky">{{ $genre }}</span>
+                                    @endforeach
+                                </div>
+                            @endif
+
+                            @if ($filmHighlights !== [])
+                                <dl class="grid gap-3 sm:grid-cols-3">
+                                    @foreach ($filmHighlights as $row)
+                                        <div class="admin-media-field">
+                                            <div class="admin-media-field-inner">
+                                                <dt class="admin-media-field-label">{{ $row['label'] }}</dt>
+                                                <dd class="admin-media-field-value">{{ $row['value'] }}</dd>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </dl>
+                            @endif
+
+                            @if (filled($item->description))
+                                <div class="rounded-[22px] border border-zinc-200/80 bg-white/75 p-4 shadow-sm">
+                                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                                        {{ __('admin.collection.fields.description') }}
+                                    </p>
+                                    <p class="mt-3 whitespace-pre-line text-sm leading-7 text-zinc-700">
+                                        {{ $item->description }}
+                                    </p>
+                                </div>
+                            @endif
+
+                            @if ($featuredCastMembers !== [])
+                                <div class="space-y-3">
+                                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                                        {{ __('admin.collection.detail.cast_limit_label') }}
+                                    </p>
+                                    <div class="flex flex-wrap gap-2">
+                                        @foreach ($featuredCastMembers as $member)
+                                            <span class="admin-stat-chip admin-stat-chip-slate">{{ $member }}</span>
+                                        @endforeach
+                                        @if ($hiddenCastMembersCount > 0)
+                                            <span class="admin-stat-chip admin-stat-chip-slate">
+                                                {{ trans_choice('admin.collection.detail.cast_more', $hiddenCastMembersCount, ['count' => $hiddenCastMembersCount]) }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endif
+
+                            @if (filled($item->studio))
+                                <p class="text-sm text-zinc-500">
+                                    {{ __('admin.collection.detail.studio_secondary', ['studio' => $item->studio]) }}
+                                </p>
+                            @endif
+                        </div>
+                    </section>
+                @endif
+
                 <section class="admin-media-section p-5 sm:p-6">
                     <div class="admin-media-section-header">
                         <span class="admin-icon-badge admin-icon-badge-{{ $typeBadgeClass }}">

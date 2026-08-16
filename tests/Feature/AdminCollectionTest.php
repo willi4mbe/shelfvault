@@ -160,6 +160,7 @@ class AdminCollectionTest extends TestCase
             'original_title' => 'The Matrix',
             'release_year' => 1999,
             'barcode' => '1234567890123',
+            'description' => 'A hacker discovers the truth behind his simulated reality.',
             'physical_format' => 'blu_ray',
             'edition' => 'Collector',
             'region' => 'B',
@@ -174,21 +175,31 @@ class AdminCollectionTest extends TestCase
             'studio' => 'Warner Bros.',
             'age_rating' => 'R',
             'genres' => ['Action', 'Science fiction'],
-            'cast_members' => ['Keanu Reeves', 'Carrie-Anne Moss'],
+            'cast_members' => ['Keanu Reeves', 'Carrie-Anne Moss', 'Laurence Fishburne', 'Hugo Weaving', 'Gloria Foster', 'Joe Pantoliano'],
         ]);
 
         $this->actingAs(User::query()->first())
             ->get(route('admin.collection.show', $item))
             ->assertOk()
+            ->assertSee('Film overview')
             ->assertSee('Main information')
             ->assertSee('Physical details')
             ->assertSee('Metadata')
             ->assertSee('Notes')
             ->assertSee('The Matrix')
+            ->assertSee('A hacker discovers the truth behind his simulated reality.')
+            ->assertSee('Action')
+            ->assertSee('Science fiction')
             ->assertSee('Lana Wachowski')
             ->assertSee('Warner Bros.')
             ->assertSee('136')
             ->assertSee('Keanu Reeves')
+            ->assertSee('Carrie-Anne Moss')
+            ->assertSee('Laurence Fishburne')
+            ->assertSee('Hugo Weaving')
+            ->assertSee('Gloria Foster')
+            ->assertSee('+1 more')
+            ->assertDontSee('Joe Pantoliano')
             ->assertSee('Living room')
             ->assertSee('Notes')
             ->assertSee('Private note');
