@@ -168,7 +168,7 @@
                                         {{ $item->physical_format ? $formatLabels[$item->physical_format] ?? $item->physical_format : '—' }}
                                     </td>
                                     <td class="px-4 py-4 align-top text-sm text-zinc-700">
-                                        {{ $item->condition ? $conditionLabels[$item->condition->value] ?? $item->condition->value : '—' }}
+                                        {{ $item->condition ? $conditionLabels[$item->condition->value] ?? $item->condition->value : __('admin.collection.placeholders.not_specified') }}
                                     </td>
                                     <td class="px-4 py-4 align-top text-sm text-zinc-700">
                                         {{ $item->location ?: '—' }}
@@ -245,7 +245,7 @@
                                 </div>
                                 <div>
                                     <dt class="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">{{ __('admin.collection.table.condition') }}</dt>
-                                    <dd class="mt-1 text-zinc-700">{{ $item->condition ? $conditionLabels[$item->condition->value] ?? $item->condition->value : '—' }}</dd>
+                                    <dd class="mt-1 text-zinc-700">{{ $item->condition ? $conditionLabels[$item->condition->value] ?? $item->condition->value : __('admin.collection.placeholders.not_specified') }}</dd>
                                 </div>
                                 <div>
                                     <dt class="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">{{ __('admin.collection.table.location') }}</dt>

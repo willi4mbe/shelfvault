@@ -63,7 +63,7 @@
             ['label' => __('admin.collection.fields.original_title'), 'value' => $item->original_title],
             ['label' => __('admin.collection.fields.release_year'), 'value' => $item->release_year],
             ['label' => __('admin.collection.fields.barcode'), 'value' => $item->barcode],
-            ['label' => __('admin.collection.fields.condition'), 'value' => $item->condition ? __('admin.collection.conditions.'.$item->condition->value) : null],
+            ['label' => __('admin.collection.fields.condition'), 'value' => $item->condition ? __('admin.collection.conditions.'.$item->condition->value) : __('admin.collection.placeholders.not_specified')],
             ['label' => __('admin.collection.fields.status'), 'value' => __('admin.collection.statuses.'.$item->status->value)],
             ['label' => __('admin.collection.fields.is_favorite'), 'value' => $item->is_favorite ? __('admin.collection.values.yes') : __('admin.collection.values.no')],
         ], static fn (array $row): bool => filled($row['value'])));

@@ -206,6 +206,7 @@ return [
             'all_types' => 'All types',
             'all_statuses' => 'All statuses',
             'none' => 'None',
+            'not_specified' => 'Not specified',
             'no_cover' => 'No cover yet',
         ],
         'help' => [
@@ -327,7 +328,6 @@ return [
             'type_required' => 'The type is required.',
             'title_required' => 'The title is required.',
             'status_required' => 'The status is required.',
-            'condition_required' => 'The condition is required.',
             'physical_format_required' => 'The physical format is required.',
             'string' => 'The :attribute field must be a string.',
             'integer' => 'The :attribute field must be an integer.',

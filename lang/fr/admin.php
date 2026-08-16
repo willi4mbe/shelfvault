@@ -206,6 +206,7 @@ return [
             'all_types' => 'Tous les types',
             'all_statuses' => 'Tous les statuts',
             'none' => 'Aucun',
+            'not_specified' => 'Non renseigné',
             'no_cover' => 'Aucune jaquette',
         ],
         'help' => [
@@ -327,7 +328,6 @@ return [
             'type_required' => 'Le type est obligatoire.',
             'title_required' => 'Le titre est obligatoire.',
             'status_required' => 'Le statut est obligatoire.',
-            'condition_required' => 'L’état est obligatoire.',
             'physical_format_required' => 'Le format physique est obligatoire.',
             'string' => 'Le champ :attribute doit être une chaîne de caractères.',
             'integer' => 'Le champ :attribute doit être un entier.',

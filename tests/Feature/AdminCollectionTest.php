@@ -277,9 +277,27 @@ class AdminCollectionTest extends TestCase
 
         $this->assertSame('film', $item->type->value);
         $this->assertSame('The Matrix', $item->title);
+        $this->assertSame('very_good', $item->condition->value);
         $this->assertSame(['Action', 'Science fiction'], $item->genres);
         $this->assertSame(['Keanu Reeves', 'Carrie-Anne Moss'], $item->cast_members);
         $this->assertSame(136, $item->runtime_minutes);
+    }
+
+    public function test_admin_can_create_an_item_without_condition(): void
+    {
+        $this->actingAs(User::query()->first())
+            ->post('/admin/collection', [
+                'type' => 'video_game',
+                'title' => 'Digital game',
+                'status' => 'owned',
+                'physical_format' => 'digital_copy',
+            ])
+            ->assertRedirect(route('admin.collection.index'));
+
+        $item = Item::query()->first();
+
+        $this->assertSame('Digital game', $item->title);
+        $this->assertNull($item->condition);
     }
 
     public function test_collection_list_does_not_show_year_column(): void
@@ -315,13 +333,12 @@ class AdminCollectionTest extends TestCase
         ]);
     }
 
-    public function test_collection_requires_the_type_title_status_condition_and_physical_format_fields(): void
+    public function test_collection_requires_the_type_title_status_and_physical_format_fields(): void
     {
         $cases = [
             ['field' => 'type', 'payload' => ['title' => 'Missing type', 'status' => 'owned', 'condition' => 'good', 'physical_format' => 'dvd'], 'message' => 'The type is required.'],
             ['field' => 'title', 'payload' => ['type' => 'film', 'status' => 'owned', 'condition' => 'good', 'physical_format' => 'dvd'], 'message' => 'The title is required.'],
             ['field' => 'status', 'payload' => ['type' => 'film', 'title' => 'Missing status', 'condition' => 'good', 'physical_format' => 'dvd'], 'message' => 'The status is required.'],
-            ['field' => 'condition', 'payload' => ['type' => 'film', 'title' => 'Missing condition', 'status' => 'owned', 'physical_format' => 'dvd'], 'message' => 'The condition is required.'],
             ['field' => 'physical_format', 'payload' => ['type' => 'film', 'title' => 'Missing format', 'status' => 'owned', 'condition' => 'good'], 'message' => 'The physical format is required.'],
         ];
 
@@ -334,7 +351,7 @@ class AdminCollectionTest extends TestCase
         }
     }
 
-    public function test_collection_requires_the_type_title_status_condition_and_physical_format_fields_in_french(): void
+    public function test_collection_requires_the_type_title_status_and_physical_format_fields_in_french(): void
     {
         app()->setLocale('fr');
         User::query()->first()->forceFill(['preferred_locale' => 'fr'])->save();
@@ -560,7 +577,46 @@ class AdminCollectionTest extends TestCase
         $this->assertSame('Updated title', $item->title);
         $this->assertSame(['Drama', 'Thriller'], $item->genres);
         $this->assertSame(['Actor One', 'Actor Two'], $item->cast_members);
+        $this->assertSame('good', $item->condition->value);
         $this->assertSame('loaned', $item->status->value);
+    }
+
+    public function test_admin_can_remove_an_existing_condition_when_editing(): void
+    {
+        $item = Item::factory()->film()->create([
+            'title' => 'Condition removed',
+            'condition' => 'good',
+            'physical_format' => 'dvd',
+        ]);
+
+        $this->actingAs(User::query()->first())
+            ->put(route('admin.collection.update', $item), [
+                'type' => 'film',
+                'title' => 'Condition removed',
+                'status' => 'owned',
+                'condition' => 'Aucun',
+                'physical_format' => 'dvd',
+            ])
+            ->assertRedirect(route('admin.collection.index'));
+
+        $item->refresh();
+
+        $this->assertNull($item->condition);
+    }
+
+    public function test_item_detail_handles_an_unspecified_condition(): void
+    {
+        $item = Item::factory()->film()->create([
+            'title' => 'No condition detail',
+            'condition' => null,
+            'physical_format' => 'dvd',
+        ]);
+
+        $this->actingAs(User::query()->first())
+            ->get(route('admin.collection.show', $item))
+            ->assertOk()
+            ->assertSee('Condition')
+            ->assertSee(__('admin.collection.placeholders.not_specified'));
     }
 
     public function test_admin_can_change_type_without_losing_an_existing_cover(): void

@@ -17,6 +17,19 @@ class ItemUpsertRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $condition = $this->nullableString($this->input('condition'));
+
+        if ($condition !== null && in_array(Str::lower($condition), ['none', 'aucun'], true)) {
+            $condition = null;
+        }
+
+        $this->merge([
+            'condition' => $condition,
+        ]);
+    }
+
     /**
      * @return array<string, array<int, mixed>>
      */
@@ -33,7 +46,7 @@ class ItemUpsertRequest extends FormRequest
             'physical_format' => ['required', 'string', 'max:64', Rule::in($this->physicalFormatValues())],
             'edition' => ['nullable', 'string', 'max:120'],
             'region' => ['nullable', 'string', 'max:64'],
-            'condition' => ['required', Rule::enum(ItemCondition::class)],
+            'condition' => ['nullable', Rule::enum(ItemCondition::class)],
             'location' => ['nullable', 'string', 'max:120'],
             'status' => ['required', Rule::enum(ItemStatus::class)],
             'is_favorite' => ['nullable', 'boolean'],
@@ -96,7 +109,6 @@ class ItemUpsertRequest extends FormRequest
             'type.required' => __('admin.collection.validation.type_required'),
             'title.required' => __('admin.collection.validation.title_required'),
             'status.required' => __('admin.collection.validation.status_required'),
-            'condition.required' => __('admin.collection.validation.condition_required'),
             'physical_format.required' => __('admin.collection.validation.physical_format_required'),
             'string' => __('admin.collection.validation.string'),
             'integer' => __('admin.collection.validation.integer'),
@@ -175,7 +187,7 @@ class ItemUpsertRequest extends FormRequest
             'physical_format' => $this->nullableString($validated['physical_format'] ?? null),
             'edition' => $this->nullableString($validated['edition'] ?? null),
             'region' => $this->nullableString($validated['region'] ?? null),
-            'condition' => $validated['condition'] ?? null,
+            'condition' => $this->nullableString($validated['condition'] ?? null),
             'location' => $this->nullableString($validated['location'] ?? null),
             'status' => $validated['status'],
             'is_favorite' => (bool) ($validated['is_favorite'] ?? false),
