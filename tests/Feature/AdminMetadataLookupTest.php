@@ -45,6 +45,9 @@ class AdminMetadataLookupTest extends TestCase
             'barcode.providers' => [],
             'services.tmdb.api_key' => '',
             'services.tmdb.bearer_token' => '',
+            'services.igdb.client_id' => '',
+            'services.igdb.client_secret' => '',
+            'services.igdb.access_token' => '',
         ]);
 
         Storage::fake('public');
@@ -116,11 +119,24 @@ class AdminMetadataLookupTest extends TestCase
         $this->actingAs(User::query()->first())
             ->postJson(route('admin.collection.metadata.search'), [
                 'mode' => 'title',
-                'type' => 'video_game',
-                'title' => 'The Matrix',
+                'type' => 'board_game',
+                'title' => 'Catan',
             ])
             ->assertStatus(422)
             ->assertJsonPath('message', __('admin.collection.lookup.automatic_search_not_available_for_this_type'));
+    }
+
+    public function test_igdb_search_returns_a_clear_message_when_igdb_is_not_configured(): void
+    {
+        $this->actingAs(User::query()->first())
+            ->postJson(route('admin.collection.metadata.search'), [
+                'mode' => 'title',
+                'type' => 'video_game',
+                'title' => 'Super Mario Galaxy',
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'no_source')
+            ->assertJsonPath('message', __('admin.collection.metadata.igdb_not_configured'));
     }
 
     public function test_tmdb_search_returns_normalized_candidates_when_tmdb_is_configured(): void
@@ -204,6 +220,75 @@ class AdminMetadataLookupTest extends TestCase
         });
     }
 
+    public function test_igdb_search_returns_normalized_video_game_candidates_when_configured(): void
+    {
+        config([
+            'services.igdb.client_id' => 'igdb-client',
+            'services.igdb.access_token' => 'igdb-token',
+        ]);
+
+        Http::fake([
+            'https://api.igdb.com/v4/games' => Http::response([
+                [
+                    'id' => 1234,
+                    'name' => 'Super Mario Galaxy',
+                    'summary' => 'Mario explores space.',
+                    'first_release_date' => 1194393600,
+                    'cover' => [
+                        'url' => '//images.igdb.com/igdb/image/upload/t_thumb/co1234.jpg',
+                    ],
+                    'platforms' => [
+                        ['name' => 'Wii'],
+                    ],
+                    'involved_companies' => [
+                        [
+                            'developer' => true,
+                            'publisher' => false,
+                            'company' => ['name' => 'Nintendo EAD Tokyo'],
+                        ],
+                        [
+                            'developer' => false,
+                            'publisher' => true,
+                            'company' => ['name' => 'Nintendo'],
+                        ],
+                    ],
+                    'genres' => [
+                        ['name' => 'Platform'],
+                        ['name' => 'Adventure'],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $this->actingAs(User::query()->first())
+            ->postJson(route('admin.collection.metadata.search'), [
+                'mode' => 'title',
+                'type' => 'video_game',
+                'title' => 'Super Mario Galaxy',
+                'release_year' => 2007,
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'found')
+            ->assertJsonPath('source', 'igdb')
+            ->assertJsonPath('data.candidates.0.source', 'igdb')
+            ->assertJsonPath('data.candidates.0.igdb_id', 1234)
+            ->assertJsonPath('data.candidates.0.title', 'Super Mario Galaxy')
+            ->assertJsonPath('data.candidates.0.release_year', 2007)
+            ->assertJsonPath('data.candidates.0.platforms', ['Wii'])
+            ->assertJsonPath('data.candidates.0.developer', 'Nintendo EAD Tokyo')
+            ->assertJsonPath('data.candidates.0.publisher', 'Nintendo')
+            ->assertJsonPath('data.candidates.0.genres', ['Platform', 'Adventure'])
+            ->assertJsonPath('data.candidates.0.poster_url', 'https://images.igdb.com/igdb/image/upload/t_cover_big/co1234.jpg');
+
+        Http::assertSent(function ($request): bool {
+            return $request->url() === 'https://api.igdb.com/v4/games'
+                && $request->hasHeader('Client-ID', 'igdb-client')
+                && $request->hasHeader('Authorization', 'Bearer igdb-token')
+                && str_contains($request->body(), 'search "Super Mario Galaxy";')
+                && str_contains($request->body(), 'where first_release_date >=');
+        });
+    }
+
     public function test_tmdb_movie_mapping_limits_cast_members_to_the_first_five_actors(): void
     {
         $mapped = (new MetadataImportMapper())->mapTmdbMovie(
@@ -284,6 +369,23 @@ class AdminMetadataLookupTest extends TestCase
         );
 
         $this->assertSame('R', $mapped['age_rating']);
+    }
+
+    public function test_igdb_game_mapping_reads_video_game_metadata(): void
+    {
+        $mapped = (new MetadataImportMapper())->mapIgdbGame($this->igdbGamePayload());
+
+        $this->assertSame('video_game', $mapped['type']);
+        $this->assertSame('Super Mario Galaxy', $mapped['title']);
+        $this->assertSame('Mario explores space.', $mapped['description']);
+        $this->assertSame(2007, $mapped['release_year']);
+        $this->assertSame(['Platform', 'Adventure'], $mapped['genres']);
+        $this->assertSame('Wii, Wii U', $mapped['platform']);
+        $this->assertSame('Nintendo EAD Tokyo', $mapped['developer']);
+        $this->assertSame('Nintendo', $mapped['publisher']);
+        $this->assertSame(['Single player'], $mapped['modes']);
+        $this->assertSame('PEGI 3', $mapped['age_rating']);
+        $this->assertSame(1234, $mapped['external_igdb_id']);
     }
 
     public function test_tmdb_import_maps_film_metadata_and_imports_a_poster_locally(): void
@@ -436,6 +538,49 @@ class AdminMetadataLookupTest extends TestCase
             ->assertJsonPath('warnings.0', __('admin.collection.metadata.poster_import_failed'));
     }
 
+    public function test_igdb_import_maps_video_game_metadata_and_imports_a_cover_locally(): void
+    {
+        config([
+            'services.igdb.client_id' => 'igdb-client',
+            'services.igdb.access_token' => 'igdb-token',
+        ]);
+
+        Http::fake([
+            'https://api.igdb.com/v4/games' => Http::response([$this->igdbGamePayload()], 200),
+            'https://images.igdb.com/igdb/image/upload/t_cover_big/co1234.jpg' => Http::response('cover-bytes', 200, [
+                'Content-Type' => 'image/jpeg',
+            ]),
+        ]);
+
+        $response = $this->actingAs(User::query()->first())
+            ->postJson(route('admin.collection.metadata.import'), [
+                'source' => 'igdb',
+                'igdb_id' => 1234,
+            ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('status', 'found')
+            ->assertJsonPath('source', 'igdb')
+            ->assertJsonPath('data.type', 'video_game')
+            ->assertJsonPath('data.title', 'Super Mario Galaxy')
+            ->assertJsonPath('data.release_year', 2007)
+            ->assertJsonPath('data.platform', 'Wii, Wii U')
+            ->assertJsonPath('data.developer', 'Nintendo EAD Tokyo')
+            ->assertJsonPath('data.publisher', 'Nintendo')
+            ->assertJsonPath('data.genres', ['Platform', 'Adventure'])
+            ->assertJsonPath('data.modes', ['Single player'])
+            ->assertJsonPath('data.external_igdb_id', 1234)
+            ->assertJsonMissingPath('data.external_tmdb_id')
+            ->assertJsonMissingPath('data.barcode');
+
+        $coverPath = $response->json('data.cover_path');
+
+        $this->assertIsString($coverPath);
+        $this->assertTrue(str_starts_with($coverPath, 'covers/'));
+        Storage::disk('public')->assertExists($coverPath);
+    }
+
     public function test_barcode_search_reports_no_barcode_metadata_source_and_does_not_fail_for_a_known_code(): void
     {
         $this->actingAs(User::query()->first())
@@ -513,6 +658,53 @@ class AdminMetadataLookupTest extends TestCase
             'original_title' => 'The Matrix',
             'overview' => 'A computer hacker learns about the true nature of reality.',
             'release_date' => '1999-03-31',
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function igdbGamePayload(): array
+    {
+        return [
+            'id' => 1234,
+            'name' => 'Super Mario Galaxy',
+            'summary' => 'Mario explores space.',
+            'first_release_date' => 1194393600,
+            'cover' => [
+                'url' => '//images.igdb.com/igdb/image/upload/t_thumb/co1234.jpg',
+            ],
+            'platforms' => [
+                ['name' => 'Wii'],
+                ['name' => 'Wii U'],
+            ],
+            'involved_companies' => [
+                [
+                    'developer' => true,
+                    'publisher' => false,
+                    'company' => ['name' => 'Nintendo EAD Tokyo'],
+                ],
+                [
+                    'developer' => false,
+                    'publisher' => true,
+                    'company' => ['name' => 'Nintendo'],
+                ],
+            ],
+            'genres' => [
+                ['name' => 'Platform'],
+                ['name' => 'Adventure'],
+            ],
+            'game_modes' => [
+                ['name' => 'Single player'],
+            ],
+            'age_ratings' => [
+                [
+                    'rating_category' => [
+                        'rating' => '3',
+                        'organization' => ['name' => 'PEGI'],
+                    ],
+                ],
+            ],
         ];
     }
 }

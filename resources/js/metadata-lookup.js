@@ -300,7 +300,7 @@ export function metadataLookup(config = {}) {
                 return;
             }
 
-            if (type !== 'film') {
+            if (!['film', 'video_game'].includes(type)) {
                 this.titleMessage = this.labels.automaticSearchNotAvailableForThisType;
                 return;
             }
@@ -345,7 +345,7 @@ export function metadataLookup(config = {}) {
                     ?? (candidates.length > 0 ? this.labels.resultsFound : this.labels.noResultFound);
 
                 this.titleMessage = message;
-                this.openResults('title', payload?.source ?? 'tmdb', candidates, message);
+                this.openResults('title', payload?.source ?? (type === 'video_game' ? 'igdb' : 'tmdb'), candidates, message);
             } catch (error) {
                 this.titleBusy = false;
                 this.titleMessage = this.labels.searchError;
@@ -427,7 +427,7 @@ export function metadataLookup(config = {}) {
                 return;
             }
 
-            const candidateId = candidate.tmdb_id ?? candidate.barcode ?? candidate.id ?? null;
+            const candidateId = candidate.tmdb_id ?? candidate.igdb_id ?? candidate.barcode ?? candidate.id ?? null;
             this.activeCandidateId = candidateId;
             this.importCandidate(candidate);
         },
@@ -451,12 +451,17 @@ export function metadataLookup(config = {}) {
                     barcode: candidate?.barcode ?? this.currentFieldValue('barcode'),
                     type: this.currentTypeValue(),
                 }
-                : {
+                : source === 'igdb'
+                    ? {
+                        source: 'igdb',
+                        igdb_id: candidate?.igdb_id ?? candidate?.id ?? null,
+                    }
+                    : {
                     source: 'tmdb',
                     tmdb_id: candidate?.tmdb_id ?? candidate?.id ?? null,
                 };
 
-            if (!payload.tmdb_id && !payload.barcode) {
+            if (!payload.tmdb_id && !payload.igdb_id && !payload.barcode) {
                 return;
             }
 
@@ -488,6 +493,7 @@ export function metadataLookup(config = {}) {
                     forceTitle: scope === 'title' || source === 'tmdb',
                     forceBarcode: scope === 'barcode',
                     forceFilmFields: source === 'tmdb',
+                    forceVideoGameFields: source === 'igdb',
                 });
                 this.closeResults();
 
@@ -501,32 +507,33 @@ export function metadataLookup(config = {}) {
                 this.titleMessage = this.labels.searchError;
             }
         },
-        applyImportedMetadata(data, { forceTitle = false, forceBarcode = false, forceFilmFields = false } = {}) {
+        applyImportedMetadata(data, { forceTitle = false, forceBarcode = false, forceFilmFields = false, forceVideoGameFields = false } = {}) {
             if (!data || typeof data !== 'object') {
                 return;
             }
 
             if (data.type) {
-                this.setFieldValue('type', data.type, { force: forceFilmFields || !this.currentTypeValue(), dispatchChange: true });
+                this.setFieldValue('type', data.type, { force: forceFilmFields || forceVideoGameFields || !this.currentTypeValue(), dispatchChange: true });
                 this.syncPhysicalFormat();
             }
 
-            this.setFieldValue('title', data.title, { force: forceTitle || forceFilmFields });
+            this.setFieldValue('title', data.title, { force: forceTitle || forceFilmFields || forceVideoGameFields });
             this.setFieldValue('original_title', data.original_title, { force: forceFilmFields });
-            this.setFieldValue('description', data.description, { force: forceFilmFields });
-            this.setFieldValue('release_year', data.release_year, { force: forceFilmFields });
-            this.setFieldValue('genres', data.genres, { force: forceFilmFields });
+            this.setFieldValue('description', data.description, { force: forceFilmFields || forceVideoGameFields });
+            this.setFieldValue('release_year', data.release_year, { force: forceFilmFields || forceVideoGameFields });
+            this.setFieldValue('genres', data.genres, { force: forceFilmFields || forceVideoGameFields });
             this.setFieldValue('runtime_minutes', data.runtime_minutes, { force: forceFilmFields });
             this.setFieldValue('studio', data.studio, { force: forceFilmFields });
             this.setFieldValue('cast_members', data.cast_members, { force: forceFilmFields });
             this.setFieldValue('director', data.director, { force: forceFilmFields });
-            this.setFieldValue('age_rating', data.age_rating, { force: forceFilmFields });
+            this.setFieldValue('age_rating', data.age_rating, { force: forceFilmFields || forceVideoGameFields });
             this.setFieldValue('external_tmdb_id', data.external_tmdb_id, { force: true });
             this.setFieldValue('barcode', data.barcode, { force: forceBarcode });
-            this.setFieldValue('platform', data.platform);
-            this.setFieldValue('developer', data.developer);
-            this.setFieldValue('publisher', data.publisher);
-            this.setFieldValue('modes', data.modes);
+            this.setFieldValue('platform', data.platform, { force: forceVideoGameFields });
+            this.setFieldValue('developer', data.developer, { force: forceVideoGameFields });
+            this.setFieldValue('publisher', data.publisher, { force: forceVideoGameFields });
+            this.setFieldValue('modes', data.modes, { force: forceVideoGameFields });
+            this.setFieldValue('external_igdb_id', data.external_igdb_id, { force: true });
             this.setFieldValue('min_players', data.min_players);
             this.setFieldValue('max_players', data.max_players);
             this.setFieldValue('play_time_minutes', data.play_time_minutes);

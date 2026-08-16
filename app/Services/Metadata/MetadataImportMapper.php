@@ -68,6 +68,51 @@ class MetadataImportMapper
         ], static fn (mixed $value): bool => $value !== null && $value !== '');
     }
 
+    /**
+     * @param  array<string, mixed>  $game
+     * @return array<string, mixed>
+     */
+    public function mapIgdbSearchCandidate(array $game): array
+    {
+        return array_filter([
+            'source' => 'igdb',
+            'igdb_id' => Arr::get($game, 'id'),
+            'id' => Arr::get($game, 'id'),
+            'title' => Arr::get($game, 'name'),
+            'release_year' => $this->releaseYearFromTimestamp(Arr::get($game, 'first_release_date')),
+            'overview' => Arr::get($game, 'summary') ?: Arr::get($game, 'storyline'),
+            'poster_url' => $this->igdbCoverUrl(Arr::get($game, 'cover.url')),
+            'platforms' => $this->namesFromNestedList(Arr::get($game, 'platforms', [])),
+            'developer' => $this->companyName($game, 'developer'),
+            'publisher' => $this->companyName($game, 'publisher'),
+            'genres' => $this->namesFromNestedList(Arr::get($game, 'genres', [])),
+        ], static fn (mixed $value): bool => $value !== null && $value !== '' && $value !== []);
+    }
+
+    /**
+     * @param  array<string, mixed>  $game
+     * @return array<string, mixed>
+     */
+    public function mapIgdbGame(array $game): array
+    {
+        $title = Arr::get($game, 'name');
+
+        return array_filter([
+            'type' => 'video_game',
+            'title' => $title,
+            'description' => Arr::get($game, 'summary') ?: Arr::get($game, 'storyline'),
+            'release_year' => $this->releaseYearFromTimestamp(Arr::get($game, 'first_release_date')),
+            'genres' => $this->namesFromNestedList(Arr::get($game, 'genres', [])),
+            'platform' => $this->textFromList($this->namesFromNestedList(Arr::get($game, 'platforms', []))),
+            'developer' => $this->companyName($game, 'developer'),
+            'publisher' => $this->companyName($game, 'publisher'),
+            'modes' => $this->namesFromNestedList(Arr::get($game, 'game_modes', [])),
+            'age_rating' => $this->igdbAgeRating(Arr::get($game, 'age_ratings', [])),
+            'external_igdb_id' => Arr::get($game, 'id'),
+            'sort_title' => $this->sortTitle(is_string($title) ? $title : null),
+        ], static fn (mixed $value): bool => $value !== null && $value !== '' && $value !== []);
+    }
+
     private function releaseYear(?string $releaseDate): ?int
     {
         if (! is_string($releaseDate) || trim($releaseDate) === '') {
@@ -79,6 +124,96 @@ class MetadataImportMapper
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    private function releaseYearFromTimestamp(mixed $timestamp): ?int
+    {
+        if (! is_numeric($timestamp)) {
+            return null;
+        }
+
+        try {
+            return Carbon::createFromTimestamp((int) $timestamp)->year;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function igdbCoverUrl(mixed $url): ?string
+    {
+        if (! is_string($url) || trim($url) === '') {
+            return null;
+        }
+
+        $normalized = str_starts_with($url, '//') ? 'https:'.$url : $url;
+        $size = trim((string) config('services.igdb.image_size', 'cover_big'));
+
+        return preg_replace('/\/t_[^\/]+\//', '/t_'.$size.'/', $normalized) ?: $normalized;
+    }
+
+    /**
+     * @param  array<int, mixed>  $items
+     * @return array<int, string>
+     */
+    private function namesFromNestedList(array $items): array
+    {
+        return collect($items)
+            ->map(fn (mixed $item): ?string => is_array($item) ? Arr::get($item, 'name') : null)
+            ->filter(fn (mixed $name): bool => is_string($name) && trim($name) !== '')
+            ->map(fn (string $name): string => trim($name))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<int, string>  $values
+     */
+    private function textFromList(array $values): ?string
+    {
+        return $values === [] ? null : implode(', ', $values);
+    }
+
+    /**
+     * @param  array<string, mixed>  $game
+     */
+    private function companyName(array $game, string $role): ?string
+    {
+        $companies = Arr::get($game, 'involved_companies', []);
+
+        foreach ($companies as $entry) {
+            if (! is_array($entry) || ! (bool) Arr::get($entry, $role, false)) {
+                continue;
+            }
+
+            $name = Arr::get($entry, 'company.name');
+
+            if (is_string($name) && trim($name) !== '') {
+                return trim($name);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<int, mixed>  $ratings
+     */
+    private function igdbAgeRating(array $ratings): ?string
+    {
+        foreach ($ratings as $rating) {
+            if (! is_array($rating)) {
+                continue;
+            }
+
+            $category = Arr::get($rating, 'rating_category.rating');
+            $organization = Arr::get($rating, 'rating_category.organization.name');
+
+            if (is_string($category) && trim($category) !== '') {
+                return trim((is_string($organization) && trim($organization) !== '' ? $organization.' ' : '').$category);
+            }
+        }
+
+        return null;
     }
 
     /**

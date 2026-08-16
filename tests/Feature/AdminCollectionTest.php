@@ -459,12 +459,12 @@ class AdminCollectionTest extends TestCase
         $this->actingAs(User::query()->first())
             ->get('/admin/collection/create')
             ->assertOk()
-            ->assertSee(__('admin.collection.metadata.tmdb_search'))
-            ->assertSee(__('admin.collection.metadata.search_movie_by_title'))
+            ->assertSee(__('admin.collection.metadata.title_search'))
+            ->assertSee(__('admin.collection.metadata.search_by_title_help'))
             ->assertSee(__('admin.collection.lookup.search'))
             ->assertSee(__('admin.collection.metadata.physical_fields_manual'))
             ->assertSeeInOrder([
-                __('admin.collection.metadata.tmdb_search'),
+                __('admin.collection.metadata.title_search'),
                 __('admin.collection.fields.cover_image'),
                 __('admin.collection.detail.sections.main'),
                 __('admin.collection.detail.sections.physical'),
@@ -480,6 +480,7 @@ class AdminCollectionTest extends TestCase
             ->assertSee('type="button"', false)
             ->assertSee('@click="searchTitle()"', false)
             ->assertSee('name="external_tmdb_id"', false)
+            ->assertSee('name="external_igdb_id"', false)
             ->assertDontSee('@click="searchBarcode({ force: true })"', false)
             ->assertDontSee('@click="openScanner()"', false)
             ->assertDontSee(__('admin.collection.scanner.scan'))
@@ -494,12 +495,12 @@ class AdminCollectionTest extends TestCase
         $this->actingAs(User::query()->first())
             ->get("/admin/collection/{$item->id}/edit")
             ->assertOk()
-            ->assertSee(__('admin.collection.metadata.tmdb_search'))
-            ->assertSee(__('admin.collection.metadata.search_movie_by_title'))
+            ->assertSee(__('admin.collection.metadata.title_search'))
+            ->assertSee(__('admin.collection.metadata.search_by_title_help'))
             ->assertSee(__('admin.collection.lookup.search'))
             ->assertSee(__('admin.collection.metadata.physical_fields_manual'))
             ->assertSeeInOrder([
-                __('admin.collection.metadata.tmdb_search'),
+                __('admin.collection.metadata.title_search'),
                 __('admin.collection.fields.cover_image'),
             ])
             ->assertSeeInOrder([
@@ -511,6 +512,7 @@ class AdminCollectionTest extends TestCase
             ->assertSee('type="button"', false)
             ->assertSee('@click="searchTitle()"', false)
             ->assertSee('name="external_tmdb_id"', false)
+            ->assertSee('name="external_igdb_id"', false)
             ->assertDontSee('@click="searchBarcode({ force: true })"', false)
             ->assertDontSee('@click="openScanner()"', false)
             ->assertDontSee(__('admin.collection.scanner.scan'))
@@ -530,8 +532,8 @@ class AdminCollectionTest extends TestCase
         $this->actingAs(User::query()->first())
             ->get('/admin/collection/create')
             ->assertOk()
-            ->assertSee(__('admin.collection.metadata.tmdb_search'))
-            ->assertSee(__('admin.collection.metadata.search_movie_by_title'))
+            ->assertSee(__('admin.collection.metadata.title_search'))
+            ->assertSee(__('admin.collection.metadata.search_by_title_help'))
             ->assertSee(__('admin.collection.lookup.search'))
             ->assertSee(__('admin.collection.fields.barcode'))
             ->assertDontSee(__('admin.collection.scanner.scan'))
@@ -1021,8 +1023,8 @@ class AdminCollectionTest extends TestCase
             ->assertSee('Choisissez un type')
             ->assertSee('Jaquette')
             ->assertSee('JPG, PNG ou WEBP — max. 4 Mo.')
-            ->assertSee('Recherche TMDb')
-            ->assertSee('Recherchez un film par titre.')
+            ->assertSee('Recherche de métadonnées')
+            ->assertSee('Recherchez par titre pour les films et les jeux vidéo.')
             ->assertSee('Champs physiques à compléter manuellement.')
             ->assertSee('Rechercher')
             ->assertDontSee('Rechercher sur TMDb')
@@ -1049,8 +1051,8 @@ class AdminCollectionTest extends TestCase
             ->assertSee('Choose a type')
             ->assertSee('Cover')
             ->assertSee('JPG, PNG or WEBP - max. 4 MB.')
-            ->assertSee('TMDb search')
-            ->assertSee('Search for a movie by title.')
+            ->assertSee('Metadata search')
+            ->assertSee('Search by title for films and video games.')
             ->assertSee('Physical details to complete manually.')
             ->assertSee('Search')
             ->assertDontSee('Search on TMDb')
@@ -1074,8 +1076,8 @@ class AdminCollectionTest extends TestCase
             ->assertSee('Cancel')
             ->assertSee('Film')
             ->assertSee('Remove cover')
-            ->assertSee('TMDb search')
-            ->assertSee('Search for a movie by title.')
+            ->assertSee('Metadata search')
+            ->assertSee('Search by title for films and video games.')
             ->assertSee('Search')
             ->assertDontSee('Search on TMDb')
             ->assertDontSee('Search by barcode')

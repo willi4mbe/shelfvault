@@ -27,7 +27,12 @@ const fields = [
     makeField('age_rating'),
     makeField('age_rating'),
     makeField('external_tmdb_id'),
+    makeField('external_igdb_id'),
     makeField('cover_path'),
+    makeField('platform'),
+    makeField('developer'),
+    makeField('publisher'),
+    makeField('modes'),
 ];
 
 const form = {
@@ -80,3 +85,29 @@ assert.equal(values('cast_members')[0], 'Keanu Reeves, Laurence Fishburne');
 assert.equal(values('cover_path')[0], 'covers/matrix.jpg');
 assert.equal(component.coverPath, 'covers/matrix.jpg');
 assert.equal(component.coverPreviewUrl, 'http://localhost:8000/storage/covers/matrix.jpg');
+
+component.applyImportedMetadata({
+    type: 'video_game',
+    title: 'Super Mario Galaxy',
+    description: 'Mario explores space.',
+    release_year: 2007,
+    genres: ['Platform', 'Adventure'],
+    platform: 'Wii',
+    developer: 'Nintendo EAD Tokyo',
+    publisher: 'Nintendo',
+    modes: ['Single player'],
+    age_rating: 'PEGI 3',
+    external_igdb_id: 1234,
+}, {
+    forceTitle: true,
+    forceVideoGameFields: true,
+});
+
+assert.equal(values('title')[0], 'Super Mario Galaxy');
+assert.equal(values('description')[0], 'Mario explores space.');
+assert.deepEqual(values('genres'), ['Platform, Adventure', 'Platform, Adventure']);
+assert.equal(values('platform')[0], 'Wii');
+assert.equal(values('developer')[0], 'Nintendo EAD Tokyo');
+assert.equal(values('publisher')[0], 'Nintendo');
+assert.equal(values('modes')[0], 'Single player');
+assert.equal(values('external_igdb_id')[0], '1234');
