@@ -18,6 +18,7 @@ const fields = [
     makeField('title'),
     makeField('original_title'),
     makeField('description'),
+    makeField('description_original'),
     makeField('release_year'),
     makeField('genres'),
     makeField('genres'),
@@ -90,6 +91,7 @@ component.applyImportedMetadata({
     type: 'video_game',
     title: 'Super Mario Galaxy',
     description: 'Mario explores space.',
+    description_original: 'Mario explores space in English.',
     release_year: 2007,
     genres: ['Platform', 'Adventure'],
     platform: 'Wii',
@@ -105,6 +107,7 @@ component.applyImportedMetadata({
 
 assert.equal(values('title')[0], 'Super Mario Galaxy');
 assert.equal(values('description')[0], 'Mario explores space.');
+assert.equal(values('description_original')[0], 'Mario explores space in English.');
 assert.deepEqual(values('genres'), ['Platform, Adventure', 'Platform, Adventure']);
 assert.equal(values('platform')[0], 'Wii');
 assert.equal(values('developer')[0], 'Nintendo EAD Tokyo');

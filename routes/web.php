@@ -5,6 +5,7 @@ use App\Http\Controllers\AdminBarcodeLookupController;
 use App\Http\Controllers\AdminMetadataLookupController;
 use App\Http\Controllers\AdminCollectionController;
 use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\AdminSettingsController;
 use App\Http\Controllers\InstallController;
 use Illuminate\Support\Facades\Route;
 
@@ -26,6 +27,7 @@ Route::post('/admin/login', [AdminAuthController::class, 'store'])->name('admin.
 Route::post('/admin/logout', [AdminAuthController::class, 'destroy'])->name('admin.logout');
 Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin');
 Route::prefix('admin')->name('admin.')->group(function (): void {
+    Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings.index');
     Route::get('/collection', [AdminCollectionController::class, 'index'])->name('collection.index');
     Route::get('/collection/create', [AdminCollectionController::class, 'create'])->name('collection.create');
     Route::post('/collection/barcode-lookup', AdminBarcodeLookupController::class)->name('collection.barcode-lookup');

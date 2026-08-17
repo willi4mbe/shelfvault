@@ -11,6 +11,7 @@ class AdminNavigation
     {
         $currentRouteName ??= '';
         $collectionActive = str_starts_with($currentRouteName, 'admin.collection.');
+        $settingsActive = str_starts_with($currentRouteName, 'admin.settings.');
 
         return array_values(array_filter([
             [
@@ -33,7 +34,14 @@ class AdminNavigation
             ['key' => 'video_games', 'route' => '#', 'visible' => false, 'interactive' => false, 'icon' => 'video_games'],
             ['key' => 'board_games', 'route' => '#', 'visible' => false, 'interactive' => false, 'icon' => 'board_games'],
             ['key' => 'loans', 'route' => '#', 'visible' => true, 'interactive' => false, 'icon' => 'loans'],
-            ['key' => 'settings', 'route' => '#', 'visible' => true, 'interactive' => false, 'icon' => 'settings'],
+            [
+                'key' => 'settings',
+                'route' => route('admin.settings.index'),
+                'visible' => true,
+                'active' => $settingsActive,
+                'interactive' => true,
+                'icon' => 'settings',
+            ],
             ['key' => 'logout', 'route' => '#', 'visible' => true, 'interactive' => true, 'icon' => 'logout', 'logout' => true],
         ], static fn (array $item): bool => $item['visible']));
     }

@@ -68,7 +68,7 @@ class AdminMetadataLookupController extends Controller
 
         $result = match ($validated['source']) {
             'barcode' => $this->importBarcodeResult($validated, $barcodeLookupService),
-            'igdb' => $igdbVideoGameSearchService->importGame((int) ($validated['igdb_id'] ?? 0)),
+            'igdb' => $igdbVideoGameSearchService->importGame((int) ($validated['igdb_id'] ?? 0), app()->getLocale()),
             default => $tmdbMovieSearchService->importMovie((int) ($validated['tmdb_id'] ?? 0)),
         };
 

@@ -55,7 +55,7 @@ class AdminDashboardController extends Controller
         return [
             ['key' => 'collection', 'icon' => 'collection', 'note' => 'collection_note', 'soon' => true, 'tone' => 'blue'],
             ['key' => 'loans', 'icon' => 'loans', 'note' => 'loans_note', 'soon' => true, 'tone' => 'violet'],
-            ['key' => 'settings', 'icon' => 'settings', 'note' => 'settings_note', 'soon' => true, 'tone' => 'emerald'],
+            ['key' => 'settings', 'icon' => 'settings', 'note' => 'settings_note', 'soon' => false, 'tone' => 'emerald'],
         ];
     }
 
