@@ -69,6 +69,80 @@ class MetadataImportMapper
     }
 
     /**
+     * @param  array<string, mixed>  $candidate
+     * @return array<string, mixed>
+     */
+    public function mapTvSearchCandidate(array $candidate, string $imageBaseUrl): array
+    {
+        $posterPath = Arr::get($candidate, 'poster_path');
+
+        return array_filter([
+            'source' => 'tmdb',
+            'type' => 'tv_series',
+            'tmdb_id' => Arr::get($candidate, 'id'),
+            'id' => Arr::get($candidate, 'id'),
+            'title' => Arr::get($candidate, 'name'),
+            'original_title' => Arr::get($candidate, 'original_name'),
+            'release_year' => $this->releaseYear(Arr::get($candidate, 'first_air_date')),
+            'overview' => Arr::get($candidate, 'overview'),
+            'poster_path' => $posterPath,
+            'poster_url' => $posterPath ? rtrim($imageBaseUrl, '/').'/'.ltrim($posterPath, '/') : null,
+            'vote_average' => Arr::get($candidate, 'vote_average'),
+        ], static fn (mixed $value): bool => $value !== null && $value !== '');
+    }
+
+    /**
+     * @param  array<string, mixed>  $series
+     * @param  array<string, mixed>  $credits
+     * @param  array<string, mixed>  $contentRatings
+     * @return array<string, mixed>
+     */
+    public function mapTmdbTvSeries(array $series, array $credits = [], array $contentRatings = []): array
+    {
+        $title = Arr::get($series, 'name');
+        $genres = collect(Arr::get($series, 'genres', []))
+            ->pluck('name')
+            ->filter()
+            ->values()
+            ->all();
+        $castMembers = collect(Arr::get($credits, 'cast', []))
+            ->pluck('name')
+            ->filter()
+            ->take(5)
+            ->values()
+            ->all();
+        $creatorNames = collect(Arr::get($series, 'created_by', []))
+            ->pluck('name')
+            ->filter()
+            ->values()
+            ->all();
+        $networkNames = collect(Arr::get($series, 'networks', []))
+            ->pluck('name')
+            ->filter()
+            ->values()
+            ->all();
+
+        return array_filter([
+            'type' => 'tv_series',
+            'title' => $title,
+            'original_title' => Arr::get($series, 'original_name'),
+            'description' => Arr::get($series, 'overview'),
+            'release_year' => $this->releaseYear(Arr::get($series, 'first_air_date')),
+            'end_year' => $this->tvEndYear($series),
+            'genres' => $genres !== [] ? $genres : null,
+            'season_count' => Arr::get($series, 'number_of_seasons'),
+            'episode_count' => Arr::get($series, 'number_of_episodes'),
+            'runtime_minutes' => $this->firstRuntime(Arr::get($series, 'episode_run_time', [])),
+            'showrunner' => $this->textFromList($creatorNames),
+            'network' => $this->textFromList($networkNames),
+            'cast_members' => $castMembers !== [] ? $castMembers : null,
+            'age_rating' => $this->contentRating($contentRatings),
+            'external_tmdb_id' => Arr::get($series, 'id'),
+            'sort_title' => $this->sortTitle(is_string($title) ? $title : null),
+        ], static fn (mixed $value): bool => $value !== null && $value !== '' && $value !== []);
+    }
+
+    /**
      * @param  array<string, mixed>  $game
      * @return array<string, mixed>
      */
@@ -137,6 +211,35 @@ class MetadataImportMapper
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $series
+     */
+    private function tvEndYear(array $series): ?int
+    {
+        if ((bool) Arr::get($series, 'in_production', false)) {
+            return null;
+        }
+
+        return $this->releaseYear(Arr::get($series, 'last_air_date'));
+    }
+
+    /**
+     */
+    private function firstRuntime(mixed $runtimes): ?int
+    {
+        if (! is_array($runtimes)) {
+            return null;
+        }
+
+        foreach ($runtimes as $runtime) {
+            if (is_numeric($runtime) && (int) $runtime > 0) {
+                return (int) $runtime;
+            }
+        }
+
+        return null;
     }
 
     private function igdbCoverUrl(mixed $url): ?string
@@ -261,6 +364,45 @@ class MetadataImportMapper
 
             if ($certification !== null) {
                 return $certification;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $contentRatings
+     */
+    private function contentRating(array $contentRatings): ?string
+    {
+        $region = strtoupper((string) config('services.tmdb.region', ''));
+        $results = Arr::get($contentRatings, 'results', []);
+
+        if (! is_array($results)) {
+            return null;
+        }
+
+        if ($region !== '') {
+            foreach ($results as $entry) {
+                $regionCode = strtoupper((string) Arr::get($entry, 'iso_3166_1', ''));
+
+                if ($regionCode !== $region) {
+                    continue;
+                }
+
+                $rating = trim((string) Arr::get($entry, 'rating', ''));
+
+                if ($rating !== '') {
+                    return $rating;
+                }
+            }
+        }
+
+        foreach ($results as $entry) {
+            $rating = trim((string) Arr::get($entry, 'rating', ''));
+
+            if ($rating !== '') {
+                return $rating;
             }
         }
 

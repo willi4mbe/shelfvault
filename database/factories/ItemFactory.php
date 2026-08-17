@@ -24,6 +24,7 @@ class ItemFactory extends Factory
             'sort_title' => fake()->optional()->sentence(3),
             'description' => fake()->optional()->paragraph(),
             'release_year' => fake()->optional()->numberBetween(1950, (int) date('Y')),
+            'end_year' => null,
             'barcode' => fake()->optional()->ean13(),
             'cover_path' => fake()->optional()->imageUrl(640, 960, 'covers', true),
             'physical_format' => fake()->optional()->randomElement([
@@ -64,6 +65,7 @@ class ItemFactory extends Factory
             'studio' => fake()->company(),
             'age_rating' => fake()->randomElement(['G', 'PG', 'PG-13', 'R', '18']),
             'external_tmdb_id' => fake()->numerify('tmdb-#####'),
+            'end_year' => null,
             'season_count' => null,
             'episode_count' => null,
             'showrunner' => null,
@@ -82,30 +84,36 @@ class ItemFactory extends Factory
 
     public function tvSeries(): static
     {
-        return $this->state(fn () => [
-            'type' => ItemType::TvSeries->value,
-            'physical_format' => fake()->randomElement(['dvd', 'blu_ray', '4k_uhd', 'box_set', 'digital_copy']),
-            'runtime_minutes' => fake()->numberBetween(22, 65),
-            'director' => null,
-            'cast_members' => [fake()->name(), fake()->name()],
-            'genres' => ['drama', 'thriller'],
-            'studio' => fake()->company(),
-            'age_rating' => fake()->randomElement(['TV-PG', 'TV-14', 'TV-MA', '12', '16']),
-            'external_tmdb_id' => fake()->numerify('tmdb-tv-#####'),
-            'season_count' => fake()->numberBetween(1, 8),
-            'episode_count' => fake()->numberBetween(6, 120),
-            'showrunner' => fake()->name(),
-            'network' => fake()->company(),
-            'platform' => null,
-            'developer' => null,
-            'publisher' => null,
-            'modes' => null,
-            'external_igdb_id' => null,
-            'min_players' => null,
-            'max_players' => null,
-            'play_time_minutes' => null,
-            'designer' => null,
-        ]);
+        return $this->state(function () {
+            $startYear = fake()->numberBetween(1990, (int) date('Y'));
+
+            return [
+                'type' => ItemType::TvSeries->value,
+                'release_year' => $startYear,
+                'end_year' => fake()->optional()->numberBetween($startYear, (int) date('Y')),
+                'physical_format' => fake()->randomElement(['dvd', 'blu_ray', '4k_uhd', 'box_set', 'digital_copy']),
+                'runtime_minutes' => fake()->numberBetween(22, 65),
+                'director' => null,
+                'cast_members' => [fake()->name(), fake()->name()],
+                'genres' => ['drama', 'thriller'],
+                'studio' => fake()->company(),
+                'age_rating' => fake()->randomElement(['TV-PG', 'TV-14', 'TV-MA', '12', '16']),
+                'external_tmdb_id' => fake()->numerify('tmdb-tv-#####'),
+                'season_count' => fake()->numberBetween(1, 8),
+                'episode_count' => fake()->numberBetween(6, 120),
+                'showrunner' => fake()->name(),
+                'network' => fake()->company(),
+                'platform' => null,
+                'developer' => null,
+                'publisher' => null,
+                'modes' => null,
+                'external_igdb_id' => null,
+                'min_players' => null,
+                'max_players' => null,
+                'play_time_minutes' => null,
+                'designer' => null,
+            ];
+        });
     }
 
     public function videoGame(): static
@@ -119,6 +127,7 @@ class ItemFactory extends Factory
             'studio' => null,
             'age_rating' => fake()->randomElement(['E', 'E10+', 'T', 'M', 'PEGI 12', 'PEGI 16']),
             'external_tmdb_id' => null,
+            'end_year' => null,
             'season_count' => null,
             'episode_count' => null,
             'showrunner' => null,
@@ -146,6 +155,7 @@ class ItemFactory extends Factory
             'studio' => null,
             'age_rating' => fake()->randomElement(['3+', '7+', '10+', '12+', '16+']),
             'external_tmdb_id' => null,
+            'end_year' => null,
             'season_count' => null,
             'episode_count' => null,
             'showrunner' => null,

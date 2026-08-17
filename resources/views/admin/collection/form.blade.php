@@ -32,6 +32,7 @@
         title: @js(old('title', $item->title)),
         originalTitle: @js(old('original_title', $item->original_title)),
         releaseYear: @js(old('release_year', $item->release_year)),
+        endYear: @js(old('end_year', $item->end_year)),
         barcode: @js(old('barcode', $item->barcode)),
         physicalFormat: @js($formPhysicalFormat),
         coverPath: @js(old('cover_path', $item->cover_path)),
@@ -386,6 +387,10 @@
                             <label class="block space-y-2">
                                 <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.fields.episode_count') }}</span>
                                 <input type="number" name="episode_count" value="{{ old('episode_count', $item->episode_count) }}" min="1" inputmode="numeric" class="{{ $commonInputClass }}">
+                            </label>
+                            <label class="block space-y-2">
+                                <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.fields.end_year') }}</span>
+                                <input type="number" name="end_year" x-model="endYear" min="1800" max="2100" inputmode="numeric" class="{{ $commonInputClass }}">
                             </label>
                             <label class="block space-y-2">
                                 <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.fields.runtime_minutes') }}</span>

@@ -46,6 +46,7 @@ function statePropertyForField(name) {
     return {
         original_title: 'originalTitle',
         release_year: 'releaseYear',
+        end_year: 'endYear',
         physical_format: 'physicalFormat',
         cover_path: 'coverPath',
     }[name] ?? name;
@@ -95,6 +96,7 @@ export function metadataLookup(config = {}) {
         title: config.title ?? '',
         originalTitle: config.originalTitle ?? '',
         releaseYear: config.releaseYear ?? '',
+        endYear: config.endYear ?? '',
         barcode: config.barcode ?? '',
         physicalFormat: config.physicalFormat ?? '',
         coverPath: config.coverPath ?? '',
@@ -328,7 +330,7 @@ export function metadataLookup(config = {}) {
                 return;
             }
 
-            if (!['film', 'video_game'].includes(type)) {
+            if (!['film', 'tv_series', 'video_game'].includes(type)) {
                 this.titleMessage = this.labels.automaticSearchNotAvailableForThisType;
                 return;
             }
@@ -487,6 +489,7 @@ export function metadataLookup(config = {}) {
                     : {
                     source: 'tmdb',
                     tmdb_id: candidate?.tmdb_id ?? candidate?.id ?? null,
+                    type: candidate?.type ?? this.currentTypeValue(),
                 };
 
             if (!payload.tmdb_id && !payload.igdb_id && !payload.barcode) {
@@ -524,7 +527,8 @@ export function metadataLookup(config = {}) {
                     source: importedSource,
                     forceTitle: scope === 'title' || importedSource === 'tmdb',
                     forceBarcode: scope === 'barcode',
-                    forceFilmFields: importedSource === 'tmdb' || importedType === 'film',
+                    forceFilmFields: importedType === 'film' || (importedSource === 'tmdb' && !importedType),
+                    forceTvSeriesFields: importedType === 'tv_series',
                     forceVideoGameFields: importedSource === 'igdb' || importedType === 'video_game',
                 });
                 this.closeResults();
@@ -537,7 +541,7 @@ export function metadataLookup(config = {}) {
                 this.titleMessage = this.labels.searchError;
             }
         },
-        applyImportedMetadata(data, { forceTitle = false, forceBarcode = false, forceFilmFields = false, forceVideoGameFields = false } = {}) {
+        applyImportedMetadata(data, { forceTitle = false, forceBarcode = false, forceFilmFields = false, forceTvSeriesFields = false, forceVideoGameFields = false } = {}) {
             data = importedMetadataPayload(data);
 
             if (!data || typeof data !== 'object') {
@@ -545,26 +549,27 @@ export function metadataLookup(config = {}) {
             }
 
             if (data.type) {
-                this.setFieldValue('type', data.type, { force: forceFilmFields || forceVideoGameFields || !this.currentTypeValue(), dispatchChange: true });
+                this.setFieldValue('type', data.type, { force: forceFilmFields || forceTvSeriesFields || forceVideoGameFields || !this.currentTypeValue(), dispatchChange: true });
                 this.syncPhysicalFormat();
             }
 
-            this.setFieldValue('title', data.title, { force: forceTitle || forceFilmFields || forceVideoGameFields });
-            this.setFieldValue('original_title', data.original_title, { force: forceFilmFields });
-            this.setFieldValue('description', data.description, { force: forceFilmFields || forceVideoGameFields });
+            this.setFieldValue('title', data.title, { force: forceTitle || forceFilmFields || forceTvSeriesFields || forceVideoGameFields });
+            this.setFieldValue('original_title', data.original_title, { force: forceFilmFields || forceTvSeriesFields });
+            this.setFieldValue('description', data.description, { force: forceFilmFields || forceTvSeriesFields || forceVideoGameFields });
             this.setFieldValue('description_original', data.description_original, { force: true });
-            this.setFieldValue('release_year', data.release_year, { force: forceFilmFields || forceVideoGameFields });
-            this.setFieldValue('genres', data.genres, { force: forceFilmFields || forceVideoGameFields });
-            this.setFieldValue('runtime_minutes', data.runtime_minutes, { force: forceFilmFields });
-            this.setFieldValue('studio', data.studio, { force: forceFilmFields });
-            this.setFieldValue('cast_members', data.cast_members, { force: forceFilmFields });
+            this.setFieldValue('release_year', data.release_year, { force: forceFilmFields || forceTvSeriesFields || forceVideoGameFields });
+            this.setFieldValue('end_year', data.end_year, { force: forceTvSeriesFields });
+            this.setFieldValue('genres', data.genres, { force: forceFilmFields || forceTvSeriesFields || forceVideoGameFields });
+            this.setFieldValue('runtime_minutes', data.runtime_minutes, { force: forceFilmFields || forceTvSeriesFields });
+            this.setFieldValue('studio', data.studio, { force: forceFilmFields || forceTvSeriesFields });
+            this.setFieldValue('cast_members', data.cast_members, { force: forceFilmFields || forceTvSeriesFields });
             this.setFieldValue('director', data.director, { force: forceFilmFields });
-            this.setFieldValue('age_rating', data.age_rating, { force: forceFilmFields || forceVideoGameFields });
+            this.setFieldValue('age_rating', data.age_rating, { force: forceFilmFields || forceTvSeriesFields || forceVideoGameFields });
             this.setFieldValue('external_tmdb_id', data.external_tmdb_id, { force: true });
-            this.setFieldValue('season_count', data.season_count);
-            this.setFieldValue('episode_count', data.episode_count);
-            this.setFieldValue('showrunner', data.showrunner);
-            this.setFieldValue('network', data.network);
+            this.setFieldValue('season_count', data.season_count, { force: forceTvSeriesFields });
+            this.setFieldValue('episode_count', data.episode_count, { force: forceTvSeriesFields });
+            this.setFieldValue('showrunner', data.showrunner, { force: forceTvSeriesFields });
+            this.setFieldValue('network', data.network, { force: forceTvSeriesFields });
             this.setFieldValue('barcode', data.barcode, { force: forceBarcode });
             this.setFieldValue('platform', data.platform, { force: forceVideoGameFields });
             this.setFieldValue('developer', data.developer, { force: forceVideoGameFields });

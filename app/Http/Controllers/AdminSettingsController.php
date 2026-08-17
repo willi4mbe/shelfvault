@@ -101,10 +101,10 @@ class AdminSettingsController extends Controller
             [
                 'key' => 'omdb',
                 'icon' => 'external_link',
-                'tone' => 'amber',
+                'tone' => 'slate',
                 'configured' => $this->filledConfig('services.omdb.api_key'),
                 'variables' => ['OMDB_API_KEY'],
-                'planned' => true,
+                'optional_future' => true,
             ],
         ];
     }

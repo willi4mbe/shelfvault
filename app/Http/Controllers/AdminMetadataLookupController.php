@@ -69,7 +69,7 @@ class AdminMetadataLookupController extends Controller
         $result = match ($validated['source']) {
             'barcode' => $this->importBarcodeResult($validated, $barcodeLookupService),
             'igdb' => $igdbVideoGameSearchService->importGame((int) ($validated['igdb_id'] ?? 0), app()->getLocale()),
-            default => $tmdbMovieSearchService->importMovie((int) ($validated['tmdb_id'] ?? 0)),
+            default => $this->importTmdbResult($validated, $tmdbMovieSearchService),
         };
 
         return response()->json($result->toArray(), $result->statusCode);
@@ -151,9 +151,24 @@ class AdminMetadataLookupController extends Controller
 
         return match ($type) {
             ItemType::Film->value => $tmdbMovieSearchService->search($title, $releaseYear),
+            ItemType::TvSeries->value => $tmdbMovieSearchService->searchTvSeries($title, $releaseYear),
             ItemType::VideoGame->value => $igdbVideoGameSearchService->search($title, $releaseYear),
             default => MetadataLookupResult::invalid(__('admin.collection.lookup.automatic_search_not_available_for_this_type')),
         };
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function importTmdbResult(array $validated, TmdbMovieSearchService $tmdbMovieSearchService): MetadataLookupResult
+    {
+        $tmdbId = (int) ($validated['tmdb_id'] ?? 0);
+
+        if (($validated['type'] ?? null) === ItemType::TvSeries->value) {
+            return $tmdbMovieSearchService->importTvSeries($tmdbId);
+        }
+
+        return $tmdbMovieSearchService->importMovie($tmdbId);
     }
 
     /**

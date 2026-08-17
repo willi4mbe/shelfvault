@@ -20,6 +20,7 @@ const fields = [
     makeField('description'),
     makeField('description_original'),
     makeField('release_year'),
+    makeField('end_year'),
     makeField('genres'),
     makeField('genres'),
     makeField('runtime_minutes'),
@@ -99,6 +100,8 @@ assert.equal(component.coverPreviewUrl, 'http://localhost:8000/storage/covers/ma
 component.applyImportedMetadata({
     type: 'tv_series',
     title: 'The Expanse',
+    release_year: 2015,
+    end_year: 2022,
     season_count: 6,
     episode_count: 62,
     showrunner: 'Naren Shankar',
@@ -107,6 +110,7 @@ component.applyImportedMetadata({
 
 assert.equal(values('season_count')[0], '6');
 assert.equal(values('episode_count')[0], '62');
+assert.equal(values('end_year')[0], '2022');
 assert.equal(values('showrunner')[0], 'Naren Shankar');
 assert.equal(values('network')[0], 'Syfy / Prime Video');
 
@@ -164,6 +168,7 @@ globalThis.fetch = async (url, options) => {
     assert.deepEqual(JSON.parse(options.body), {
         source: 'tmdb',
         tmdb_id: 603,
+        type: 'film',
     });
 
     return {
