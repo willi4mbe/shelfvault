@@ -36,9 +36,9 @@
             </div>
         @endif
 
-        <section class="grid gap-3 xl:grid-cols-[0.72fr_1.28fr]">
-            <section class="admin-panel !rounded-[20px] !p-3 sm:!p-4">
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between xl:flex-col xl:items-stretch">
+        <section class="grid items-start gap-4 xl:grid-cols-[minmax(24rem,0.85fr)_minmax(0,1.15fr)]">
+            <section class="admin-panel self-start !rounded-[20px] !p-4 sm:!p-5">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div class="min-w-0">
                         <p class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">
                             {{ __('admin.settings.language_heading') }}
@@ -49,12 +49,12 @@
                     </div>
                 </div>
 
-                <form method="POST" action="{{ route('admin.settings.update') }}" class="mt-3 space-y-2.5">
+                <form method="POST" action="{{ route('admin.settings.update') }}" class="mt-4 space-y-3">
                     @csrf
 
-                    <div class="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end xl:grid-cols-1">
+                    <div class="grid gap-3 sm:grid-cols-[minmax(14rem,1fr)_auto] sm:items-end">
                         <label class="block space-y-1">
-                            <span class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">{{ __('admin.settings.language_field') }}</span>
+                            <span class="block whitespace-nowrap text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">{{ __('admin.settings.language_field') }}</span>
                             <select name="preferred_locale" class="h-9 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-sm font-medium text-zinc-950 outline-none transition focus:border-zinc-400 focus:bg-white focus:ring-4 focus:ring-zinc-100">
                                 @foreach ($locales as $code => $label)
                                     <option value="{{ $code }}" @selected(old('preferred_locale', $currentLocale) === $code)>{{ $label }}</option>
@@ -62,7 +62,7 @@
                             </select>
                         </label>
 
-                        <button type="submit" class="inline-flex h-9 items-center justify-center rounded-full bg-zinc-950 px-3.5 text-sm font-semibold text-white transition hover:bg-zinc-800">
+                        <button type="submit" class="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full bg-zinc-950 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800">
                             {{ __('admin.settings.save') }}
                         </button>
                     </div>
@@ -77,7 +77,7 @@
                 </form>
             </section>
 
-            <section class="admin-panel !rounded-[20px] !p-3 sm:!p-4">
+            <section class="admin-panel !rounded-[20px] !p-4 sm:!p-5">
                 <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                     <div class="min-w-0">
                         <p class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">
@@ -97,16 +97,16 @@
                         @endphp
 
                         <article class="px-3 py-2.5">
-                            <div class="flex min-w-0 items-start gap-2.5 md:items-center">
+                            <div class="flex min-w-0 items-start gap-2.5">
                                 <span class="inline-flex h-7 w-7 flex-none items-center justify-center rounded-lg border border-zinc-200/80 bg-zinc-50 text-zinc-700 admin-icon-badge-{{ $integration['tone'] }}">
                                     @include('admin.icon', ['name' => $integration['icon'], 'class' => 'h-3.5 w-3.5 flex-none'])
                                 </span>
 
                                 <div class="min-w-0 flex-1">
-                                    <div class="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+                                    <div class="grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
                                         <div class="min-w-0">
                                             <div class="flex flex-wrap items-center gap-1.5">
-                                                <h2 class="text-sm font-semibold text-zinc-950">
+                                                <h2 class="min-w-0 text-sm font-semibold text-zinc-950">
                                                     {{ __('admin.settings.integrations.'.$integration['key'].'.title') }}
                                                 </h2>
                                                 <span class="inline-flex h-5 items-center rounded-full px-2 text-[0.65rem] font-bold admin-stat-chip-{{ $stateTone }}">
@@ -119,9 +119,9 @@
                                             </p>
                                         </div>
 
-                                        <div class="flex flex-wrap gap-1.5 md:justify-end">
+                                        <div class="flex min-w-0 flex-wrap gap-1.5 lg:max-w-xs lg:justify-end">
                                             @foreach ($integration['variables'] as $variable)
-                                                <code class="rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-[0.66rem] font-semibold text-zinc-600">{{ $variable }}</code>
+                                                <code class="max-w-full whitespace-nowrap rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-[0.66rem] font-semibold text-zinc-600">{{ $variable }}</code>
                                             @endforeach
                                         </div>
                                     </div>

@@ -30,6 +30,27 @@ function normalizeLookupValue(value) {
     return String(value).trim();
 }
 
+function importedMetadataPayload(payload) {
+    if (!payload || typeof payload !== 'object') {
+        return {};
+    }
+
+    if (payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)) {
+        return payload.data;
+    }
+
+    return payload;
+}
+
+function statePropertyForField(name) {
+    return {
+        original_title: 'originalTitle',
+        release_year: 'releaseYear',
+        physical_format: 'physicalFormat',
+        cover_path: 'coverPath',
+    }[name] ?? name;
+}
+
 function fieldHasValue(field) {
     if (!field) {
         return false;
@@ -179,7 +200,11 @@ export function metadataLookup(config = {}) {
             }
         },
         formElement() {
-            return this.$el.closest('form') ?? this.$el.querySelector('form');
+            return this.$root?.querySelector('form')
+                ?? this.$el?.closest('form')
+                ?? this.$el?.querySelector('form')
+                ?? globalThis.document?.getElementById?.('collection-form')
+                ?? null;
         },
         currentTypeValue() {
             return String(this.type ?? '').trim();
@@ -235,8 +260,10 @@ export function metadataLookup(config = {}) {
                 }
             });
 
-            if (Object.prototype.hasOwnProperty.call(this, name)) {
-                this[name] = normalizedValue;
+            const stateProperty = statePropertyForField(name);
+
+            if (Object.prototype.hasOwnProperty.call(this, stateProperty)) {
+                this[stateProperty] = normalizedValue;
             }
         },
         clearTitleState() {
@@ -489,24 +516,30 @@ export function metadataLookup(config = {}) {
                     return;
                 }
 
-                this.applyImportedMetadata(payloadJson?.data ?? {}, {
-                    source,
-                    forceTitle: scope === 'title' || source === 'tmdb',
+                const importedData = importedMetadataPayload(payloadJson?.data ?? {});
+                const importedType = normalizeLookupValue(importedData.type);
+                const importedSource = payloadJson?.source ?? source;
+
+                this.applyImportedMetadata(importedData, {
+                    source: importedSource,
+                    forceTitle: scope === 'title' || importedSource === 'tmdb',
                     forceBarcode: scope === 'barcode',
-                    forceFilmFields: source === 'tmdb',
-                    forceVideoGameFields: source === 'igdb',
+                    forceFilmFields: importedSource === 'tmdb' || importedType === 'film',
+                    forceVideoGameFields: importedSource === 'igdb' || importedType === 'video_game',
                 });
                 this.closeResults();
 
                 const warnings = Array.isArray(payloadJson?.warnings) ? payloadJson.warnings : [];
                 this.titleMessage = payloadJson?.message ?? this.labels.metadataImported;
-                this.importNotice = warnings[0] ?? (payloadJson?.data?.cover_path ? this.labels.coverImported : '');
+                this.importNotice = warnings[0] ?? (importedData.cover_path ? this.labels.coverImported : '');
             } catch (error) {
                 this.importBusy = false;
                 this.titleMessage = this.labels.searchError;
             }
         },
         applyImportedMetadata(data, { forceTitle = false, forceBarcode = false, forceFilmFields = false, forceVideoGameFields = false } = {}) {
+            data = importedMetadataPayload(data);
+
             if (!data || typeof data !== 'object') {
                 return;
             }

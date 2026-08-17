@@ -52,7 +52,12 @@ const form = {
     dispatchEvent() {},
 };
 
+const root = {
+    querySelector: (selector) => selector === 'form' ? form : null,
+};
+
 const component = metadataLookup({ type: 'film' });
+component.$root = root;
 component.$el = {
     closest: () => null,
     querySelector: (selector) => selector === 'form' ? form : null,
@@ -126,9 +131,74 @@ component.applyImportedMetadata({
 assert.equal(values('title')[0], 'Super Mario Galaxy');
 assert.equal(values('description')[0], 'Mario explores space.');
 assert.equal(values('description_original')[0], 'Mario explores space in English.');
+assert.equal(component.releaseYear, '2007');
 assert.deepEqual(values('genres'), ['Platform, Adventure', 'Platform, Adventure']);
 assert.equal(values('platform')[0], 'Wii');
 assert.equal(values('developer')[0], 'Nintendo EAD Tokyo');
 assert.equal(values('publisher')[0], 'Nintendo');
 assert.equal(values('modes')[0], 'Single player');
 assert.equal(values('external_igdb_id')[0], '1234');
+
+const originalDocument = globalThis.document;
+const originalFetch = globalThis.fetch;
+
+component.importUrl = '/admin/collection/metadata/import';
+component.resultsScope = 'title';
+component.resultsSource = '';
+component.$el = {
+    closest: () => null,
+    querySelector: () => null,
+};
+
+globalThis.document = {
+    querySelector(selector) {
+        return selector === 'meta[name="csrf-token"]'
+            ? { getAttribute: () => 'csrf-token' }
+            : null;
+    },
+};
+
+globalThis.fetch = async (url, options) => {
+    assert.equal(url, '/admin/collection/metadata/import');
+    assert.equal(options.method, 'POST');
+    assert.deepEqual(JSON.parse(options.body), {
+        source: 'tmdb',
+        tmdb_id: 603,
+    });
+
+    return {
+        ok: true,
+        async json() {
+            return {
+                status: 'found',
+                message: 'Imported',
+                data: {
+                    type: 'film',
+                    title: 'Imported Matrix',
+                    original_title: 'The Matrix',
+                    description: 'Imported description.',
+                    release_year: 1999,
+                    genres: ['Action'],
+                    runtime_minutes: 136,
+                    director: 'Lana Wachowski',
+                    external_tmdb_id: 603,
+                },
+            };
+        },
+    };
+};
+
+try {
+    await component.importCandidate({ tmdb_id: 603 });
+} finally {
+    globalThis.document = originalDocument;
+    globalThis.fetch = originalFetch;
+}
+
+assert.equal(values('title')[0], 'Imported Matrix');
+assert.equal(values('original_title')[0], 'The Matrix');
+assert.equal(values('description')[0], 'Imported description.');
+assert.equal(values('release_year')[0], '1999');
+assert.equal(values('external_tmdb_id')[0], '603');
+assert.equal(component.title, 'Imported Matrix');
+assert.equal(component.originalTitle, 'The Matrix');
