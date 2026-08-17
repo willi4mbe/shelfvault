@@ -147,6 +147,7 @@ return [
             'configured' => 'Configured',
             'missing' => 'Not configured',
             'planned' => 'Planned',
+            'optional_future' => 'Optional later',
         ],
         'translation_providers' => [
             'google' => 'Google Cloud Translation',
@@ -168,7 +169,7 @@ return [
             ],
             'omdb' => [
                 'title' => 'IMDb / OMDb',
-                'description' => 'Reserved for a future film metadata fallback when an OMDb key is available.',
+                'description' => 'Optional provider kept for a later film metadata fallback. No OMDb key is needed right now.',
             ],
         ],
         'security' => [
@@ -371,6 +372,7 @@ return [
             'title' => 'Title',
             'original_title' => 'Original title',
             'release_year' => 'Release year',
+            'end_year' => 'End year',
             'barcode' => 'Barcode',
             'cover_path' => 'Cover path',
             'physical_format' => 'Physical format',

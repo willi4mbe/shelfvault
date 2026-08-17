@@ -92,8 +92,8 @@
                 <div class="mt-3 divide-y divide-zinc-200/80 overflow-hidden rounded-2xl border border-zinc-200/80 bg-white/70">
                     @foreach ($integrations as $integration)
                         @php
-                            $stateKey = $integration['configured'] ? 'configured' : (($integration['planned'] ?? false) ? 'planned' : 'missing');
-                            $stateTone = $integration['configured'] ? 'emerald' : (($integration['planned'] ?? false) ? 'amber' : 'slate');
+                            $stateKey = $integration['configured'] ? 'configured' : (($integration['optional_future'] ?? false) ? 'optional_future' : 'missing');
+                            $stateTone = $integration['configured'] ? 'emerald' : 'slate';
                         @endphp
 
                         <article class="px-3 py-2.5">

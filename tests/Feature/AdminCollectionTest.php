@@ -404,12 +404,19 @@ class AdminCollectionTest extends TestCase
 
     public function test_admin_can_create_a_tv_series_item(): void
     {
+        Storage::disk('public')->put('covers/tmdb-the-expanse.jpg', 'poster-bytes');
+
         $this->actingAs(User::query()->first())
             ->post('/admin/collection', [
                 'type' => 'tv_series',
                 'title' => 'The Expanse',
+                'original_title' => 'The Expanse',
+                'description' => 'A police detective in the asteroid belt uncovers a system-wide conspiracy.',
                 'release_year' => 2015,
+                'end_year' => 2022,
                 'barcode' => '3333333333333',
+                'external_tmdb_id' => 63639,
+                'cover_path' => 'covers/tmdb-the-expanse.jpg',
                 'physical_format' => 'box_set',
                 'condition' => 'very_good',
                 'location' => 'Shelf TV',
@@ -435,12 +442,22 @@ class AdminCollectionTest extends TestCase
         $item = Item::query()->first();
 
         $this->assertSame('tv_series', $item->type->value);
+        $this->assertSame('The Expanse', $item->original_title);
+        $this->assertSame('A police detective in the asteroid belt uncovers a system-wide conspiracy.', $item->description);
+        $this->assertSame(2015, $item->release_year);
+        $this->assertSame(2022, $item->end_year);
+        $this->assertSame('63639', $item->external_tmdb_id);
+        $this->assertSame('covers/tmdb-the-expanse.jpg', $item->cover_path);
         $this->assertSame(6, $item->season_count);
         $this->assertSame(62, $item->episode_count);
+        $this->assertSame(45, $item->runtime_minutes);
         $this->assertSame('Naren Shankar', $item->showrunner);
         $this->assertSame('Syfy / Prime Video', $item->network);
+        $this->assertSame('Alcon Television Group', $item->studio);
+        $this->assertSame('TV-14', $item->age_rating);
         $this->assertSame(['Science fiction', 'Drama'], $item->genres);
         $this->assertSame(['Steven Strait', 'Shohreh Aghdashloo'], $item->cast_members);
+        $this->assertSame(Storage::disk('public')->url('covers/tmdb-the-expanse.jpg'), $item->coverUrl());
     }
 
     public function test_admin_can_create_a_board_game_item(): void

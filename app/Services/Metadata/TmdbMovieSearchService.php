@@ -73,6 +73,56 @@ class TmdbMovieSearchService
         }
     }
 
+    public function searchTvSeries(string $title, ?int $releaseYear = null): MetadataLookupResult
+    {
+        $title = trim($title);
+
+        if ($title === '') {
+            return MetadataLookupResult::invalid(__('admin.collection.validation.title_required'));
+        }
+
+        if (! $this->configured()) {
+            return MetadataLookupResult::noSource(__('admin.collection.metadata.tmdb_not_configured'));
+        }
+
+        try {
+            $response = $this->client()
+                ->get('/search/tv', array_filter([
+                    ...$this->authQueryParameters(),
+                    'query' => $title,
+                    'include_adult' => false,
+                    'language' => config('services.tmdb.language', 'fr-FR'),
+                    'first_air_date_year' => $releaseYear,
+                ], static fn (mixed $value): bool => $value !== null && $value !== ''));
+
+            if (! $response->successful()) {
+                return MetadataLookupResult::error(__('admin.collection.metadata.search_error'), $response->status());
+            }
+
+            $candidates = collect($response->json('results', []))
+                ->take(10)
+                ->map(fn (array $candidate): array => $this->mapper->mapTvSearchCandidate($candidate, (string) config('services.tmdb.image_base_url')))
+                ->values()
+                ->all();
+
+            if ($candidates === []) {
+                return MetadataLookupResult::notFound(__('admin.collection.metadata.no_result_found'), [
+                    'query' => $title,
+                    'release_year' => $releaseYear,
+                    'candidates' => [],
+                ], 'tmdb');
+            }
+
+            return MetadataLookupResult::found([
+                'query' => $title,
+                'release_year' => $releaseYear,
+                'candidates' => $candidates,
+            ], __('admin.collection.metadata.results_found'), 'tmdb');
+        } catch (Throwable) {
+            return MetadataLookupResult::error(__('admin.collection.metadata.search_error'));
+        }
+    }
+
     public function importMovie(int $tmdbId): MetadataLookupResult
     {
         if (! $this->configured()) {
@@ -109,6 +159,42 @@ class TmdbMovieSearchService
         }
     }
 
+    public function importTvSeries(int $tmdbId): MetadataLookupResult
+    {
+        if (! $this->configured()) {
+            return MetadataLookupResult::noSource(__('admin.collection.metadata.tmdb_not_configured'));
+        }
+
+        try {
+            $series = $this->tvSeriesBundle($tmdbId);
+            $credits = Arr::get($series, 'aggregate_credits', []);
+            $contentRatings = Arr::get($series, 'content_ratings', []);
+            $data = $this->mapper->mapTmdbTvSeries($series, $credits, $contentRatings);
+            $warnings = [];
+
+            if (($series['poster_path'] ?? null) && ! empty($series['poster_path'])) {
+                $posterImport = $this->importPoster(
+                    (string) $series['poster_path'],
+                    (int) $tmdbId,
+                    (string) ($series['name'] ?? $tmdbId)
+                );
+
+                if (filled($posterImport['cover_path'] ?? null)) {
+                    $data['cover_path'] = $posterImport['cover_path'];
+                    $data['cover_url'] = $posterImport['cover_url'];
+                } elseif (filled($posterImport['warning'] ?? null)) {
+                    $warnings[] = (string) $posterImport['warning'];
+                }
+            }
+
+            return MetadataLookupResult::found($data, __('admin.collection.metadata.metadata_imported'), 'tmdb', $warnings);
+        } catch (RequestException $exception) {
+            return MetadataLookupResult::error(__('admin.collection.metadata.search_error'), $exception->response->status() ?: 500);
+        } catch (Throwable) {
+            return MetadataLookupResult::error(__('admin.collection.metadata.search_error'));
+        }
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -119,6 +205,23 @@ class TmdbMovieSearchService
                 ...$this->authQueryParameters(),
                 'language' => config('services.tmdb.language', 'fr-FR'),
                 'append_to_response' => 'credits,release_dates',
+            ]);
+
+        $response->throw();
+
+        return $response->json() ?? [];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function tvSeriesBundle(int $tmdbId): array
+    {
+        $response = $this->client()
+            ->get("/tv/{$tmdbId}", [
+                ...$this->authQueryParameters(),
+                'language' => config('services.tmdb.language', 'fr-FR'),
+                'append_to_response' => 'aggregate_credits,content_ratings',
             ]);
 
         $response->throw();

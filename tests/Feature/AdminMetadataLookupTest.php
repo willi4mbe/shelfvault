@@ -189,6 +189,50 @@ class AdminMetadataLookupTest extends TestCase
             ->assertJsonPath('data.candidates.0.poster_url', 'https://image.tmdb.org/t/p/w500/matrix.jpg');
     }
 
+    public function test_tmdb_tv_search_returns_normalized_candidates_when_tmdb_is_configured(): void
+    {
+        config(['services.tmdb.api_key' => 'test-key']);
+
+        Http::fake([
+            'https://api.themoviedb.org/3/search/tv*' => Http::response([
+                'results' => [
+                    [
+                        'id' => 63639,
+                        'name' => 'The Expanse',
+                        'original_name' => 'The Expanse',
+                        'first_air_date' => '2015-12-14',
+                        'overview' => 'A missing woman links a detective, a ship captain, and a conspiracy.',
+                        'poster_path' => '/expanse.jpg',
+                        'vote_average' => 8.1,
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $this->actingAs(User::query()->first())
+            ->postJson(route('admin.collection.metadata.search'), [
+                'mode' => 'title',
+                'type' => 'tv_series',
+                'title' => 'The Expanse',
+                'release_year' => 2015,
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'found')
+            ->assertJsonPath('source', 'tmdb')
+            ->assertJsonPath('data.candidates.0.source', 'tmdb')
+            ->assertJsonPath('data.candidates.0.type', 'tv_series')
+            ->assertJsonPath('data.candidates.0.tmdb_id', 63639)
+            ->assertJsonPath('data.candidates.0.title', 'The Expanse')
+            ->assertJsonPath('data.candidates.0.original_title', 'The Expanse')
+            ->assertJsonPath('data.candidates.0.release_year', 2015)
+            ->assertJsonPath('data.candidates.0.poster_url', 'https://image.tmdb.org/t/p/w500/expanse.jpg');
+
+        Http::assertSent(function ($request): bool {
+            return str_starts_with($request->url(), 'https://api.themoviedb.org/3/search/tv')
+                && str_contains($request->url(), 'first_air_date_year=2015');
+        });
+    }
+
     public function test_tmdb_search_uses_the_configured_bearer_token(): void
     {
         config([
@@ -376,6 +420,53 @@ class AdminMetadataLookupTest extends TestCase
         $this->assertSame('R', $mapped['age_rating']);
     }
 
+    public function test_tmdb_tv_series_mapping_reads_series_metadata_and_regional_rating(): void
+    {
+        config(['services.tmdb.region' => 'FR']);
+
+        $mapped = (new MetadataImportMapper())->mapTmdbTvSeries(
+            $this->tmdbTvSeriesPayload(),
+            [
+                'cast' => [
+                    ['name' => 'Steven Strait'],
+                    ['name' => 'Shohreh Aghdashloo'],
+                    ['name' => 'Dominique Tipper'],
+                    ['name' => 'Wes Chatham'],
+                    ['name' => 'Cas Anvar'],
+                    ['name' => 'Frankie Adams'],
+                ],
+            ],
+            [
+                'results' => [
+                    ['iso_3166_1' => 'US', 'rating' => 'TV-14'],
+                    ['iso_3166_1' => 'FR', 'rating' => '16'],
+                ],
+            ],
+        );
+
+        $this->assertSame('tv_series', $mapped['type']);
+        $this->assertSame('The Expanse', $mapped['title']);
+        $this->assertSame('The Expanse', $mapped['original_title']);
+        $this->assertSame('A missing woman links a detective, a ship captain, and a conspiracy.', $mapped['description']);
+        $this->assertSame(2015, $mapped['release_year']);
+        $this->assertSame(2022, $mapped['end_year']);
+        $this->assertSame(6, $mapped['season_count']);
+        $this->assertSame(62, $mapped['episode_count']);
+        $this->assertSame(45, $mapped['runtime_minutes']);
+        $this->assertSame('Mark Fergus, Hawk Ostby', $mapped['showrunner']);
+        $this->assertSame('Syfy, Prime Video', $mapped['network']);
+        $this->assertSame(['Science Fiction', 'Drama'], $mapped['genres']);
+        $this->assertSame([
+            'Steven Strait',
+            'Shohreh Aghdashloo',
+            'Dominique Tipper',
+            'Wes Chatham',
+            'Cas Anvar',
+        ], $mapped['cast_members']);
+        $this->assertSame('16', $mapped['age_rating']);
+        $this->assertSame(63639, $mapped['external_tmdb_id']);
+    }
+
     public function test_igdb_game_mapping_reads_video_game_metadata(): void
     {
         $mapped = (new MetadataImportMapper())->mapIgdbGame($this->igdbGamePayload());
@@ -541,6 +632,85 @@ class AdminMetadataLookupTest extends TestCase
             ->assertJsonPath('data.external_tmdb_id', 603)
             ->assertJsonMissingPath('data.cover_path')
             ->assertJsonPath('warnings.0', __('admin.collection.metadata.poster_import_failed'));
+    }
+
+    public function test_tmdb_import_maps_tv_series_metadata_and_imports_a_poster_locally(): void
+    {
+        config([
+            'services.tmdb.api_key' => 'test-key',
+            'services.tmdb.region' => 'FR',
+        ]);
+
+        Http::fake([
+            'https://api.themoviedb.org/3/tv/63639*' => Http::response([
+                ...$this->tmdbTvSeriesPayload(),
+                'poster_path' => '/expanse.jpg',
+                'aggregate_credits' => [
+                    'cast' => [
+                        ['name' => 'Steven Strait'],
+                        ['name' => 'Shohreh Aghdashloo'],
+                        ['name' => 'Dominique Tipper'],
+                        ['name' => 'Wes Chatham'],
+                        ['name' => 'Cas Anvar'],
+                        ['name' => 'Frankie Adams'],
+                    ],
+                ],
+                'content_ratings' => [
+                    'results' => [
+                        ['iso_3166_1' => 'US', 'rating' => 'TV-14'],
+                        ['iso_3166_1' => 'FR', 'rating' => '16'],
+                    ],
+                ],
+            ], 200),
+            'https://image.tmdb.org/t/p/w500/expanse.jpg' => Http::response('poster-bytes', 200, [
+                'Content-Type' => 'image/jpeg',
+            ]),
+        ]);
+
+        $response = $this->actingAs(User::query()->first())
+            ->postJson(route('admin.collection.metadata.import'), [
+                'source' => 'tmdb',
+                'type' => 'tv_series',
+                'tmdb_id' => 63639,
+            ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('status', 'found')
+            ->assertJsonPath('source', 'tmdb')
+            ->assertJsonPath('data.type', 'tv_series')
+            ->assertJsonPath('data.title', 'The Expanse')
+            ->assertJsonPath('data.original_title', 'The Expanse')
+            ->assertJsonPath('data.release_year', 2015)
+            ->assertJsonPath('data.end_year', 2022)
+            ->assertJsonPath('data.season_count', 6)
+            ->assertJsonPath('data.episode_count', 62)
+            ->assertJsonPath('data.runtime_minutes', 45)
+            ->assertJsonPath('data.showrunner', 'Mark Fergus, Hawk Ostby')
+            ->assertJsonPath('data.network', 'Syfy, Prime Video')
+            ->assertJsonPath('data.age_rating', '16')
+            ->assertJsonPath('data.genres', ['Science Fiction', 'Drama'])
+            ->assertJsonPath('data.cast_members', [
+                'Steven Strait',
+                'Shohreh Aghdashloo',
+                'Dominique Tipper',
+                'Wes Chatham',
+                'Cas Anvar',
+            ])
+            ->assertJsonPath('data.external_tmdb_id', 63639)
+            ->assertJsonMissingPath('data.physical_format')
+            ->assertJsonMissingPath('data.edition')
+            ->assertJsonMissingPath('data.region')
+            ->assertJsonMissingPath('data.barcode')
+            ->assertJsonMissingPath('data.condition')
+            ->assertJsonMissingPath('data.status')
+            ->assertJsonMissingPath('data.location');
+
+        $coverPath = $response->json('data.cover_path');
+
+        $this->assertIsString($coverPath);
+        $this->assertTrue(str_starts_with($coverPath, 'covers/'));
+        Storage::disk('public')->assertExists($coverPath);
     }
 
     public function test_igdb_import_maps_video_game_metadata_and_imports_a_cover_locally(): void
@@ -774,6 +944,37 @@ class AdminMetadataLookupTest extends TestCase
             'original_title' => 'The Matrix',
             'overview' => 'A computer hacker learns about the true nature of reality.',
             'release_date' => '1999-03-31',
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function tmdbTvSeriesPayload(): array
+    {
+        return [
+            'id' => 63639,
+            'name' => 'The Expanse',
+            'original_name' => 'The Expanse',
+            'overview' => 'A missing woman links a detective, a ship captain, and a conspiracy.',
+            'first_air_date' => '2015-12-14',
+            'last_air_date' => '2022-01-14',
+            'in_production' => false,
+            'number_of_seasons' => 6,
+            'number_of_episodes' => 62,
+            'episode_run_time' => [45],
+            'created_by' => [
+                ['name' => 'Mark Fergus'],
+                ['name' => 'Hawk Ostby'],
+            ],
+            'networks' => [
+                ['name' => 'Syfy'],
+                ['name' => 'Prime Video'],
+            ],
+            'genres' => [
+                ['name' => 'Science Fiction'],
+                ['name' => 'Drama'],
+            ],
         ];
     }
 

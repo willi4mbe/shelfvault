@@ -95,6 +95,7 @@
             'tv_series' => array_values(array_filter([
                 ['label' => __('admin.collection.fields.season_count'), 'value' => $item->season_count],
                 ['label' => __('admin.collection.fields.episode_count'), 'value' => $item->episode_count],
+                ['label' => __('admin.collection.fields.end_year'), 'value' => $item->end_year],
                 ['label' => __('admin.collection.fields.runtime_minutes'), 'value' => $item->runtime_minutes ? $item->runtime_minutes.' '.__('admin.collection.unit.minutes') : null],
                 ['label' => __('admin.collection.fields.showrunner'), 'value' => $item->showrunner],
                 ['label' => __('admin.collection.fields.network'), 'value' => $item->network],
@@ -190,7 +191,7 @@
                                 <span>{{ $item->original_title }}</span>
                             @endif
                             @if ($item->release_year)
-                                <span>{{ $item->release_year }}</span>
+                                <span>{{ $item->release_year }}{{ $item->end_year ? ' - '.$item->end_year : '' }}</span>
                             @endif
                             @if ($item->barcode)
                                 <span>{{ __('admin.collection.table.barcode') }}: {{ $item->barcode }}</span>
