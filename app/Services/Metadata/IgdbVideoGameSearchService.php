@@ -44,7 +44,7 @@ class IgdbVideoGameSearchService
         try {
             $games = $this->games($this->searchQuery($title, $releaseYear));
             $candidates = collect($games)
-                ->take(5)
+                ->take(10)
                 ->map(fn (array $candidate): array => $this->mapper->mapIgdbSearchCandidate($candidate))
                 ->values()
                 ->all();
@@ -146,7 +146,7 @@ class IgdbVideoGameSearchService
             }
         }
 
-        return $query.' limit 5;';
+        return $query.' limit 10;';
     }
 
     private function importQuery(int $igdbId): string

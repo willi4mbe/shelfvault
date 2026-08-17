@@ -115,6 +115,7 @@ export function metadataLookup(config = {}) {
         typeMeta: {
             '': { label: config.typeLabels?.none ?? '', chip: 'slate', rgb: '148 163 184' },
             film: { label: config.typeLabels?.film ?? '', chip: 'violet', rgb: '99 102 241' },
+            tv_series: { label: config.typeLabels?.tv_series ?? '', chip: 'sky', rgb: '14 165 233' },
             video_game: { label: config.typeLabels?.video_game ?? '', chip: 'emerald', rgb: '20 184 166' },
             board_game: { label: config.typeLabels?.board_game ?? '', chip: 'amber', rgb: '245 158 11' },
         },
@@ -527,6 +528,10 @@ export function metadataLookup(config = {}) {
             this.setFieldValue('director', data.director, { force: forceFilmFields });
             this.setFieldValue('age_rating', data.age_rating, { force: forceFilmFields || forceVideoGameFields });
             this.setFieldValue('external_tmdb_id', data.external_tmdb_id, { force: true });
+            this.setFieldValue('season_count', data.season_count);
+            this.setFieldValue('episode_count', data.episode_count);
+            this.setFieldValue('showrunner', data.showrunner);
+            this.setFieldValue('network', data.network);
             this.setFieldValue('barcode', data.barcode, { force: forceBarcode });
             this.setFieldValue('platform', data.platform, { force: forceVideoGameFields });
             this.setFieldValue('developer', data.developer, { force: forceVideoGameFields });

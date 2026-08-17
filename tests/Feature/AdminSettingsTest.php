@@ -92,6 +92,8 @@ class AdminSettingsTest extends TestCase
             ->get(route('admin.settings.index'))
             ->assertOk()
             ->assertSee(__('admin.settings.title'))
+            ->assertSee(__('admin.settings.language_title'))
+            ->assertSee(__('admin.settings.language_help'))
             ->assertSee('TMDB_API_KEY')
             ->assertSee('IGDB_CLIENT_SECRET')
             ->assertSee('TRANSLATION_PROVIDER')
@@ -103,6 +105,35 @@ class AdminSettingsTest extends TestCase
             ->assertDontSee('igdb-client-secret')
             ->assertDontSee('google-secret-value')
             ->assertDontSee('omdb-secret-value');
+    }
+
+    public function test_admin_can_update_application_language_from_settings(): void
+    {
+        $admin = User::query()->first();
+
+        $this->actingAs($admin)
+            ->post(route('admin.settings.update'), [
+                'preferred_locale' => 'fr',
+            ])
+            ->assertRedirect(route('admin.settings.index'))
+            ->assertSessionHas('status', __('admin.settings.saved'));
+
+        $this->assertSame('fr', $admin->refresh()->preferred_locale);
+
+        $this->actingAs($admin)
+            ->get(route('admin.settings.index'))
+            ->assertOk()
+            ->assertSee('Langue de l’application');
+    }
+
+    public function test_settings_page_no_longer_shows_removed_admin_blocks(): void
+    {
+        $this->actingAs(User::query()->first())
+            ->get(route('admin.settings.index'))
+            ->assertOk()
+            ->assertDontSee(__('admin.settings.kicker'))
+            ->assertDontSee(__('admin.settings.security_heading'))
+            ->assertDontSee(__('admin.settings.next_title'));
     }
 
     public function test_settings_navigation_is_available_to_admins(): void

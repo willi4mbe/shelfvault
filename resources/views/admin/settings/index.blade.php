@@ -7,10 +7,7 @@
         <section class="admin-topbar">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div class="max-w-3xl">
-                    <p class="text-sm font-semibold tracking-[0.16em] text-zinc-500 uppercase">
-                        {{ __('admin.settings.kicker') }}
-                    </p>
-                    <h1 class="mt-3 text-[1.95rem] font-semibold leading-tight tracking-tight text-zinc-950 sm:text-[2.4rem]">
+                    <h1 class="text-[1.95rem] font-semibold leading-tight tracking-tight text-zinc-950 sm:text-[2.4rem]">
                         {{ __('admin.settings.title') }}
                     </h1>
                     <p class="mt-3 text-sm leading-6 text-zinc-600">
@@ -24,51 +21,118 @@
             </div>
         </section>
 
-        <section class="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-            <x-admin.block
-                :heading="__('admin.settings.integrations_heading')"
-                :title="__('admin.settings.integrations_title')"
+        @if (session('status'))
+            <div
+                x-data="{ visible: true }"
+                x-init="setTimeout(() => visible = false, 4000)"
+                x-show="visible"
+                x-transition.opacity.duration.250ms
+                x-cloak
+                role="status"
+                aria-live="polite"
+                class="rounded-[22px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800"
             >
-                <div class="mt-5 space-y-3">
+                {{ session('status') }}
+            </div>
+        @endif
+
+        <section class="grid gap-3 xl:grid-cols-[0.72fr_1.28fr]">
+            <section class="admin-panel !rounded-[20px] !p-3 sm:!p-4">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between xl:flex-col xl:items-stretch">
+                    <div class="min-w-0">
+                        <p class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                            {{ __('admin.settings.language_heading') }}
+                        </p>
+                        <h2 class="mt-1 text-base font-semibold tracking-tight text-zinc-950">
+                            {{ __('admin.settings.language_title') }}
+                        </h2>
+                    </div>
+                </div>
+
+                <form method="POST" action="{{ route('admin.settings.update') }}" class="mt-3 space-y-2.5">
+                    @csrf
+
+                    <div class="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end xl:grid-cols-1">
+                        <label class="block space-y-1">
+                            <span class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">{{ __('admin.settings.language_field') }}</span>
+                            <select name="preferred_locale" class="h-9 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-sm font-medium text-zinc-950 outline-none transition focus:border-zinc-400 focus:bg-white focus:ring-4 focus:ring-zinc-100">
+                                @foreach ($locales as $code => $label)
+                                    <option value="{{ $code }}" @selected(old('preferred_locale', $currentLocale) === $code)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </label>
+
+                        <button type="submit" class="inline-flex h-9 items-center justify-center rounded-full bg-zinc-950 px-3.5 text-sm font-semibold text-white transition hover:bg-zinc-800">
+                            {{ __('admin.settings.save') }}
+                        </button>
+                    </div>
+
+                    @error('preferred_locale')
+                        <p class="text-sm font-medium text-rose-700">{{ $message }}</p>
+                    @enderror
+
+                    <p class="text-xs leading-4 text-zinc-500">
+                        {{ __('admin.settings.language_help') }}
+                    </p>
+                </form>
+            </section>
+
+            <section class="admin-panel !rounded-[20px] !p-3 sm:!p-4">
+                <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                    <div class="min-w-0">
+                        <p class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                            {{ __('admin.settings.integrations_heading') }}
+                        </p>
+                        <h2 class="mt-1 text-base font-semibold tracking-tight text-zinc-950">
+                            {{ __('admin.settings.integrations_title') }}
+                        </h2>
+                    </div>
+                </div>
+
+                <div class="mt-3 divide-y divide-zinc-200/80 overflow-hidden rounded-2xl border border-zinc-200/80 bg-white/70">
                     @foreach ($integrations as $integration)
                         @php
                             $stateKey = $integration['configured'] ? 'configured' : (($integration['planned'] ?? false) ? 'planned' : 'missing');
                             $stateTone = $integration['configured'] ? 'emerald' : (($integration['planned'] ?? false) ? 'amber' : 'slate');
                         @endphp
 
-                        <article class="admin-list-row items-start">
-                            <div class="flex min-w-0 items-start gap-3">
-                                <span class="admin-icon-badge admin-icon-badge-{{ $integration['tone'] }}">
-                                    @include('admin.icon', ['name' => $integration['icon'], 'class' => 'admin-icon'])
+                        <article class="px-3 py-2.5">
+                            <div class="flex min-w-0 items-start gap-2.5 md:items-center">
+                                <span class="inline-flex h-7 w-7 flex-none items-center justify-center rounded-lg border border-zinc-200/80 bg-zinc-50 text-zinc-700 admin-icon-badge-{{ $integration['tone'] }}">
+                                    @include('admin.icon', ['name' => $integration['icon'], 'class' => 'h-3.5 w-3.5 flex-none'])
                                 </span>
 
-                                <div class="min-w-0">
-                                    <div class="flex flex-wrap items-center gap-2">
-                                        <h2 class="text-sm font-semibold text-zinc-950">
-                                            {{ __('admin.settings.integrations.'.$integration['key'].'.title') }}
-                                        </h2>
-                                        <span class="admin-stat-chip admin-stat-chip-{{ $stateTone }}">
-                                            {{ __('admin.settings.states.'.$stateKey) }}
-                                        </span>
-                                    </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+                                        <div class="min-w-0">
+                                            <div class="flex flex-wrap items-center gap-1.5">
+                                                <h2 class="text-sm font-semibold text-zinc-950">
+                                                    {{ __('admin.settings.integrations.'.$integration['key'].'.title') }}
+                                                </h2>
+                                                <span class="inline-flex h-5 items-center rounded-full px-2 text-[0.65rem] font-bold admin-stat-chip-{{ $stateTone }}">
+                                                    {{ __('admin.settings.states.'.$stateKey) }}
+                                                </span>
+                                            </div>
 
-                                    <p class="mt-2 text-sm leading-6 text-zinc-600">
-                                        {{ __('admin.settings.integrations.'.$integration['key'].'.description') }}
-                                    </p>
+                                            <p class="mt-0.5 text-xs leading-4 text-zinc-600">
+                                                {{ __('admin.settings.integrations.'.$integration['key'].'.description') }}
+                                            </p>
+                                        </div>
 
-                                    <div class="mt-3 flex flex-wrap gap-2">
-                                        @foreach ($integration['variables'] as $variable)
-                                            <code class="admin-meta-pill">{{ $variable }}</code>
-                                        @endforeach
+                                        <div class="flex flex-wrap gap-1.5 md:justify-end">
+                                            @foreach ($integration['variables'] as $variable)
+                                                <code class="rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-[0.66rem] font-semibold text-zinc-600">{{ $variable }}</code>
+                                            @endforeach
+                                        </div>
                                     </div>
 
                                     @if ($integration['key'] === 'translation')
-                                        <dl class="mt-3 grid gap-2 text-sm text-zinc-600 sm:grid-cols-2">
-                                            <div class="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
+                                        <dl class="mt-2 grid gap-1.5 text-xs text-zinc-600 sm:grid-cols-2">
+                                            <div class="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1">
                                                 <dt class="font-medium text-zinc-700">{{ __('admin.settings.provider_label') }}</dt>
                                                 <dd class="text-right">{{ $integration['provider'] }}</dd>
                                             </div>
-                                            <div class="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
+                                            <div class="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1">
                                                 <dt class="font-medium text-zinc-700">{{ __('admin.settings.api_key_label') }}</dt>
                                                 <dd class="text-right">
                                                     {{ __('admin.settings.states.'.($integration['api_key_configured'] ? 'configured' : 'missing')) }}
@@ -81,43 +145,7 @@
                         </article>
                     @endforeach
                 </div>
-            </x-admin.block>
-
-            <div class="space-y-4">
-                <x-admin.block
-                    :heading="__('admin.settings.security_heading')"
-                    :title="__('admin.settings.security_title')"
-                >
-                    <div class="mt-5 space-y-3">
-                        @foreach (['secrets_hidden', 'optional_integrations', 'env_only'] as $item)
-                            <div class="admin-list-row">
-                                <div class="flex items-start gap-3">
-                                    <span class="admin-icon-badge admin-icon-badge-slate">
-                                        @include('admin.icon', ['name' => 'auth', 'class' => 'admin-icon'])
-                                    </span>
-                                    <div>
-                                        <p class="text-sm font-semibold text-zinc-950">
-                                            {{ __('admin.settings.security.'.$item.'.title') }}
-                                        </p>
-                                        <p class="mt-1 text-sm leading-6 text-zinc-600">
-                                            {{ __('admin.settings.security.'.$item.'.detail') }}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                </x-admin.block>
-
-                <x-admin.block
-                    :heading="__('admin.settings.next_heading')"
-                    :title="__('admin.settings.next_title')"
-                >
-                    <p class="mt-5 text-sm leading-6 text-zinc-600">
-                        {{ __('admin.settings.next_text') }}
-                    </p>
-                </x-admin.block>
-            </div>
+            </section>
         </section>
     </div>
 @endsection

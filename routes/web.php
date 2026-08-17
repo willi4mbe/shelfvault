@@ -28,6 +28,7 @@ Route::post('/admin/logout', [AdminAuthController::class, 'destroy'])->name('adm
 Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin');
 Route::prefix('admin')->name('admin.')->group(function (): void {
     Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings.index');
+    Route::post('/settings', [AdminSettingsController::class, 'update'])->name('settings.update');
     Route::get('/collection', [AdminCollectionController::class, 'index'])->name('collection.index');
     Route::get('/collection/create', [AdminCollectionController::class, 'create'])->name('collection.create');
     Route::post('/collection/barcode-lookup', AdminBarcodeLookupController::class)->name('collection.barcode-lookup');

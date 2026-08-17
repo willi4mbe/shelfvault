@@ -28,6 +28,10 @@ const fields = [
     makeField('age_rating'),
     makeField('age_rating'),
     makeField('external_tmdb_id'),
+    makeField('season_count'),
+    makeField('episode_count'),
+    makeField('showrunner'),
+    makeField('network'),
     makeField('external_igdb_id'),
     makeField('cover_path'),
     makeField('platform'),
@@ -86,6 +90,20 @@ assert.equal(values('cast_members')[0], 'Keanu Reeves, Laurence Fishburne');
 assert.equal(values('cover_path')[0], 'covers/matrix.jpg');
 assert.equal(component.coverPath, 'covers/matrix.jpg');
 assert.equal(component.coverPreviewUrl, 'http://localhost:8000/storage/covers/matrix.jpg');
+
+component.applyImportedMetadata({
+    type: 'tv_series',
+    title: 'The Expanse',
+    season_count: 6,
+    episode_count: 62,
+    showrunner: 'Naren Shankar',
+    network: 'Syfy / Prime Video',
+});
+
+assert.equal(values('season_count')[0], '6');
+assert.equal(values('episode_count')[0], '62');
+assert.equal(values('showrunner')[0], 'Naren Shankar');
+assert.equal(values('network')[0], 'Syfy / Prime Video');
 
 component.applyImportedMetadata({
     type: 'video_game',

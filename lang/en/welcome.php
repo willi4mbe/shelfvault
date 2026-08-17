@@ -7,7 +7,7 @@ return [
     'hero' => [
         'eyebrow' => 'Self-hosted media catalog',
         'title' => 'Your physical collection, self-hosted.',
-        'subtitle' => 'ShelfVault is being built as a private, mobile-first app for films, video games, and board games.',
+        'subtitle' => 'ShelfVault is being built as a private, mobile-first app for films, TV series, video games, and board games.',
     ],
     'actions' => [
         'admin' => 'Admin login',

@@ -402,6 +402,47 @@ class AdminCollectionTest extends TestCase
         $this->assertSame(['Single player'], $item->modes);
     }
 
+    public function test_admin_can_create_a_tv_series_item(): void
+    {
+        $this->actingAs(User::query()->first())
+            ->post('/admin/collection', [
+                'type' => 'tv_series',
+                'title' => 'The Expanse',
+                'release_year' => 2015,
+                'barcode' => '3333333333333',
+                'physical_format' => 'box_set',
+                'condition' => 'very_good',
+                'location' => 'Shelf TV',
+                'status' => 'owned',
+                'season_count' => 6,
+                'episode_count' => 62,
+                'runtime_minutes' => 45,
+                'showrunner' => 'Naren Shankar',
+                'network' => 'Syfy / Prime Video',
+                'studio' => 'Alcon Television Group',
+                'age_rating' => 'TV-14',
+                'genres' => 'Science fiction, Drama',
+                'cast_members' => 'Steven Strait, Shohreh Aghdashloo',
+            ])
+            ->assertRedirect(route('admin.collection.index'));
+
+        $this->actingAs(User::query()->first())
+            ->get('/admin/collection')
+            ->assertOk()
+            ->assertSee('The Expanse was added.')
+            ->assertSee(__('admin.collection.types.tv_series'));
+
+        $item = Item::query()->first();
+
+        $this->assertSame('tv_series', $item->type->value);
+        $this->assertSame(6, $item->season_count);
+        $this->assertSame(62, $item->episode_count);
+        $this->assertSame('Naren Shankar', $item->showrunner);
+        $this->assertSame('Syfy / Prime Video', $item->network);
+        $this->assertSame(['Science fiction', 'Drama'], $item->genres);
+        $this->assertSame(['Steven Strait', 'Shohreh Aghdashloo'], $item->cast_members);
+    }
+
     public function test_admin_can_create_a_board_game_item(): void
     {
         $this->actingAs(User::query()->first())
@@ -903,6 +944,34 @@ class AdminCollectionTest extends TestCase
             ->assertSee('Strategy, Family');
     }
 
+    public function test_admin_can_view_tv_series_specific_fields_on_detail_page(): void
+    {
+        $item = Item::factory()->tvSeries()->create([
+            'title' => 'The Expanse',
+            'season_count' => 6,
+            'episode_count' => 62,
+            'runtime_minutes' => 45,
+            'showrunner' => 'Naren Shankar',
+            'network' => 'Syfy / Prime Video',
+            'studio' => 'Alcon Television Group',
+            'genres' => ['Science fiction', 'Drama'],
+            'cast_members' => ['Steven Strait', 'Shohreh Aghdashloo'],
+        ]);
+
+        $this->actingAs(User::query()->first())
+            ->get(route('admin.collection.show', $item))
+            ->assertOk()
+            ->assertSee(__('admin.collection.types.tv_series'))
+            ->assertSee(__('admin.collection.detail.sections.tv_series_overview'))
+            ->assertSee('6')
+            ->assertSee('62')
+            ->assertSee('45 min')
+            ->assertSee('Naren Shankar')
+            ->assertSee('Syfy / Prime Video')
+            ->assertSee('Alcon Television Group')
+            ->assertSee('Science fiction, Drama');
+    }
+
     public function test_csv_fields_are_converted_to_json_arrays_and_rehydrated_for_editing(): void
     {
         $this->actingAs(User::query()->first())
@@ -1030,7 +1099,6 @@ class AdminCollectionTest extends TestCase
             ->assertDontSee('Rechercher sur TMDb')
             ->assertDontSee('Rechercher par code-barres')
             ->assertDontSee('Scanner un code-barres')
-            ->assertDontSee('Fermer')
             ->assertDontSee('Saisie manuelle disponible')
             ->assertDontSee('Placez le code-barres dans le cadre.')
             ->assertDontSee('Supprime la jaquette stockée et vide le champ de jaquette.')

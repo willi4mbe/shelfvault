@@ -45,6 +45,10 @@ class Item extends Model
         'studio',
         'age_rating',
         'external_tmdb_id',
+        'season_count',
+        'episode_count',
+        'showrunner',
+        'network',
         'platform',
         'developer',
         'publisher',
@@ -65,6 +69,8 @@ class Item extends Model
             'is_favorite' => 'bool',
             'release_year' => 'integer',
             'runtime_minutes' => 'integer',
+            'season_count' => 'integer',
+            'episode_count' => 'integer',
             'cast_members' => 'array',
             'genres' => 'array',
             'modes' => 'array',
@@ -105,6 +111,11 @@ class Item extends Model
     public function scopeVideoGame(Builder $query): Builder
     {
         return $query->where('type', ItemType::VideoGame->value);
+    }
+
+    public function scopeTvSeries(Builder $query): Builder
+    {
+        return $query->where('type', ItemType::TvSeries->value);
     }
 
     public function scopeBoardGame(Builder $query): Builder

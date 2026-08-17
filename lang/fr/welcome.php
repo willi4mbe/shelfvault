@@ -7,7 +7,7 @@ return [
     'hero' => [
         'eyebrow' => 'Catalogue multimédia auto-hébergé',
         'title' => 'Votre collection physique, auto-hébergée.',
-        'subtitle' => 'ShelfVault se construit comme une application privée, mobile-first, pour les films, les jeux vidéo et les jeux de société.',
+        'subtitle' => 'ShelfVault se construit comme une application privée, mobile-first, pour les films, les séries TV, les jeux vidéo et les jeux de société.',
     ],
     'actions' => [
         'admin' => 'Connexion admin',
