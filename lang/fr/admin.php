@@ -119,6 +119,63 @@ return [
             ],
         ],
     ],
+    'settings' => [
+        'page_title' => 'Paramètres ShelfVault',
+        'kicker' => 'Paramètres admin',
+        'title' => 'Paramètres',
+        'subtitle' => 'Centralisez la configuration des métadonnées externes sans afficher les secrets enregistrés.',
+        'integrations_heading' => 'Services externes',
+        'integrations_title' => 'Fournisseurs de métadonnées et d’enrichissement',
+        'security_heading' => 'Sécurité',
+        'security_title' => 'Garde-fous de configuration',
+        'next_heading' => 'Prochaine étape',
+        'next_title' => 'Paramètres modifiables plus tard',
+        'next_text' => 'Cette page prépare l’espace des paramètres admin. Une prochaine itération pourra ajouter des formulaires validés qui écrivent la configuration proprement sans exposer les tokens dans le navigateur.',
+        'provider_label' => 'Fournisseur',
+        'api_key_label' => 'Clé API',
+        'states' => [
+            'configured' => 'Configuré',
+            'missing' => 'Non configuré',
+            'planned' => 'Prévu',
+        ],
+        'translation_providers' => [
+            'google' => 'Google Cloud Translation',
+            'custom' => 'Fournisseur personnalisé',
+            'none' => 'Aucun',
+        ],
+        'integrations' => [
+            'tmdb' => [
+                'title' => 'Films TMDb',
+                'description' => 'Utilisé pour importer les titres de films, affiches, crédits, durées et résumés localisés.',
+            ],
+            'igdb' => [
+                'title' => 'IGDB / Twitch jeux',
+                'description' => 'Utilisé pour importer les métadonnées et jaquettes de jeux vidéo via des identifiants Twitch ou un token IGDB.',
+            ],
+            'translation' => [
+                'title' => 'Traduction des descriptions',
+                'description' => 'Fournisseur optionnel utilisé pour traduire les descriptions IGDB importées dans la langue de l’admin.',
+            ],
+            'omdb' => [
+                'title' => 'IMDb / OMDb',
+                'description' => 'Réservé pour un futur fournisseur de secours pour les métadonnées de films lorsqu’une clé OMDb sera disponible.',
+            ],
+        ],
+        'security' => [
+            'secrets_hidden' => [
+                'title' => 'Secrets masqués',
+                'detail' => 'La page admin montre seulement l’état de configuration et les noms de variables, jamais les valeurs des tokens.',
+            ],
+            'optional_integrations' => [
+                'title' => 'Intégrations optionnelles',
+                'detail' => 'ShelfVault continue de fonctionner même si les fournisseurs externes sont absents.',
+            ],
+            'env_only' => [
+                'title' => 'Piloté par l’environnement',
+                'detail' => 'Les classes de fournisseurs et les clés sont lues depuis la configuration, sans service ni secret codé en dur.',
+            ],
+        ],
+    ],
     'collection' => [
         'page_title' => 'Collection ShelfVault',
         'kicker' => 'Gestion de la collection',
@@ -191,6 +248,8 @@ return [
             'choose_this_result' => 'Choisir ce résultat',
             'poster_import_failed' => 'La jaquette n’a pas pu être importée depuis TMDb.',
             'igdb_cover_import_failed' => 'La jaquette n’a pas pu être importée depuis IGDB.',
+            'translation_not_configured' => 'Aucun fournisseur de traduction n’est configuré, la description IGDB originale a donc été conservée.',
+            'translation_failed' => 'La description IGDB n’a pas pu être traduite, la description originale a donc été conservée.',
             'barcode_source_unavailable' => 'Aucune source de métadonnées par code-barres n’est configurée.',
             'physical_fields_manual' => 'Champs physiques à compléter manuellement.',
         ],
@@ -302,6 +361,7 @@ return [
             'status' => 'Statut',
             'is_favorite' => 'Favori',
             'description' => 'Description',
+            'description_original' => 'Description originale',
             'personal_notes' => 'Notes personnelles',
             'acquired_at' => 'Date d’acquisition',
             'external_tmdb_id' => 'Identifiant TMDb',

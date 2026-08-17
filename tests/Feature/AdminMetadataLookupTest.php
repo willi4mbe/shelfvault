@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Tests\Fakes\FakeTextTranslationProvider;
 use Tests\TestCase;
 
 class AdminMetadataLookupTest extends TestCase
@@ -48,6 +49,10 @@ class AdminMetadataLookupTest extends TestCase
             'services.igdb.client_id' => '',
             'services.igdb.client_secret' => '',
             'services.igdb.access_token' => '',
+            'services.translation.provider' => '',
+            'services.translation.source_locale' => 'en',
+            'services.translation.google.api_key' => '',
+            'services.translation.google.base_url' => 'https://translation.googleapis.com/language/translate/v2',
         ]);
 
         Storage::fake('public');
@@ -568,9 +573,11 @@ class AdminMetadataLookupTest extends TestCase
             ->assertJsonPath('data.platform', 'Wii, Wii U')
             ->assertJsonPath('data.developer', 'Nintendo EAD Tokyo')
             ->assertJsonPath('data.publisher', 'Nintendo')
+            ->assertJsonPath('data.description', 'Mario explores space.')
             ->assertJsonPath('data.genres', ['Platform', 'Adventure'])
             ->assertJsonPath('data.modes', ['Single player'])
             ->assertJsonPath('data.external_igdb_id', 1234)
+            ->assertJsonMissingPath('data.description_original')
             ->assertJsonMissingPath('data.external_tmdb_id')
             ->assertJsonMissingPath('data.barcode');
 
@@ -579,6 +586,115 @@ class AdminMetadataLookupTest extends TestCase
         $this->assertIsString($coverPath);
         $this->assertTrue(str_starts_with($coverPath, 'covers/'));
         Storage::disk('public')->assertExists($coverPath);
+    }
+
+    public function test_igdb_import_translates_description_to_the_admin_locale_when_a_provider_is_configured(): void
+    {
+        config([
+            'services.igdb.client_id' => 'igdb-client',
+            'services.igdb.access_token' => 'igdb-token',
+            'services.translation.provider' => FakeTextTranslationProvider::class,
+            'services.translation.source_locale' => 'en',
+        ]);
+
+        $admin = User::query()->first();
+        $admin->forceFill(['preferred_locale' => 'fr'])->save();
+
+        Http::fake([
+            'https://api.igdb.com/v4/games' => Http::response([$this->igdbGamePayload()], 200),
+            'https://images.igdb.com/igdb/image/upload/t_cover_big/co1234.jpg' => Http::response('cover-bytes', 200, [
+                'Content-Type' => 'image/jpeg',
+            ]),
+        ]);
+
+        $this->actingAs($admin)
+            ->postJson(route('admin.collection.metadata.import'), [
+                'source' => 'igdb',
+                'igdb_id' => 1234,
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'found')
+            ->assertJsonPath('data.description', '[fr] Mario explores space.')
+            ->assertJsonPath('data.description_original', 'Mario explores space.');
+    }
+
+    public function test_igdb_import_uses_google_translation_when_configured(): void
+    {
+        config([
+            'services.igdb.client_id' => 'igdb-client',
+            'services.igdb.access_token' => 'igdb-token',
+            'services.translation.provider' => 'google',
+            'services.translation.source_locale' => 'en',
+            'services.translation.google.api_key' => 'google-test-key',
+            'services.translation.google.base_url' => 'https://translation.googleapis.com/language/translate/v2',
+        ]);
+
+        $admin = User::query()->first();
+        $admin->forceFill(['preferred_locale' => 'fr'])->save();
+
+        Http::fake([
+            'https://api.igdb.com/v4/games' => Http::response([$this->igdbGamePayload()], 200),
+            'https://translation.googleapis.com/language/translate/v2*' => Http::response([
+                'data' => [
+                    'translations' => [
+                        [
+                            'translatedText' => 'Mario explore l&#39;espace.',
+                            'detectedSourceLanguage' => 'en',
+                        ],
+                    ],
+                ],
+            ], 200),
+            'https://images.igdb.com/igdb/image/upload/t_cover_big/co1234.jpg' => Http::response('cover-bytes', 200, [
+                'Content-Type' => 'image/jpeg',
+            ]),
+        ]);
+
+        $this->actingAs($admin)
+            ->postJson(route('admin.collection.metadata.import'), [
+                'source' => 'igdb',
+                'igdb_id' => 1234,
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'found')
+            ->assertJsonPath('data.description', "Mario explore l'espace.")
+            ->assertJsonPath('data.description_original', 'Mario explores space.');
+
+        Http::assertSent(function ($request): bool {
+            return str_starts_with($request->url(), 'https://translation.googleapis.com/language/translate/v2?key=google-test-key')
+                && str_contains($request->body(), 'target=fr')
+                && ! str_contains($request->body(), 'source=');
+        });
+    }
+
+    public function test_igdb_import_keeps_original_description_and_warns_when_translation_provider_is_missing(): void
+    {
+        config([
+            'services.igdb.client_id' => 'igdb-client',
+            'services.igdb.access_token' => 'igdb-token',
+            'services.translation.provider' => '',
+            'services.translation.source_locale' => 'en',
+        ]);
+
+        $admin = User::query()->first();
+        $admin->forceFill(['preferred_locale' => 'fr'])->save();
+
+        Http::fake([
+            'https://api.igdb.com/v4/games' => Http::response([$this->igdbGamePayload()], 200),
+            'https://images.igdb.com/igdb/image/upload/t_cover_big/co1234.jpg' => Http::response('cover-bytes', 200, [
+                'Content-Type' => 'image/jpeg',
+            ]),
+        ]);
+
+        $this->actingAs($admin)
+            ->postJson(route('admin.collection.metadata.import'), [
+                'source' => 'igdb',
+                'igdb_id' => 1234,
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'found')
+            ->assertJsonPath('data.description', 'Mario explores space.')
+            ->assertJsonMissingPath('data.description_original')
+            ->assertJsonPath('warnings.0', __('admin.collection.metadata.translation_not_configured'));
     }
 
     public function test_barcode_search_reports_no_barcode_metadata_source_and_does_not_fail_for_a_known_code(): void

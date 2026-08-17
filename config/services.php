@@ -52,4 +52,17 @@ return [
         'image_size' => env('IGDB_IMAGE_SIZE', 'cover_big'),
     ],
 
+    'translation' => [
+        'provider' => env('TRANSLATION_PROVIDER'),
+        'source_locale' => env('TRANSLATION_SOURCE_LOCALE', 'en'),
+        'google' => [
+            'api_key' => env('GOOGLE_TRANSLATE_API_KEY'),
+            'base_url' => env('GOOGLE_TRANSLATE_BASE_URL', 'https://translation.googleapis.com/language/translate/v2'),
+        ],
+    ],
+
+    'omdb' => [
+        'api_key' => env('OMDB_API_KEY'),
+    ],
+
 ];

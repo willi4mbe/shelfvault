@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Services\Translation\Contracts\TextTranslationProvider;
+use App\Services\Translation\Providers\GoogleTextTranslationProvider;
+use App\Services\Translation\Providers\NullTextTranslationProvider;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -11,7 +14,26 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(TextTranslationProvider::class, function ($app): TextTranslationProvider {
+            $provider = trim((string) config('services.translation.provider', ''));
+
+            if (strtolower($provider) === 'google') {
+                $apiKey = trim((string) config('services.translation.google.api_key', ''));
+
+                return $apiKey !== ''
+                    ? $app->make(GoogleTextTranslationProvider::class)
+                    : new NullTextTranslationProvider();
+            }
+
+            if ($provider !== ''
+                && class_exists($provider)
+                && is_a($provider, TextTranslationProvider::class, true)
+            ) {
+                return $app->make($provider);
+            }
+
+            return new NullTextTranslationProvider();
+        });
     }
 
     /**

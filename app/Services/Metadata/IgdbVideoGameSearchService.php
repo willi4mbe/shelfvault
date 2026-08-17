@@ -2,6 +2,8 @@
 
 namespace App\Services\Metadata;
 
+use App\Services\Translation\Contracts\TextTranslationProvider;
+use App\Services\Translation\Providers\NullTextTranslationProvider;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
@@ -14,6 +16,7 @@ class IgdbVideoGameSearchService
 {
     public function __construct(
         private readonly MetadataImportMapper $mapper = new MetadataImportMapper(),
+        private readonly ?TextTranslationProvider $translationProvider = null,
     ) {
     }
 
@@ -64,7 +67,7 @@ class IgdbVideoGameSearchService
         }
     }
 
-    public function importGame(int $igdbId): MetadataLookupResult
+    public function importGame(int $igdbId, ?string $targetLocale = null): MetadataLookupResult
     {
         if (! $this->configured()) {
             return MetadataLookupResult::noSource(__('admin.collection.metadata.igdb_not_configured'));
@@ -81,7 +84,10 @@ class IgdbVideoGameSearchService
             }
 
             $data = $this->mapper->mapIgdbGame($game);
-            $warnings = [];
+
+            $warnings = array_filter([
+                $this->translateDescription($data, $targetLocale ?? app()->getLocale()),
+            ]);
             $coverUrl = $this->coverUrl($game);
 
             if ($coverUrl !== null) {
@@ -170,6 +176,61 @@ class IgdbVideoGameSearchService
             'age_ratings.rating_category.rating',
             'age_ratings.rating_category.organization.name',
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function translateDescription(array &$data, string $targetLocale): ?string
+    {
+        $description = $data['description'] ?? null;
+
+        if (! is_string($description) || trim($description) === '') {
+            return null;
+        }
+
+        $targetLocale = trim($targetLocale) !== '' ? trim($targetLocale) : app()->getLocale();
+        $sourceLocale = trim((string) config('services.translation.source_locale', 'en'));
+        $translator = $this->translator();
+
+        if (! $translator->configured()) {
+            if ($this->samePrimaryLocale($sourceLocale, $targetLocale)) {
+                return null;
+            }
+
+            return __('admin.collection.metadata.translation_not_configured');
+        }
+
+        try {
+            $result = $translator->translate($description, $targetLocale, $sourceLocale !== '' ? $sourceLocale : null);
+        } catch (Throwable) {
+            return __('admin.collection.metadata.translation_failed');
+        }
+
+        if (! $result->translated || trim($result->text) === '') {
+            return null;
+        }
+
+        $data['description'] = $result->text;
+
+        if ($result->text !== $description) {
+            $data['description_original'] = $description;
+        }
+
+        return null;
+    }
+
+    private function translator(): TextTranslationProvider
+    {
+        return $this->translationProvider ?? app(TextTranslationProvider::class) ?? new NullTextTranslationProvider();
+    }
+
+    private function samePrimaryLocale(string $sourceLocale, string $targetLocale): bool
+    {
+        $source = strtolower(strtok(str_replace('_', '-', trim($sourceLocale)), '-') ?: '');
+        $target = strtolower(strtok(str_replace('_', '-', trim($targetLocale)), '-') ?: '');
+
+        return $source !== '' && $source === $target;
     }
 
     private function escapeQueryString(string $value): string

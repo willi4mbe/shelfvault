@@ -499,9 +499,7 @@ export function metadataLookup(config = {}) {
 
                 const warnings = Array.isArray(payloadJson?.warnings) ? payloadJson.warnings : [];
                 this.titleMessage = payloadJson?.message ?? this.labels.metadataImported;
-                this.importNotice = payloadJson?.data?.cover_path
-                    ? this.labels.coverImported
-                    : (warnings.length > 0 ? this.labels.coverNotImported : '');
+                this.importNotice = warnings[0] ?? (payloadJson?.data?.cover_path ? this.labels.coverImported : '');
             } catch (error) {
                 this.importBusy = false;
                 this.titleMessage = this.labels.searchError;
@@ -520,6 +518,7 @@ export function metadataLookup(config = {}) {
             this.setFieldValue('title', data.title, { force: forceTitle || forceFilmFields || forceVideoGameFields });
             this.setFieldValue('original_title', data.original_title, { force: forceFilmFields });
             this.setFieldValue('description', data.description, { force: forceFilmFields || forceVideoGameFields });
+            this.setFieldValue('description_original', data.description_original, { force: true });
             this.setFieldValue('release_year', data.release_year, { force: forceFilmFields || forceVideoGameFields });
             this.setFieldValue('genres', data.genres, { force: forceFilmFields || forceVideoGameFields });
             this.setFieldValue('runtime_minutes', data.runtime_minutes, { force: forceFilmFields });

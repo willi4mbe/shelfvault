@@ -128,6 +128,7 @@
 
         <input type="hidden" name="external_tmdb_id" value="{{ old('external_tmdb_id', $item->external_tmdb_id) }}">
         <input type="hidden" name="external_igdb_id" value="{{ old('external_igdb_id', $item->external_igdb_id) }}">
+        <input type="hidden" name="description_original" value="{{ old('description_original', $item->description_original) }}">
         <input type="hidden" name="cover_path" x-model="coverPath">
 
         <section class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1.95fr)]">

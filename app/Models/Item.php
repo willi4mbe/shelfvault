@@ -38,6 +38,7 @@ class Item extends Model
         'personal_notes',
         'acquired_at',
         'runtime_minutes',
+        'description_original',
         'director',
         'cast_members',
         'genres',

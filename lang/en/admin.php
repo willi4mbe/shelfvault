@@ -119,6 +119,63 @@ return [
             ],
         ],
     ],
+    'settings' => [
+        'page_title' => 'ShelfVault settings',
+        'kicker' => 'Admin settings',
+        'title' => 'Settings',
+        'subtitle' => 'Centralize external metadata configuration without displaying stored secrets.',
+        'integrations_heading' => 'External services',
+        'integrations_title' => 'Metadata and enrichment providers',
+        'security_heading' => 'Security',
+        'security_title' => 'Configuration guardrails',
+        'next_heading' => 'Next step',
+        'next_title' => 'Editable settings later',
+        'next_text' => 'This page prepares the admin settings area. A later iteration can add validated forms that write configuration safely without exposing tokens in the browser.',
+        'provider_label' => 'Provider',
+        'api_key_label' => 'API key',
+        'states' => [
+            'configured' => 'Configured',
+            'missing' => 'Not configured',
+            'planned' => 'Planned',
+        ],
+        'translation_providers' => [
+            'google' => 'Google Cloud Translation',
+            'custom' => 'Custom provider',
+            'none' => 'None',
+        ],
+        'integrations' => [
+            'tmdb' => [
+                'title' => 'TMDb movies',
+                'description' => 'Used to import film titles, posters, credits, runtime, and localized overviews.',
+            ],
+            'igdb' => [
+                'title' => 'IGDB / Twitch games',
+                'description' => 'Used to import video game metadata and covers through Twitch credentials or an IGDB access token.',
+            ],
+            'translation' => [
+                'title' => 'Description translation',
+                'description' => 'Optional provider used to translate imported IGDB descriptions into the admin language.',
+            ],
+            'omdb' => [
+                'title' => 'IMDb / OMDb',
+                'description' => 'Reserved for a future film metadata fallback when an OMDb key is available.',
+            ],
+        ],
+        'security' => [
+            'secrets_hidden' => [
+                'title' => 'Secrets stay hidden',
+                'detail' => 'The admin page only shows configuration status and variable names, never token values.',
+            ],
+            'optional_integrations' => [
+                'title' => 'Optional integrations',
+                'detail' => 'ShelfVault keeps working when external providers are missing.',
+            ],
+            'env_only' => [
+                'title' => 'Environment driven',
+                'detail' => 'Provider classes and keys are read from configuration, so no service or secret is hardcoded.',
+            ],
+        ],
+    ],
     'collection' => [
         'page_title' => 'ShelfVault collection',
         'kicker' => 'Collection management',
@@ -191,6 +248,8 @@ return [
             'choose_this_result' => 'Choose this result',
             'poster_import_failed' => 'The cover could not be imported from TMDb.',
             'igdb_cover_import_failed' => 'The cover could not be imported from IGDB.',
+            'translation_not_configured' => 'No translation provider is configured, so the original IGDB description was kept.',
+            'translation_failed' => 'The IGDB description could not be translated, so the original description was kept.',
             'barcode_source_unavailable' => 'No barcode metadata source is configured.',
             'physical_fields_manual' => 'Physical details to complete manually.',
         ],
@@ -302,6 +361,7 @@ return [
             'status' => 'Status',
             'is_favorite' => 'Favorite',
             'description' => 'Description',
+            'description_original' => 'Original description',
             'personal_notes' => 'Personal notes',
             'acquired_at' => 'Acquired at',
             'external_tmdb_id' => 'TMDb ID',
