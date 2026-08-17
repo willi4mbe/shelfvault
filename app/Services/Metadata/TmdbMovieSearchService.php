@@ -50,7 +50,7 @@ class TmdbMovieSearchService
             }
 
             $candidates = collect($response->json('results', []))
-                ->take(5)
+                ->take(10)
                 ->map(fn (array $candidate): array => $this->mapper->mapSearchCandidate($candidate, (string) config('services.tmdb.image_base_url')))
                 ->values()
                 ->all();

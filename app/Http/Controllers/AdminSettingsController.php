@@ -8,6 +8,7 @@ use App\Support\AdminNavigation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class AdminSettingsController extends Controller
@@ -29,7 +30,37 @@ class AdminSettingsController extends Controller
         return view('admin.settings.index', [
             'navigation' => $navigation->items($request->route()?->getName()),
             'integrations' => $this->integrations($translationProvider),
+            'locales' => config('shelfvault.locales'),
+            'currentLocale' => Auth::user()?->preferred_locale ?? config('app.locale', 'en'),
         ]);
+    }
+
+    public function update(InstallationState $installationState, Request $request): RedirectResponse
+    {
+        if (! $installationState->installed()) {
+            return redirect()->route('install.show');
+        }
+
+        if (! Auth::check()) {
+            return redirect()->route('login');
+        }
+
+        $validated = $request->validate([
+            'preferred_locale' => ['required', Rule::in(array_keys(config('shelfvault.locales')))],
+        ], [], [
+            'preferred_locale' => __('admin.settings.language_field'),
+        ]);
+
+        $user = Auth::user();
+        $user->forceFill([
+            'preferred_locale' => $validated['preferred_locale'],
+        ])->save();
+
+        app()->setLocale($validated['preferred_locale']);
+
+        return redirect()
+            ->route('admin.settings.index')
+            ->with('status', __('admin.settings.saved'));
     }
 
     /**

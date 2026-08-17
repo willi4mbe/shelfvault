@@ -12,6 +12,10 @@
                 'rgb' => '99 102 241',
                 'chip' => 'violet',
             ],
+            'tv_series' => [
+                'rgb' => '14 165 233',
+                'chip' => 'sky',
+            ],
             'video_game' => [
                 'rgb' => '20 184 166',
                 'chip' => 'emerald',
@@ -37,6 +41,14 @@
                 '4k_uhd' => __('admin.collection.formats.film.four_k_uhd'),
                 'vhs' => __('admin.collection.formats.film.vhs'),
                 'digital_copy' => __('admin.collection.formats.film.digital_copy'),
+                default => $item->physical_format,
+            },
+            'tv_series' => match ($item->physical_format) {
+                'dvd' => __('admin.collection.formats.tv_series.dvd'),
+                'blu_ray' => __('admin.collection.formats.tv_series.blu_ray'),
+                '4k_uhd' => __('admin.collection.formats.tv_series.four_k_uhd'),
+                'box_set' => __('admin.collection.formats.tv_series.box_set'),
+                'digital_copy' => __('admin.collection.formats.tv_series.digital_copy'),
                 default => $item->physical_format,
             },
             'video_game' => match ($item->physical_format) {
@@ -80,6 +92,17 @@
             'film' => array_values(array_filter([
                 ['label' => __('admin.collection.fields.external_tmdb_id'), 'value' => $item->external_tmdb_id],
             ], static fn (array $row): bool => filled($row['value']))),
+            'tv_series' => array_values(array_filter([
+                ['label' => __('admin.collection.fields.season_count'), 'value' => $item->season_count],
+                ['label' => __('admin.collection.fields.episode_count'), 'value' => $item->episode_count],
+                ['label' => __('admin.collection.fields.runtime_minutes'), 'value' => $item->runtime_minutes ? $item->runtime_minutes.' '.__('admin.collection.unit.minutes') : null],
+                ['label' => __('admin.collection.fields.showrunner'), 'value' => $item->showrunner],
+                ['label' => __('admin.collection.fields.network'), 'value' => $item->network],
+                ['label' => __('admin.collection.fields.studio'), 'value' => $item->studio],
+                ['label' => __('admin.collection.fields.age_rating'), 'value' => $item->age_rating],
+                ['label' => __('admin.collection.fields.genres'), 'value' => is_array($item->genres) && $item->genres !== [] ? implode(', ', $item->genres) : null],
+                ['label' => __('admin.collection.fields.external_tmdb_id'), 'value' => $item->external_tmdb_id],
+            ], static fn (array $row): bool => filled($row['value']))),
             'video_game' => array_values(array_filter([
                 ['label' => __('admin.collection.fields.platform'), 'value' => $item->platform],
                 ['label' => __('admin.collection.fields.developer'), 'value' => $item->developer],
@@ -112,6 +135,14 @@
                 ['label' => __('admin.collection.fields.age_rating'), 'value' => $item->age_rating],
             ], static fn (array $row): bool => filled($row['value'])))
             : [];
+        $seriesHighlights = $typeValue === 'tv_series'
+            ? array_values(array_filter([
+                ['label' => __('admin.collection.fields.season_count'), 'value' => $item->season_count],
+                ['label' => __('admin.collection.fields.episode_count'), 'value' => $item->episode_count],
+                ['label' => __('admin.collection.fields.showrunner'), 'value' => $item->showrunner],
+            ], static fn (array $row): bool => filled($row['value'])))
+            : [];
+        $overviewHighlights = $typeValue === 'tv_series' ? $seriesHighlights : $filmHighlights;
     @endphp
 
     <div class="relative isolate space-y-6" style="--media-accent: {{ $typeConfig['rgb'] }};">
@@ -223,14 +254,14 @@
             </div>
 
             <div class="space-y-6">
-                @if ($typeValue === 'film' && (filled($item->description) || $genres !== [] || $filmHighlights !== [] || $featuredCastMembers !== [] || filled($item->studio)))
+                @if (in_array($typeValue, ['film', 'tv_series'], true) && (filled($item->description) || $genres !== [] || $overviewHighlights !== [] || $featuredCastMembers !== [] || filled($item->studio) || filled($item->network)))
                     <section class="admin-media-section p-5 sm:p-6">
                         <div class="admin-media-section-header">
                             <span class="admin-icon-badge admin-icon-badge-{{ $typeBadgeClass }}">
                                 @include('admin.icon', ['name' => 'overview', 'class' => 'admin-icon'])
                             </span>
                             <h2 class="admin-media-section-label">
-                                {{ __('admin.collection.detail.sections.film_overview') }}
+                                {{ $typeValue === 'tv_series' ? __('admin.collection.detail.sections.tv_series_overview') : __('admin.collection.detail.sections.film_overview') }}
                             </h2>
                         </div>
 
@@ -243,9 +274,9 @@
                                 </div>
                             @endif
 
-                            @if ($filmHighlights !== [])
+                            @if ($overviewHighlights !== [])
                                 <dl class="grid gap-3 sm:grid-cols-3">
-                                    @foreach ($filmHighlights as $row)
+                                    @foreach ($overviewHighlights as $row)
                                         <div class="admin-media-field">
                                             <div class="admin-media-field-inner">
                                                 <dt class="admin-media-field-label">{{ $row['label'] }}</dt>
@@ -288,6 +319,12 @@
                             @if (filled($item->studio))
                                 <p class="text-sm text-zinc-500">
                                     {{ __('admin.collection.detail.studio_secondary', ['studio' => $item->studio]) }}
+                                </p>
+                            @endif
+
+                            @if (filled($item->network))
+                                <p class="text-sm text-zinc-500">
+                                    {{ __('admin.collection.detail.network_secondary', ['network' => $item->network]) }}
                                 </p>
                             @endif
                         </div>

@@ -49,6 +49,12 @@
             <path d="M15 6v12"></path>
             <path d="M5 10h14"></path>
             @break
+        @case('tv_series')
+            <rect x="4.5" y="6.5" width="15" height="10.5" rx="1.5"></rect>
+            <path d="M9 20h6"></path>
+            <path d="M12 17v3"></path>
+            <path d="M8 4l4 2.5L16 4"></path>
+            @break
         @case('video_games')
             <path d="M7 8h10a3 3 0 0 1 3 3v4a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-4a3 3 0 0 1 3-3Z"></path>
             <path d="M9 12h3"></path>

@@ -3,6 +3,16 @@
 @section('title', __('admin.collection.page_title'))
 
 @section('content')
+    @php
+        $typeChip = static fn (string $value): string => match ($value) {
+            'film' => 'violet',
+            'tv_series' => 'sky',
+            'video_game' => 'emerald',
+            'board_game' => 'amber',
+            default => 'slate',
+        };
+    @endphp
+
     <div class="space-y-6">
         <section class="admin-topbar">
             <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
@@ -160,7 +170,7 @@
                                         </div>
                                     </td>
                                     <td class="px-4 py-4 align-top">
-                                        <span class="admin-stat-chip admin-stat-chip-{{ $item->type->value === 'film' ? 'violet' : ($item->type->value === 'video_game' ? 'emerald' : 'amber') }}">
+                                        <span class="admin-stat-chip admin-stat-chip-{{ $typeChip($item->type->value) }}">
                                             {{ __('admin.collection.types.'.$item->type->value) }}
                                         </span>
                                     </td>

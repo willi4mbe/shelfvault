@@ -19,6 +19,7 @@
     $coverUrl = $item->coverUrl();
     $typeConfig = match ($formType) {
         'film' => ['rgb' => '99 102 241', 'chip' => 'violet'],
+        'tv_series' => ['rgb' => '14 165 233', 'chip' => 'sky'],
         'video_game' => ['rgb' => '20 184 166', 'chip' => 'emerald'],
         'board_game' => ['rgb' => '245 158 11', 'chip' => 'amber'],
         default => ['rgb' => '148 163 184', 'chip' => 'neutral'],
@@ -53,10 +54,12 @@
             coverImported: @js(__('admin.collection.metadata.cover_imported')),
             coverNotImported: @js(__('admin.collection.metadata.cover_not_imported')),
             posterImportFailed: @js(__('admin.collection.metadata.poster_import_failed')),
+            close: @js(__('admin.collection.scanner.close')),
         },
         typeLabels: {
             none: @js(__('admin.collection.create.choose_type')),
             film: @js(__('admin.collection.types.film')),
+            tv_series: @js(__('admin.collection.types.tv_series')),
             video_game: @js(__('admin.collection.types.video_game')),
             board_game: @js(__('admin.collection.types.board_game')),
         },
@@ -148,76 +151,10 @@
                             {{ __('admin.collection.metadata.search_by_title_help') }}
                         </p>
 
-                        <button
-                            type="button"
-                            class="admin-media-button admin-media-button-primary w-full justify-center"
-                            @click="searchTitle()"
-                            :disabled="titleBusy"
-                        >
-                            {{ __('admin.collection.lookup.search') }}
-                        </button>
-
                         <div class="space-y-1 text-xs leading-5 text-zinc-500">
                             <p x-cloak x-show="titleBusy" x-text="titleMessage" aria-live="polite"></p>
                             <p x-cloak x-show="!titleBusy && titleMessage" x-text="titleMessage" aria-live="polite"></p>
                             <p x-cloak x-show="!titleBusy && importNotice" x-text="importNotice" aria-live="polite"></p>
-                        </div>
-
-                        <div
-                            x-cloak
-                            x-show="resultsOpen && resultsScope === 'title'"
-                            x-transition.opacity
-                            class="admin-media-lookup-inline space-y-4 border border-zinc-200 bg-white/90 p-4 shadow-sm sm:p-5"
-                        >
-                            <div class="space-y-1">
-                                <h3 class="text-lg font-semibold text-zinc-950">
-                                    {{ __('admin.collection.metadata.results_found') }}
-                                </h3>
-                                <p class="text-sm leading-6 text-zinc-600" x-text="resultsMessage"></p>
-                            </div>
-
-                            <div class="space-y-3">
-                                <template x-for="candidate in resultsCandidates" :key="candidate.tmdb_id ?? candidate.id">
-                                    <article class="rounded-[22px] border border-zinc-200 bg-white p-3 shadow-sm">
-                                        <div class="flex gap-3">
-                                            <template x-if="candidate.poster_url">
-                                                <img :src="candidate.poster_url" :alt="candidate.title" class="h-28 w-20 rounded-2xl object-cover shadow-sm">
-                                            </template>
-                                            <template x-if="!candidate.poster_url">
-                                                <div class="flex h-28 w-20 flex-none items-center justify-center rounded-2xl border border-zinc-200 bg-zinc-100 text-zinc-400">
-                                                    @include('admin.icon', ['name' => 'collection', 'class' => 'h-5 w-5'])
-                                                </div>
-                                            </template>
-
-                                            <div class="min-w-0 flex-1 space-y-2">
-                                                <div class="space-y-1">
-                                                    <div class="flex flex-wrap items-center gap-2">
-                                                        <h4 class="min-w-0 flex-1 text-sm font-semibold text-zinc-950" x-text="candidate.title"></h4>
-                                                        <span x-cloak x-show="candidate.release_year" class="rounded-full bg-zinc-100 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-600" x-text="candidate.release_year"></span>
-                                                    </div>
-
-                                                    <p x-cloak x-show="candidate.original_title && candidate.original_title !== candidate.title" class="truncate text-xs text-zinc-500" x-text="candidate.original_title"></p>
-                                                    <p x-cloak x-show="candidate.platforms && candidate.platforms.length" class="truncate text-xs text-zinc-500" x-text="candidate.platforms.join(', ')"></p>
-                                                    <p x-cloak x-show="candidate.developer || candidate.publisher" class="truncate text-xs text-zinc-500" x-text="[candidate.developer, candidate.publisher].filter(Boolean).join(' / ')"></p>
-                                                </div>
-
-                                                <p x-cloak x-show="candidate.overview" class="line-clamp-3 text-xs leading-5 text-zinc-600" x-text="candidate.overview"></p>
-
-                                                <div class="flex justify-end">
-                                                    <button
-                                                        type="button"
-                                                        class="admin-media-button admin-media-button-primary text-sm"
-                                                        @click="chooseCandidate(candidate)"
-                                                        :disabled="importBusy && activeCandidateId !== (candidate.tmdb_id ?? candidate.igdb_id ?? candidate.id)"
-                                                    >
-                                                        {{ __('admin.collection.lookup.choose') }}
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </article>
-                                </template>
-                            </div>
                         </div>
                     </div>
                 </section>
@@ -317,10 +254,20 @@
                             <span>{{ __('admin.collection.fields.is_favorite') }}</span>
                         </label>
 
-                        <label class="block space-y-2 md:col-span-2">
+                        <div class="space-y-2 md:col-span-2">
                             <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.fields.title') }}</span>
-                            <input type="text" name="title" x-model="title" @input="closeResults(); clearTitleState()" @keydown.enter.prevent="searchTitle()" class="{{ $commonInputClass }}">
-                        </label>
+                            <div class="flex flex-col gap-2 sm:flex-row">
+                                <input type="text" name="title" x-model="title" @input="closeResults(); clearTitleState()" @keydown.enter.prevent="searchTitle()" class="{{ $commonInputClass }} sm:flex-1">
+                                <button
+                                    type="button"
+                                    class="admin-media-button admin-media-button-primary justify-center sm:min-w-36"
+                                    @click="searchTitle()"
+                                    :disabled="titleBusy"
+                                >
+                                    {{ __('admin.collection.lookup.search') }}
+                                </button>
+                            </div>
+                        </div>
 
                         <label class="block space-y-2">
                             <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.fields.original_title') }}</span>
@@ -401,7 +348,7 @@
                         </h2>
                     </div>
 
-                    <div x-show="type === '{{ ItemType::Film->value }}'" x-cloak class="mt-5 space-y-4">
+                    <fieldset x-show="type === '{{ ItemType::Film->value }}'" x-bind:disabled="type !== '{{ ItemType::Film->value }}'" x-cloak class="mt-5 space-y-4">
                         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                             <label class="block space-y-2">
                                 <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.fields.runtime_minutes') }}</span>
@@ -428,9 +375,50 @@
                                 <textarea name="cast_members" rows="3" placeholder="{{ __('admin.collection.fields.csv_placeholder') }}" class="{{ $commonInputClass }}">{{ old('cast_members', $itemToText($item->cast_members)) }}</textarea>
                             </label>
                         </div>
-                    </div>
+                    </fieldset>
 
-                    <div x-show="type === '{{ ItemType::VideoGame->value }}'" x-cloak class="mt-5 space-y-4">
+                    <fieldset x-show="type === '{{ ItemType::TvSeries->value }}'" x-bind:disabled="type !== '{{ ItemType::TvSeries->value }}'" x-cloak class="mt-5 space-y-4">
+                        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                            <label class="block space-y-2">
+                                <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.fields.season_count') }}</span>
+                                <input type="number" name="season_count" value="{{ old('season_count', $item->season_count) }}" min="1" inputmode="numeric" class="{{ $commonInputClass }}">
+                            </label>
+                            <label class="block space-y-2">
+                                <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.fields.episode_count') }}</span>
+                                <input type="number" name="episode_count" value="{{ old('episode_count', $item->episode_count) }}" min="1" inputmode="numeric" class="{{ $commonInputClass }}">
+                            </label>
+                            <label class="block space-y-2">
+                                <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.fields.runtime_minutes') }}</span>
+                                <input type="number" name="runtime_minutes" value="{{ old('runtime_minutes', $item->runtime_minutes) }}" min="1" inputmode="numeric" class="{{ $commonInputClass }}">
+                            </label>
+                            <label class="block space-y-2">
+                                <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.fields.showrunner') }}</span>
+                                <input type="text" name="showrunner" value="{{ old('showrunner', $item->showrunner) }}" class="{{ $commonInputClass }}">
+                            </label>
+                            <label class="block space-y-2">
+                                <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.fields.network') }}</span>
+                                <input type="text" name="network" value="{{ old('network', $item->network) }}" class="{{ $commonInputClass }}">
+                            </label>
+                            <label class="block space-y-2">
+                                <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.fields.studio') }}</span>
+                                <input type="text" name="studio" value="{{ old('studio', $item->studio) }}" class="{{ $commonInputClass }}">
+                            </label>
+                            <label class="block space-y-2">
+                                <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.fields.age_rating') }}</span>
+                                <input type="text" name="age_rating" value="{{ old('age_rating', $item->age_rating) }}" class="{{ $commonInputClass }}">
+                            </label>
+                            <label class="block space-y-2 md:col-span-2">
+                                <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.fields.genres') }}</span>
+                                <textarea name="genres" rows="3" placeholder="{{ __('admin.collection.fields.csv_placeholder') }}" class="{{ $commonInputClass }}">{{ old('genres', $itemToText($item->genres)) }}</textarea>
+                            </label>
+                            <label class="block space-y-2 md:col-span-2">
+                                <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.fields.cast_members') }}</span>
+                                <textarea name="cast_members" rows="3" placeholder="{{ __('admin.collection.fields.csv_placeholder') }}" class="{{ $commonInputClass }}">{{ old('cast_members', $itemToText($item->cast_members)) }}</textarea>
+                            </label>
+                        </div>
+                    </fieldset>
+
+                    <fieldset x-show="type === '{{ ItemType::VideoGame->value }}'" x-bind:disabled="type !== '{{ ItemType::VideoGame->value }}'" x-cloak class="mt-5 space-y-4">
                         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                             <label class="block space-y-2">
                                 <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.fields.platform') }}</span>
@@ -457,9 +445,9 @@
                                 <textarea name="modes" rows="3" placeholder="{{ __('admin.collection.fields.csv_placeholder') }}" class="{{ $commonInputClass }}">{{ old('modes', $itemToText($item->modes)) }}</textarea>
                             </label>
                         </div>
-                    </div>
+                    </fieldset>
 
-                    <div x-show="type === '{{ ItemType::BoardGame->value }}'" x-cloak class="mt-5 space-y-4">
+                    <fieldset x-show="type === '{{ ItemType::BoardGame->value }}'" x-bind:disabled="type !== '{{ ItemType::BoardGame->value }}'" x-cloak class="mt-5 space-y-4">
                         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                             <label class="block space-y-2">
                                 <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.fields.min_players') }}</span>
@@ -486,7 +474,7 @@
                                 <textarea name="genres" rows="3" placeholder="{{ __('admin.collection.fields.csv_placeholder') }}" class="{{ $commonInputClass }}">{{ old('genres', $itemToText($item->genres)) }}</textarea>
                             </label>
                         </div>
-                    </div>
+                    </fieldset>
                 </section>
 
                 <section class="admin-media-note">
@@ -513,4 +501,79 @@
             </div>
         </section>
     </form>
+
+    <div
+        x-cloak
+        x-show="resultsOpen && resultsScope === 'title'"
+        x-transition.opacity
+        class="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/45 px-3 py-4 backdrop-blur-sm sm:items-center sm:p-6"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="metadata-results-title"
+    >
+        <div class="max-h-[88vh] w-full max-w-5xl overflow-hidden rounded-[26px] border border-white/70 bg-white shadow-2xl">
+            <div class="flex items-start justify-between gap-4 border-b border-zinc-200 bg-zinc-50 px-4 py-4 sm:px-5">
+                <div class="min-w-0">
+                    <h3 id="metadata-results-title" class="text-base font-semibold text-zinc-950">
+                        {{ __('admin.collection.metadata.results_found') }}
+                    </h3>
+                    <p class="mt-1 text-sm leading-6 text-zinc-600" x-text="resultsMessage"></p>
+                </div>
+                <button
+                    type="button"
+                    class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-300 bg-white text-zinc-700 transition hover:border-zinc-400 hover:text-zinc-950"
+                    @click="closeResults()"
+                    :aria-label="labels.close"
+                    :title="labels.close"
+                >
+                    <span aria-hidden="true" class="text-xl leading-none">&times;</span>
+                </button>
+            </div>
+
+            <div class="max-h-[calc(88vh-5.2rem)] overflow-y-auto p-4 sm:p-5">
+                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    <template x-for="candidate in resultsCandidates" :key="candidate.tmdb_id ?? candidate.igdb_id ?? candidate.id">
+                        <article class="overflow-hidden rounded-[18px] border border-zinc-200 bg-white shadow-sm transition hover:border-zinc-300 hover:shadow-md">
+                            <div class="flex gap-3 p-3">
+                                <template x-if="candidate.poster_url">
+                                    <img :src="candidate.poster_url" :alt="candidate.title" class="h-32 w-20 flex-none rounded-2xl object-cover shadow-sm">
+                                </template>
+                                <template x-if="!candidate.poster_url">
+                                    <div class="flex h-32 w-20 flex-none items-center justify-center rounded-2xl border border-zinc-200 bg-zinc-100 text-zinc-400">
+                                        @include('admin.icon', ['name' => 'collection', 'class' => 'h-5 w-5'])
+                                    </div>
+                                </template>
+
+                                <div class="min-w-0 flex-1 space-y-2">
+                                    <div class="space-y-1">
+                                        <div class="flex items-start gap-2">
+                                            <h4 class="min-w-0 flex-1 text-sm font-semibold leading-5 text-zinc-950" x-text="candidate.title"></h4>
+                                            <span x-cloak x-show="candidate.release_year" class="rounded-full bg-zinc-100 px-2 py-1 text-[10px] font-semibold uppercase text-zinc-600" x-text="candidate.release_year"></span>
+                                        </div>
+
+                                        <p x-cloak x-show="candidate.original_title && candidate.original_title !== candidate.title" class="truncate text-xs text-zinc-500" x-text="candidate.original_title"></p>
+                                        <p x-cloak x-show="candidate.platforms && candidate.platforms.length" class="truncate text-xs text-zinc-500" x-text="candidate.platforms.join(', ')"></p>
+                                        <p x-cloak x-show="candidate.developer || candidate.publisher" class="truncate text-xs text-zinc-500" x-text="[candidate.developer, candidate.publisher].filter(Boolean).join(' / ')"></p>
+                                    </div>
+
+                                    <p x-cloak x-show="candidate.overview" class="line-clamp-3 text-xs leading-5 text-zinc-600" x-text="candidate.overview"></p>
+                                </div>
+                            </div>
+
+                            <div class="border-t border-zinc-100 bg-zinc-50 px-3 py-2">
+                                <button
+                                    type="button"
+                                    class="inline-flex w-full items-center justify-center rounded-full bg-zinc-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-60"
+                                    @click="chooseCandidate(candidate)"
+                                    :disabled="importBusy && activeCandidateId !== (candidate.tmdb_id ?? candidate.igdb_id ?? candidate.id)"
+                                >
+                                    {{ __('admin.collection.lookup.choose') }}
+                                </button>
+                            </div>
+                        </article>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
 </section>

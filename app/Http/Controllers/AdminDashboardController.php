@@ -40,6 +40,7 @@ class AdminDashboardController extends Controller
         return [
             ['key' => 'total_items', 'value' => Item::query()->count(), 'tone' => 'blue', 'icon' => 'total_items'],
             ['key' => 'films', 'value' => Item::film()->count(), 'tone' => 'violet', 'icon' => 'films'],
+            ['key' => 'tv_series', 'value' => Item::tvSeries()->count(), 'tone' => 'sky', 'icon' => 'tv_series'],
             ['key' => 'video_games', 'value' => Item::videoGame()->count(), 'tone' => 'emerald', 'icon' => 'video_games'],
             ['key' => 'board_games', 'value' => Item::boardGame()->count(), 'tone' => 'amber', 'icon' => 'board_games'],
             ['key' => 'loans', 'value' => ItemLoan::active()->count(), 'tone' => 'rose', 'icon' => 'loans'],

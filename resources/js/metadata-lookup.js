@@ -30,6 +30,27 @@ function normalizeLookupValue(value) {
     return String(value).trim();
 }
 
+function importedMetadataPayload(payload) {
+    if (!payload || typeof payload !== 'object') {
+        return {};
+    }
+
+    if (payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)) {
+        return payload.data;
+    }
+
+    return payload;
+}
+
+function statePropertyForField(name) {
+    return {
+        original_title: 'originalTitle',
+        release_year: 'releaseYear',
+        physical_format: 'physicalFormat',
+        cover_path: 'coverPath',
+    }[name] ?? name;
+}
+
 function fieldHasValue(field) {
     if (!field) {
         return false;
@@ -115,6 +136,7 @@ export function metadataLookup(config = {}) {
         typeMeta: {
             '': { label: config.typeLabels?.none ?? '', chip: 'slate', rgb: '148 163 184' },
             film: { label: config.typeLabels?.film ?? '', chip: 'violet', rgb: '99 102 241' },
+            tv_series: { label: config.typeLabels?.tv_series ?? '', chip: 'sky', rgb: '14 165 233' },
             video_game: { label: config.typeLabels?.video_game ?? '', chip: 'emerald', rgb: '20 184 166' },
             board_game: { label: config.typeLabels?.board_game ?? '', chip: 'amber', rgb: '245 158 11' },
         },
@@ -178,7 +200,11 @@ export function metadataLookup(config = {}) {
             }
         },
         formElement() {
-            return this.$el.closest('form') ?? this.$el.querySelector('form');
+            return this.$root?.querySelector('form')
+                ?? this.$el?.closest('form')
+                ?? this.$el?.querySelector('form')
+                ?? globalThis.document?.getElementById?.('collection-form')
+                ?? null;
         },
         currentTypeValue() {
             return String(this.type ?? '').trim();
@@ -234,8 +260,10 @@ export function metadataLookup(config = {}) {
                 }
             });
 
-            if (Object.prototype.hasOwnProperty.call(this, name)) {
-                this[name] = normalizedValue;
+            const stateProperty = statePropertyForField(name);
+
+            if (Object.prototype.hasOwnProperty.call(this, stateProperty)) {
+                this[stateProperty] = normalizedValue;
             }
         },
         clearTitleState() {
@@ -488,24 +516,30 @@ export function metadataLookup(config = {}) {
                     return;
                 }
 
-                this.applyImportedMetadata(payloadJson?.data ?? {}, {
-                    source,
-                    forceTitle: scope === 'title' || source === 'tmdb',
+                const importedData = importedMetadataPayload(payloadJson?.data ?? {});
+                const importedType = normalizeLookupValue(importedData.type);
+                const importedSource = payloadJson?.source ?? source;
+
+                this.applyImportedMetadata(importedData, {
+                    source: importedSource,
+                    forceTitle: scope === 'title' || importedSource === 'tmdb',
                     forceBarcode: scope === 'barcode',
-                    forceFilmFields: source === 'tmdb',
-                    forceVideoGameFields: source === 'igdb',
+                    forceFilmFields: importedSource === 'tmdb' || importedType === 'film',
+                    forceVideoGameFields: importedSource === 'igdb' || importedType === 'video_game',
                 });
                 this.closeResults();
 
                 const warnings = Array.isArray(payloadJson?.warnings) ? payloadJson.warnings : [];
                 this.titleMessage = payloadJson?.message ?? this.labels.metadataImported;
-                this.importNotice = warnings[0] ?? (payloadJson?.data?.cover_path ? this.labels.coverImported : '');
+                this.importNotice = warnings[0] ?? (importedData.cover_path ? this.labels.coverImported : '');
             } catch (error) {
                 this.importBusy = false;
                 this.titleMessage = this.labels.searchError;
             }
         },
         applyImportedMetadata(data, { forceTitle = false, forceBarcode = false, forceFilmFields = false, forceVideoGameFields = false } = {}) {
+            data = importedMetadataPayload(data);
+
             if (!data || typeof data !== 'object') {
                 return;
             }
@@ -527,6 +561,10 @@ export function metadataLookup(config = {}) {
             this.setFieldValue('director', data.director, { force: forceFilmFields });
             this.setFieldValue('age_rating', data.age_rating, { force: forceFilmFields || forceVideoGameFields });
             this.setFieldValue('external_tmdb_id', data.external_tmdb_id, { force: true });
+            this.setFieldValue('season_count', data.season_count);
+            this.setFieldValue('episode_count', data.episode_count);
+            this.setFieldValue('showrunner', data.showrunner);
+            this.setFieldValue('network', data.network);
             this.setFieldValue('barcode', data.barcode, { force: forceBarcode });
             this.setFieldValue('platform', data.platform, { force: forceVideoGameFields });
             this.setFieldValue('developer', data.developer, { force: forceVideoGameFields });

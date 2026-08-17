@@ -252,6 +252,7 @@ class AdminCollectionController extends Controller
     {
         return [
             ItemType::Film->value => __('admin.collection.types.'.ItemType::Film->value),
+            ItemType::TvSeries->value => __('admin.collection.types.'.ItemType::TvSeries->value),
             ItemType::VideoGame->value => __('admin.collection.types.'.ItemType::VideoGame->value),
             ItemType::BoardGame->value => __('admin.collection.types.'.ItemType::BoardGame->value),
         ];
@@ -298,6 +299,14 @@ class AdminCollectionController extends Controller
                 'vhs' => __('admin.collection.formats.film.vhs'),
                 'digital_copy' => __('admin.collection.formats.film.digital_copy'),
             ],
+            ItemType::TvSeries->value => [
+                '' => __('admin.collection.placeholders.none'),
+                'dvd' => __('admin.collection.formats.tv_series.dvd'),
+                'blu_ray' => __('admin.collection.formats.tv_series.blu_ray'),
+                '4k_uhd' => __('admin.collection.formats.tv_series.four_k_uhd'),
+                'box_set' => __('admin.collection.formats.tv_series.box_set'),
+                'digital_copy' => __('admin.collection.formats.tv_series.digital_copy'),
+            ],
             ItemType::VideoGame->value => [
                 '' => __('admin.collection.placeholders.none'),
                 'cartridge' => __('admin.collection.formats.video_game.cartridge'),
@@ -323,6 +332,7 @@ class AdminCollectionController extends Controller
     {
         return array_merge(
             $this->formatOptions()[ItemType::Film->value],
+            $this->formatOptions()[ItemType::TvSeries->value],
             $this->formatOptions()[ItemType::VideoGame->value],
             $this->formatOptions()[ItemType::BoardGame->value],
         );

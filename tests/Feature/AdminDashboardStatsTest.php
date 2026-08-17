@@ -73,6 +73,7 @@ class AdminDashboardStatsTest extends TestCase
     {
         Item::factory()->film()->owned()->create(['title' => 'Recent Film']);
         Item::factory()->film()->loaned()->create(['title' => 'Loaned Film']);
+        Item::factory()->tvSeries()->owned()->create(['title' => 'Recent Series']);
         Item::factory()->videoGame()->owned()->create(['title' => 'Recent Game']);
         Item::factory()->boardGame()->archived()->create(['title' => 'Archived Game']);
 
@@ -102,12 +103,13 @@ class AdminDashboardStatsTest extends TestCase
             ->assertViewHas('stats', function (array $stats): bool {
                 $statsByKey = collect($stats)->keyBy('key');
 
-                return (int) $statsByKey->get('total_items')['value'] === 5
+                return (int) $statsByKey->get('total_items')['value'] === 6
                     && (int) $statsByKey->get('films')['value'] === 2
+                    && (int) $statsByKey->get('tv_series')['value'] === 1
                     && (int) $statsByKey->get('video_games')['value'] === 1
                     && (int) $statsByKey->get('board_games')['value'] === 2
                     && (int) $statsByKey->get('loans')['value'] === 1
-                    && (int) $statsByKey->get('recent_additions')['value'] === 4;
+                    && (int) $statsByKey->get('recent_additions')['value'] === 5;
             })
             ->assertDontSee('Wishlist');
     }
