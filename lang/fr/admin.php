@@ -154,6 +154,8 @@ return [
         'secret_configured_placeholder' => 'Secret déjà configuré - saisir pour remplacer',
         'secret_help' => 'Les champs secrets ne sont jamais préremplis ; saisissez une nouvelle valeur uniquement pour remplacer le secret stocké.',
         'future_provider_help' => 'Conservé comme fournisseur optionnel futur. ShelfVault ne l’utilise pas encore.',
+        'provider_enabled_label' => 'Activer ce fournisseur',
+        'provider_enabled_help' => 'Les champs restent inactifs tant que le fournisseur n’est pas activé.',
         'library' => [
             'name_label' => 'Nom de la bibliothèque',
             'types_title' => 'Types de contenu activés',
@@ -279,6 +281,7 @@ return [
             'borrower_name' => 'Emprunteur',
             'loaned_at' => 'Date de prêt',
             'expected_return_at' => 'Retour prévu',
+            'returned_at' => 'Date de retour',
             'notes' => 'Notes',
         ],
         'placeholders' => [

@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
-        <meta name="theme-color" content="#111827">
+        <meta name="theme-color" content="#050507">
         <meta name="robots" content="noindex">
         <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
         <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
@@ -16,10 +16,75 @@
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="admin-body min-h-screen text-zinc-950 antialiased">
-        <main class="mx-auto flex min-h-screen w-full max-w-[96rem] px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
-            <div class="admin-shell flex w-full flex-1 flex-col gap-4 lg:flex-row">
-                <aside class="admin-sidebar flex min-h-0 flex-col overflow-hidden rounded-[28px] p-4 sm:p-5 lg:w-[15rem] lg:p-4 xl:w-[15.75rem]">
+    @php($adminAccentTheme = app(\App\Services\Library\LibrarySettings::class)->accentTheme())
+    <body
+        class="admin-body admin-accent-{{ $adminAccentTheme['key'] ?? 'orange' }} min-h-screen text-white antialiased"
+        style="--library-accent: {{ $adminAccentTheme['rgb'] ?? '249 115 22' }}; --library-accent-contrast: {{ $adminAccentTheme['contrastRgb'] ?? '23 13 2' }}; --admin-accent: {{ $adminAccentTheme['rgb'] ?? '249 115 22' }}; --admin-accent-contrast: {{ $adminAccentTheme['contrastRgb'] ?? '23 13 2' }};"
+    >
+        <div x-data="{ menuOpen: false }" class="min-h-screen">
+            <header class="admin-mobile-header sticky top-0 z-40 flex items-center justify-between gap-3 px-4 py-3 lg:hidden">
+                <a href="{{ route('admin') }}" class="library-brand">
+                    <span class="library-mobile-logo">
+                        <img src="{{ asset('branding/shelfvault-icon-192.png') }}" alt="" class="h-7 w-7">
+                    </span>
+                    <span class="truncate text-sm font-semibold">{{ __('admin.brand') }}</span>
+                </a>
+                <button
+                    type="button"
+                    x-on:click="menuOpen = ! menuOpen"
+                    class="library-icon-button"
+                    aria-controls="admin-mobile-menu"
+                    x-bind:aria-expanded="menuOpen.toString()"
+                >
+                    @include('admin.icon', ['name' => 'collection', 'class' => 'h-5 w-5'])
+                    <span class="sr-only">{{ __('library.navigation.menu') }}</span>
+                </button>
+            </header>
+
+            <div
+                x-cloak
+                x-show="menuOpen"
+                x-transition.opacity.duration.150ms
+                class="fixed inset-0 z-50 bg-black/72 lg:hidden"
+                x-on:click.self="menuOpen = false"
+            >
+                <aside id="admin-mobile-menu" class="admin-drawer flex h-full w-[min(22rem,86vw)] flex-col px-5 py-5">
+                    <div class="flex items-center justify-between gap-3">
+                        <a href="{{ route('admin') }}" class="library-brand">
+                            <span class="library-logo-mark">
+                                <img src="{{ asset('branding/shelfvault-icon-192.png') }}" alt="" class="h-8 w-8">
+                            </span>
+                            <span class="min-w-0">
+                                <span class="block text-xs font-semibold uppercase text-white/46">{{ __('admin.brand') }}</span>
+                                <span class="mt-1 block truncate text-base font-semibold text-white">{{ __('admin.sidebar.title') }}</span>
+                            </span>
+                        </a>
+                        <button type="button" x-on:click="menuOpen = false" class="library-icon-button">
+                            @include('admin.icon', ['name' => 'minimize', 'class' => 'h-5 w-5'])
+                            <span class="sr-only">{{ __('library.navigation.menu') }}</span>
+                        </button>
+                    </div>
+
+                    <div class="mt-6 min-h-0 flex-1 overflow-y-auto">
+                        @include('admin.partials.navigation')
+
+                        @hasSection('sidebar')
+                            <div class="mt-4">
+                                @yield('sidebar')
+                            </div>
+                        @endif
+                    </div>
+
+                    <div class="mt-4 border-t border-white/10 pt-4">
+                        <span class="text-xs font-medium text-white/52">
+                            {{ __('admin.footer.version') }}
+                        </span>
+                    </div>
+                </aside>
+            </div>
+
+            <main class="mx-auto grid min-h-[calc(100vh-4.25rem)] w-full max-w-[96rem] gap-4 px-4 py-4 sm:px-6 lg:min-h-screen lg:grid-cols-[16.5rem_minmax(0,1fr)] lg:px-8 lg:py-6">
+                <aside class="admin-sidebar hidden min-h-0 flex-col overflow-hidden rounded-[18px] p-4 sm:p-5 lg:flex lg:p-4">
                     <div class="space-y-4">
                         <div class="admin-logo-strip inline-flex h-14 w-fit max-w-full items-center rounded-2xl px-4 py-2">
                             <img src="{{ asset('branding/shelfvault.png') }}" alt="{{ __('admin.brand') }}" class="block h-10 w-auto flex-none object-contain">
@@ -33,63 +98,7 @@
                     </div>
 
                     <div class="mt-5 min-h-0 flex-1 overflow-y-auto">
-                        <nav class="space-y-2">
-                            <p class="px-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-                                {{ __('admin.sidebar.navigation') }}
-                            </p>
-
-                            @php($logoutItem = null)
-
-                            @isset($navigation)
-                                @foreach ($navigation as $item)
-                                    @if (($item['logout'] ?? false))
-                                        @php($logoutItem = $item)
-                                    @elseif (($item['interactive'] ?? false))
-                                        <a
-                                            href="{{ $item['route'] }}"
-                                            @class([
-                                                'admin-nav-link',
-                                                'admin-nav-link-active' => ($item['active'] ?? false),
-                                            ])
-                                            @if(($item['active'] ?? false)) aria-current="page" @endif
-                                        >
-                                            <span class="admin-nav-link-label">
-                                                @include('admin.icon', ['name' => $item['icon'], 'class' => 'admin-nav-link-icon'])
-                                                <span>{{ __('admin.navigation.'.$item['key']) }}</span>
-                                            </span>
-                                        </a>
-                                    @else
-                                        <div class="admin-nav-link admin-nav-link-disabled">
-                                            <span class="admin-nav-link-label">
-                                                @include('admin.icon', ['name' => $item['icon'], 'class' => 'admin-nav-link-icon'])
-                                                <span>{{ __('admin.navigation.'.$item['key']) }}</span>
-                                            </span>
-                                        </div>
-                                    @endif
-                                @endforeach
-                            @endisset
-                        </nav>
-
-                        <div class="mt-5 space-y-2 border-t border-white/10 pt-4">
-                            <a href="{{ url('/') }}" class="admin-nav-link admin-nav-link-secondary" aria-label="{{ __('admin.navigation.home') }}">
-                                <span class="admin-nav-link-label">
-                                    @include('admin.icon', ['name' => 'home', 'class' => 'admin-nav-link-icon'])
-                                    <span>{{ __('admin.navigation.home') }}</span>
-                                </span>
-                            </a>
-
-                            @if ($logoutItem)
-                                <form method="POST" action="{{ route('admin.logout') }}">
-                                    @csrf
-                                    <button type="submit" class="admin-nav-link admin-nav-link-button admin-nav-link-secondary">
-                                        <span class="admin-nav-link-label">
-                                            @include('admin.icon', ['name' => $logoutItem['icon'], 'class' => 'admin-nav-link-icon'])
-                                            <span>{{ __('admin.actions.logout') }}</span>
-                                        </span>
-                                    </button>
-                                </form>
-                            @endif
-                        </div>
+                        @include('admin.partials.navigation')
 
                         @hasSection('sidebar')
                             <div class="mt-4">
@@ -105,7 +114,7 @@
                     </div>
                 </aside>
 
-                <section class="admin-main flex min-h-0 flex-1 flex-col overflow-hidden rounded-[28px]">
+                <section class="admin-main flex min-h-0 flex-col overflow-hidden rounded-[18px]">
                     @hasSection('header')
                         <header class="shrink-0 border-b border-zinc-200/80">
                             @yield('header')
@@ -116,7 +125,7 @@
                         @yield('content')
                     </div>
                 </section>
-            </div>
-        </main>
+            </main>
+        </div>
     </body>
 </html>

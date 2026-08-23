@@ -60,6 +60,7 @@ class AdminSettingsController extends Controller
             'accent_color' => ['required', Rule::in(array_keys($librarySettings->accentColorOptions()))],
             'locations_enabled' => ['nullable', 'boolean'],
             'locations' => ['nullable', 'string', 'max:2000'],
+            'preferred_locale' => ['required', Rule::in(array_keys(config('shelfvault.locales')))],
         ], [], [
             'library_name' => __('admin.settings.library.name_label'),
             'enabled_types' => __('admin.settings.library.types_title'),
@@ -67,6 +68,7 @@ class AdminSettingsController extends Controller
             'accent_color' => __('admin.settings.appearance.accent_label'),
             'locations_enabled' => __('admin.settings.locations.enabled_title'),
             'locations' => __('admin.settings.locations.list_label'),
+            'preferred_locale' => __('admin.settings.language_field'),
         ]);
 
         $librarySettings->setLibraryName($validated['library_name']);
@@ -75,6 +77,13 @@ class AdminSettingsController extends Controller
         $librarySettings->setAccentColor($validated['accent_color']);
         $librarySettings->setLocationsEnabled($request->boolean('locations_enabled'));
         $librarySettings->setLocations(preg_split('/\R/u', (string) ($validated['locations'] ?? '')) ?: []);
+
+        $user = Auth::user();
+        $user->forceFill([
+            'preferred_locale' => $validated['preferred_locale'],
+        ])->save();
+
+        app()->setLocale($validated['preferred_locale']);
 
         return redirect()
             ->route('admin.settings.index')
@@ -116,21 +125,25 @@ class AdminSettingsController extends Controller
         }
 
         abort_unless(array_key_exists($service, $this->serviceDefinitions()), 404);
-        abort_if($this->serviceDefinitions()[$service]['optional_future'] ?? false, 404);
 
         $validated = $request->validate($this->validationRules($service), [], $this->validationAttributes($service));
         $payload = $validated['settings'] ?? [];
+        $enabled = array_key_exists('enabled', $payload) ? (bool) $payload['enabled'] : true;
 
-        foreach ($this->serviceDefinitions()[$service]['fields'] as $field) {
-            $key = $field['key'];
-            $isSecret = (bool) ($field['secret'] ?? false);
-            $value = $payload[$key] ?? null;
+        $settings->set($service, 'enabled', $enabled ? '1' : '0', false);
 
-            if ($isSecret && trim((string) $value) === '') {
-                continue;
+        if ($enabled) {
+            foreach ($this->serviceDefinitions()[$service]['fields'] as $field) {
+                $key = $field['key'];
+                $isSecret = (bool) ($field['secret'] ?? false);
+                $value = $payload[$key] ?? null;
+
+                if ($isSecret && trim((string) $value) === '') {
+                    continue;
+                }
+
+                $settings->set($service, $key, is_string($value) ? $value : null, $isSecret);
             }
-
-            $settings->set($service, $key, is_string($value) ? $value : null, $isSecret);
         }
 
         if ($service === 'igdb') {
@@ -154,7 +167,6 @@ class AdminSettingsController extends Controller
         }
 
         abort_unless(array_key_exists($service, $this->serviceDefinitions()), 404);
-        abort_if($this->serviceDefinitions()[$service]['optional_future'] ?? false, 404);
 
         [$ok, $message] = match ($service) {
             'tmdb' => $this->testTmdb($settings),
@@ -178,6 +190,7 @@ class AdminSettingsController extends Controller
             ->map(fn (array $definition, string $service): array => [
                 ...$definition,
                 'key' => $service,
+                'enabled' => $this->serviceEnabled($service, $settings),
                 'state' => $this->serviceState($service, $settings),
                 'fields' => $this->fieldsForView($service, $definition['fields'], $settings),
             ])
@@ -265,16 +278,6 @@ class AdminSettingsController extends Controller
                     ['key' => 'token', 'secret' => true, 'config' => 'services.bgg.token'],
                 ],
             ],
-            'omdb' => [
-                'icon' => 'external_link',
-                'tone' => 'slate',
-                'variables' => ['OMDB_API_KEY'],
-                'testable' => false,
-                'optional_future' => true,
-                'fields' => [
-                    ['key' => 'api_key', 'secret' => true, 'config' => 'services.omdb.api_key'],
-                ],
-            ],
         ];
     }
 
@@ -308,8 +311,8 @@ class AdminSettingsController extends Controller
 
     private function serviceState(string $service, ExternalServiceSettings $settings): string
     {
-        if ($service === 'omdb') {
-            return 'optional_future';
+        if (! $this->serviceEnabled($service, $settings)) {
+            return 'missing';
         }
 
         if ($service === 'tmdb') {
@@ -354,7 +357,9 @@ class AdminSettingsController extends Controller
      */
     private function validationRules(string $service): array
     {
-        return match ($service) {
+        return [
+            'settings.enabled' => ['nullable', 'boolean'],
+            ...match ($service) {
             'tmdb' => [
                 'settings.api_key' => ['nullable', 'string', 'max:2000'],
                 'settings.bearer_token' => ['nullable', 'string', 'max:4000'],
@@ -374,7 +379,8 @@ class AdminSettingsController extends Controller
                 'settings.token' => ['nullable', 'string', 'max:4000'],
             ],
             default => [],
-        };
+            },
+        ];
     }
 
     /**
@@ -383,10 +389,53 @@ class AdminSettingsController extends Controller
     private function validationAttributes(string $service): array
     {
         return collect($this->serviceDefinitions()[$service]['fields'] ?? [])
+            ->prepend(['key' => 'enabled'])
             ->mapWithKeys(fn (array $field): array => [
-                'settings.'.$field['key'] => __('admin.settings.fields.'.$service.'.'.$field['key']),
+                'settings.'.$field['key'] => $field['key'] === 'enabled'
+                    ? __('admin.settings.provider_enabled_label')
+                    : __('admin.settings.fields.'.$service.'.'.$field['key']),
             ])
             ->all();
+    }
+
+    private function serviceEnabled(string $service, ExternalServiceSettings $settings): bool
+    {
+        $stored = $settings->get($service, 'enabled');
+
+        if ($stored !== null) {
+            return filter_var($stored, FILTER_VALIDATE_BOOL);
+        }
+
+        return $this->serviceHasCredentials($service, $settings);
+    }
+
+    private function serviceHasCredentials(string $service, ExternalServiceSettings $settings): bool
+    {
+        if ($service === 'tmdb') {
+            return $this->filled($settings->getSecret('tmdb', 'api_key', config('services.tmdb.api_key')))
+                || $this->filled($settings->getSecret('tmdb', 'bearer_token', config('services.tmdb.bearer_token')));
+        }
+
+        if ($service === 'igdb') {
+            $clientId = $settings->getSecret('igdb', 'client_id', config('services.igdb.client_id'));
+            $clientSecret = $settings->getSecret('igdb', 'client_secret', config('services.igdb.client_secret'));
+            $accessToken = $settings->getSecret('igdb', 'access_token', config('services.igdb.access_token'));
+
+            return $this->filled($clientId) && ($this->filled($clientSecret) || $this->filled($accessToken));
+        }
+
+        if ($service === 'google_translation') {
+            $provider = strtolower((string) $settings->get('google_translation', 'provider', config('services.translation.provider')));
+            $apiKey = $settings->getSecret('google_translation', 'api_key', config('services.translation.google.api_key'));
+
+            return $provider === 'google' && $this->filled($apiKey);
+        }
+
+        if ($service === 'bgg') {
+            return $this->filled($settings->getSecret('bgg', 'token', config('services.bgg.token')));
+        }
+
+        return false;
     }
 
     /**

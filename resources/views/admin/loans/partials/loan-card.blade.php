@@ -30,7 +30,11 @@
                     @endif
                 </div>
 
-                <dl class="mt-3 grid gap-2 text-sm text-zinc-600 sm:grid-cols-3">
+                <dl @class([
+                    'mt-3 grid gap-2 text-sm text-zinc-600',
+                    'sm:grid-cols-3' => $showReturnAction,
+                    'sm:grid-cols-4' => ! $showReturnAction,
+                ])>
                     <div>
                         <dt class="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">{{ __('admin.loans.fields.borrower_name') }}</dt>
                         <dd class="mt-1 font-medium text-zinc-800">{{ $loan->borrower_name }}</dd>
@@ -43,6 +47,12 @@
                         <dt class="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">{{ __('admin.loans.fields.expected_return_at') }}</dt>
                         <dd class="mt-1">{{ optional($loan->expected_return_at)->format('Y-m-d') ?: __('admin.loans.placeholders.no_expected_return') }}</dd>
                     </div>
+                    @unless ($showReturnAction)
+                        <div>
+                            <dt class="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">{{ __('admin.loans.fields.returned_at') }}</dt>
+                            <dd class="mt-1 font-medium text-zinc-800">{{ optional($loan->returned_at)->format('Y-m-d') }}</dd>
+                        </div>
+                    @endunless
                 </dl>
 
                 @if (filled($loan->notes))

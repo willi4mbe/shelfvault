@@ -11,10 +11,10 @@
         };
 
         $typeTone = static fn (?string $type): string => match ($type) {
-            'film' => 'violet',
+            'film' => 'amber',
             'tv_series' => 'sky',
             'video_game' => 'emerald',
-            'board_game' => 'amber',
+            'board_game' => 'violet',
             default => 'slate',
         };
     @endphp

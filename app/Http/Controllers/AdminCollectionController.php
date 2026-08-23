@@ -37,8 +37,7 @@ class AdminCollectionController extends Controller
         $filters = $this->filters($request, $librarySettings);
 
         $query = Item::query()
-            ->withExists(['itemLoans as has_active_loan' => fn ($query) => $query->active()])
-            ->orderByRaw('LOWER(COALESCE(sort_title, title)) asc');
+            ->withExists(['itemLoans as has_active_loan' => fn ($query) => $query->active()]);
 
         if ($filters['search'] !== null) {
             $search = $filters['search'];
@@ -53,7 +52,9 @@ class AdminCollectionController extends Controller
             $query->where('type', $filters['type']);
         }
 
-        $items = $query->get();
+        $items = $query
+            ->orderByRaw('LOWER(COALESCE(sort_title, title)) asc')
+            ->get();
 
         return view('admin.collection.index', [
             'navigation' => $navigation->items($request->route()?->getName()),

@@ -52,12 +52,11 @@
         @endif
 
         <section class="space-y-4">
-            <form method="POST" action="{{ route('admin.settings.library.update') }}" class="admin-panel !rounded-[20px] !p-4 sm:!p-5">
+            <form method="POST" action="{{ route('admin.settings.library.update') }}" class="space-y-4">
                 @csrf
                 @method('PUT')
 
-                <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.78fr)]">
-                    <section class="min-w-0">
+                    <section class="admin-panel !rounded-[20px] !p-4 sm:!p-5">
                         <p class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">
                             {{ __('admin.settings.library_heading') }}
                         </p>
@@ -103,7 +102,7 @@
                         </div>
                     </section>
 
-                    <section class="min-w-0">
+                    <section class="admin-panel !rounded-[20px] !p-4 sm:!p-5">
                         <p class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">
                             {{ __('admin.settings.features_heading') }}
                         </p>
@@ -187,14 +186,7 @@
                             @enderror
                         </div>
 
-                        <div class="mt-4 flex justify-end">
-                            <button type="submit" class="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-full bg-zinc-950 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800 sm:w-auto">
-                                {{ __('admin.settings.save') }}
-                            </button>
-                        </div>
                     </section>
-                </div>
-            </form>
 
             <section class="admin-panel !rounded-[20px] !p-4 sm:!p-5">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -210,9 +202,7 @@
                         </p>
                     </div>
 
-                    <form method="POST" action="{{ route('admin.settings.update') }}" class="w-full lg:max-w-xl">
-                        @csrf
-
+                    <div class="w-full lg:max-w-xl">
                         <div class="grid gap-2 sm:grid-cols-[minmax(12rem,1fr)_auto] sm:items-end">
                             <label class="min-w-0 space-y-1">
                                 <span class="block text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">{{ __('admin.settings.language_field') }}</span>
@@ -222,18 +212,21 @@
                                     @endforeach
                                 </select>
                             </label>
-
-                            <button type="submit" class="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-full bg-zinc-950 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800 sm:w-auto">
-                                {{ __('admin.settings.save') }}
-                            </button>
                         </div>
 
                         @error('preferred_locale')
                             <p class="mt-2 text-sm font-medium text-rose-700">{{ $message }}</p>
                         @enderror
-                    </form>
+                    </div>
                 </div>
             </section>
+
+                <div class="flex justify-end">
+                    <button type="submit" class="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-full bg-zinc-950 px-5 text-sm font-semibold text-white transition hover:bg-zinc-800 sm:w-auto">
+                        {{ __('admin.settings.save') }}
+                    </button>
+                </div>
+            </form>
 
             <section class="admin-panel !rounded-[20px] !p-4 sm:!p-5">
                 <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
@@ -258,7 +251,10 @@
                             };
                         @endphp
 
-                        <article class="flex min-h-full flex-col rounded-2xl border border-zinc-200/80 bg-white/85 p-4">
+                        <article
+                            class="flex min-h-full flex-col rounded-2xl border border-zinc-200/80 bg-white/85 p-4"
+                            x-data="{ providerEnabled: @js(old('settings.enabled', $integration['enabled'] ? '1' : '0') === '1') }"
+                        >
                             <div class="flex min-w-0 items-start gap-3">
                                 <span class="inline-flex h-8 w-8 flex-none items-center justify-center rounded-lg border border-zinc-200/80 bg-zinc-50 text-zinc-700 admin-icon-badge-{{ $integration['tone'] }}">
                                     @include('admin.icon', ['name' => $integration['icon'], 'class' => 'h-4 w-4 flex-none'])
@@ -272,6 +268,20 @@
                                         <span class="inline-flex h-5 items-center rounded-full px-2 text-[0.65rem] font-bold admin-stat-chip-{{ $stateTone }}">
                                             {{ __('admin.settings.states.'.$stateKey) }}
                                         </span>
+                                        @if (! ($integration['optional_future'] ?? false))
+                                            <input type="hidden" name="settings[enabled]" value="0" form="settings-provider-{{ $integration['key'] }}">
+                                            <label class="inline-flex h-7 items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-2.5 text-[0.68rem] font-semibold text-zinc-700">
+                                                <input
+                                                    type="checkbox"
+                                                    name="settings[enabled]"
+                                                    value="1"
+                                                    form="settings-provider-{{ $integration['key'] }}"
+                                                    x-model="providerEnabled"
+                                                    class="h-3.5 w-3.5 rounded border-zinc-300 text-zinc-950 focus:ring-zinc-500"
+                                                >
+                                                <span>{{ __('admin.settings.provider_enabled_label') }}</span>
+                                            </label>
+                                        @endif
                                     </div>
 
                                     <p class="mt-1 text-xs leading-5 text-zinc-600">
@@ -281,11 +291,14 @@
                             </div>
 
                             @if (! ($integration['optional_future'] ?? false))
-                                <form method="POST" action="{{ route('admin.settings.external-services.update', $integration['key']) }}" class="mt-4 flex flex-1 flex-col">
+                                <form id="settings-provider-{{ $integration['key'] }}" method="POST" action="{{ route('admin.settings.external-services.update', $integration['key']) }}" class="mt-4 flex flex-1 flex-col">
                                     @csrf
                                     @method('PUT')
 
-                                    <div class="grid gap-2 {{ $integration['key'] === 'tmdb' ? 'sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5.75rem_4.5rem]' : 'sm:grid-cols-2' }}">
+                                    <div
+                                        class="grid gap-2 {{ $integration['key'] === 'tmdb' ? 'sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5.75rem_4.5rem]' : 'sm:grid-cols-2' }}"
+                                        x-bind:class="{ 'opacity-45': ! providerEnabled }"
+                                    >
                                         @foreach ($integration['fields'] as $field)
                                             @php
                                                 $isCompactField = $integration['key'] === 'tmdb' && in_array($field['key'], ['language', 'region'], true);
@@ -295,7 +308,7 @@
                                                 <span class="block truncate text-[0.66rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">{{ $field['label'] }}</span>
 
                                                 @if (($field['type'] ?? null) === 'select')
-                                                    <select name="settings[{{ $field['key'] }}]" class="h-9 w-full min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-sm font-medium text-zinc-950 outline-none transition focus:border-zinc-400 focus:bg-white focus:ring-4 focus:ring-zinc-100">
+                                                    <select name="settings[{{ $field['key'] }}]" x-bind:disabled="! providerEnabled" class="h-9 w-full min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-sm font-medium text-zinc-950 outline-none transition focus:border-zinc-400 focus:bg-white focus:ring-4 focus:ring-zinc-100">
                                                         <option value="">{{ __('admin.settings.translation_providers.none') }}</option>
                                                         <option value="google" @selected(old('settings.'.$field['key'], $field['value']) === 'google')>{{ __('admin.settings.translation_providers.google') }}</option>
                                                     </select>
@@ -306,6 +319,7 @@
                                                         value="{{ $field['secret'] ? '' : old('settings.'.$field['key'], $field['value']) }}"
                                                         placeholder="{{ $field['secret'] && $field['configured'] ? __('admin.settings.secret_configured_placeholder') : $field['placeholder'] }}"
                                                         autocomplete="off"
+                                                        x-bind:disabled="! providerEnabled"
                                                         class="h-9 w-full min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-sm font-medium text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-zinc-400 focus:bg-white focus:ring-4 focus:ring-zinc-100 {{ $isCompactField ? 'text-center' : '' }}"
                                                     >
                                                 @endif
@@ -322,6 +336,7 @@
                                             <button
                                                 type="submit"
                                                 form="test-{{ $integration['key'] }}"
+                                                x-bind:disabled="! providerEnabled"
                                                 class="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-700 transition hover:border-zinc-400 hover:text-zinc-950"
                                             >
                                                 {{ __('admin.settings.test_connection') }}

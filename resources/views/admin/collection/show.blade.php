@@ -9,8 +9,8 @@
 
         $typeConfig = match ($typeValue) {
             'film' => [
-                'rgb' => '99 102 241',
-                'chip' => 'violet',
+                'rgb' => '245 158 11',
+                'chip' => 'amber',
             ],
             'tv_series' => [
                 'rgb' => '14 165 233',
@@ -21,8 +21,8 @@
                 'chip' => 'emerald',
             ],
             'board_game' => [
-                'rgb' => '245 158 11',
-                'chip' => 'amber',
+                'rgb' => '167 139 250',
+                'chip' => 'violet',
             ],
             default => [
                 'rgb' => '99 102 241',
@@ -71,7 +71,7 @@
             ['label' => __('admin.collection.fields.original_title'), 'value' => $item->original_title],
             ['label' => __('admin.collection.fields.release_year'), 'value' => $item->release_year],
             ['label' => __('admin.collection.fields.barcode'), 'value' => $item->barcode],
-            ['label' => __('admin.collection.fields.condition'), 'value' => $item->condition ? __('admin.collection.conditions.'.$item->condition->value) : __('admin.collection.placeholders.not_specified')],
+            ['label' => __('admin.collection.fields.condition'), 'value' => $item->physical_format === 'digital_copy' ? null : ($item->condition ? __('admin.collection.conditions.'.$item->condition->value) : __('admin.collection.placeholders.not_specified'))],
             ['label' => __('admin.collection.fields.is_favorite'), 'value' => $item->is_favorite ? __('admin.collection.values.yes') : __('admin.collection.values.no')],
         ], static fn (array $row): bool => filled($row['value'])));
 
@@ -164,7 +164,7 @@
                                 {{ $formatLabel }}
                             </span>
                         @endif
-                        @if ($item->condition)
+                        @if ($item->condition && $item->physical_format !== 'digital_copy')
                             <span class="admin-stat-chip admin-stat-chip-slate">
                                 {{ __('admin.collection.conditions.'.$item->condition->value) }}
                             </span>

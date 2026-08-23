@@ -3070,3 +3070,291 @@
         white-space: pre-line;
     }
 }
+
+/* Final admin overrides must stay after Tailwind/component layers. */
+.admin-body {
+    background:
+        radial-gradient(circle at 78% 0%, rgba(255, 255, 255, 0.06), transparent 24rem),
+        radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.05), transparent 22rem),
+        linear-gradient(180deg, #111217 0%, #08090c 42%, #050507 100%);
+    color: #ffffff;
+}
+
+.admin-mobile-header,
+.admin-sidebar,
+.admin-drawer {
+    border-color: rgba(255, 255, 255, 0.06);
+    background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.035), transparent 58%),
+        rgba(9, 12, 15, 0.96);
+    box-shadow: 22px 0 70px rgba(0, 0, 0, 0.38);
+    backdrop-filter: blur(24px);
+}
+
+.admin-main {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.admin-topbar,
+.admin-main > header {
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.admin-sidebar::before,
+.admin-sidebar-hero::after,
+.admin-nav-link-active::before {
+    content: none;
+}
+
+.admin-sidebar-hero,
+.admin-nav-link-secondary {
+    background: rgba(255, 255, 255, 0.045);
+    box-shadow: none;
+}
+
+.admin-nav-heading,
+.admin-sidebar-title {
+    color: rgba(255, 255, 255, 0.42);
+    letter-spacing: 0;
+}
+
+.admin-nav-link {
+    border-color: transparent;
+    border-radius: 0.45rem;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.admin-nav-link:hover {
+    transform: none;
+    background: rgba(255, 255, 255, 0.055);
+    color: #ffffff;
+}
+
+.admin-nav-link-active,
+.admin-nav-link-active:hover,
+.admin-nav-link-active svg {
+    color: rgb(var(--admin-accent));
+}
+
+.admin-nav-link-active {
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.035);
+    box-shadow: none;
+}
+
+.admin-stat-card,
+.admin-panel,
+.admin-quick-card,
+.admin-empty-state,
+.admin-media-hero,
+.admin-media-section,
+.admin-media-subsection,
+.admin-media-note,
+.admin-media-cover-shell,
+.admin-media-scanner-panel,
+.admin-media-lookup-panel {
+    border-color: rgba(255, 255, 255, 0.09);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.072), rgba(255, 255, 255, 0.04)),
+        rgba(255, 255, 255, 0.055);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.055),
+        0 18px 42px rgba(0, 0, 0, 0.22);
+}
+
+.admin-stat-card,
+.admin-panel,
+.admin-quick-card,
+.admin-empty-state,
+.admin-media-field,
+.admin-list-row,
+.admin-activity-row {
+    border-radius: 0.65rem;
+}
+
+.admin-media-hero,
+.admin-media-section,
+.admin-media-subsection,
+.admin-media-note,
+.admin-media-cover-shell,
+.admin-media-scanner-panel,
+.admin-media-lookup-panel {
+    border-radius: 0.75rem;
+}
+
+.admin-media-field,
+.admin-list-row,
+.admin-activity-row,
+.admin-body .admin-main :where(.bg-white, .bg-white\/75, .bg-white\/80, .bg-white\/85, .bg-white\/90, .bg-zinc-50, .bg-zinc-100) {
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: none;
+}
+
+.admin-media-cover-frame {
+    border-radius: 0.45rem;
+    background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.04)),
+        #17181d;
+}
+
+.admin-media-cover-placeholder {
+    color: rgb(var(--media-accent, var(--admin-accent)));
+    background:
+        radial-gradient(circle at 50% 30%, rgb(var(--media-accent, var(--admin-accent)) / 0.16), transparent 42%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.045));
+}
+
+.admin-media-field::before {
+    background: rgb(var(--media-accent, var(--admin-accent)) / 0.88);
+}
+
+.admin-media-cover-placeholder-title,
+.admin-media-scanner-status,
+.admin-media-field-value,
+.admin-overview-value,
+.admin-body .admin-main :where(.text-zinc-950, .text-zinc-900):not(input):not(select):not(textarea) {
+    color: #ffffff;
+}
+
+.admin-media-cover-placeholder-text,
+.admin-media-note-text,
+.admin-body .admin-main :where(.text-zinc-800, .text-zinc-700):not(input):not(select):not(textarea) {
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.admin-media-field-label,
+.admin-media-note-title,
+.admin-media-section-label,
+.admin-body .admin-main :where(.text-zinc-600, .text-zinc-500, .text-zinc-400):not(input):not(select):not(textarea) {
+    color: rgba(255, 255, 255, 0.56);
+    letter-spacing: 0;
+}
+
+.admin-body .admin-main :where(.border-zinc-100, .border-zinc-200, .border-zinc-200\/80, .border-zinc-300) {
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.admin-stat-card::before {
+    height: 0.18rem;
+    background: rgb(var(--admin-accent));
+}
+
+.admin-stat-chip,
+.admin-status-chip,
+.admin-activity-state,
+.admin-soon-chip,
+.admin-meta-pill,
+.admin-icon-badge,
+.admin-block-control,
+.admin-overview-value {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.075);
+    color: rgba(255, 255, 255, 0.84);
+    font-weight: 850;
+    letter-spacing: 0;
+}
+
+.admin-stat-chip-violet,
+.admin-icon-badge-violet {
+    border-color: rgba(167, 139, 250, 0.22);
+    background: rgba(167, 139, 250, 0.16);
+    color: #c4b5fd;
+}
+
+.admin-stat-chip-emerald,
+.admin-icon-badge-emerald {
+    border-color: rgba(52, 211, 153, 0.22);
+    background: rgba(52, 211, 153, 0.14);
+    color: #86efac;
+}
+
+.admin-stat-chip-amber,
+.admin-icon-badge-amber {
+    border-color: rgba(245, 158, 11, 0.24);
+    background: rgba(245, 158, 11, 0.18);
+    color: #fbbf24;
+}
+
+.admin-stat-chip-rose,
+.admin-icon-badge-rose {
+    border-color: rgba(251, 113, 133, 0.24);
+    background: rgba(251, 113, 133, 0.14);
+    color: #fda4af;
+}
+
+.admin-stat-chip-sky,
+.admin-icon-badge-sky,
+.admin-stat-chip-blue,
+.admin-icon-badge-blue {
+    border-color: rgba(56, 189, 248, 0.22);
+    background: rgba(56, 189, 248, 0.14);
+    color: #7dd3fc;
+}
+
+.admin-stat-chip-slate,
+.admin-stat-chip-neutral,
+.admin-icon-badge-slate {
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.075);
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.admin-body input:not([type='checkbox']):not([type='radio']),
+.admin-body select,
+.admin-body textarea,
+.admin-body .install-input {
+    border-color: rgba(255, 255, 255, 0.11);
+    background: rgba(5, 5, 7, 0.58);
+    color: #ffffff;
+    box-shadow: none;
+}
+
+.admin-body input:not([type='checkbox']):not([type='radio']):focus,
+.admin-body select:focus,
+.admin-body textarea:focus,
+.admin-body .install-input:focus {
+    border-color: rgb(var(--admin-accent) / 0.5);
+    background: rgba(5, 5, 7, 0.76);
+    box-shadow: 0 0 0 4px rgb(var(--admin-accent) / 0.12);
+    transform: none;
+}
+
+.admin-body option {
+    background: #11151a;
+    color: #ffffff;
+}
+
+.admin-body input[type='checkbox'],
+.admin-body input[type='radio'] {
+    accent-color: rgb(var(--admin-accent));
+}
+
+.admin-media-button-primary,
+.admin-body .admin-main :where(a.bg-zinc-950, button.bg-zinc-950),
+.admin-body .install-button-primary {
+    border: 1px solid rgb(var(--admin-accent) / 0.18);
+    background: rgb(var(--admin-accent));
+    color: rgb(var(--admin-accent-contrast));
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        0 16px 34px rgb(var(--admin-accent) / 0.18);
+}
+
+.admin-media-button-secondary,
+.admin-body .admin-main :where(a.bg-white, button.bg-white) {
+    border-color: rgba(255, 255, 255, 0.11);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.78);
+    box-shadow: none;
+}
+
+.admin-media-button-danger,
+.admin-body .admin-main button.bg-rose-50 {
+    border-color: rgba(251, 113, 133, 0.24);
+    background: rgba(251, 113, 133, 0.12);
+    color: #fda4af;
+}
