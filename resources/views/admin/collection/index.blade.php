@@ -57,7 +57,7 @@
                 action="{{ route('admin.collection.index') }}"
                 x-data="{ timer: null, submitNow() { this.$refs.form.requestSubmit(); }, queueSubmit() { clearTimeout(this.timer); this.timer = setTimeout(() => this.submitNow(), 300); } }"
                 x-ref="form"
-                class="grid gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(12rem,0.7fr)_minmax(12rem,0.7fr)_auto]"
+                class="grid gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(12rem,0.7fr)_auto]"
             >
                 <label class="block space-y-2">
                     <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.filters.search') }}</span>
@@ -82,16 +82,6 @@
                     </select>
                 </label>
 
-                <label class="block space-y-2">
-                    <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.filters.status') }}</span>
-                    <select name="status" x-on:change="submitNow()" class="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-zinc-400 focus:bg-white focus:ring-4 focus:ring-zinc-100">
-                        <option value="">{{ __('admin.collection.placeholders.all_statuses') }}</option>
-                        @foreach ($statusOptions as $value => $label)
-                            <option value="{{ $value }}" @selected($filters['status'] === $value)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </label>
-
                 <div class="flex items-end gap-3 lg:justify-end">
                     <a href="{{ route('admin.collection.index') }}" class="inline-flex w-full items-center justify-center rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:border-zinc-400 hover:text-zinc-950">
                         {{ __('admin.collection.filters.reset') }}
@@ -108,14 +98,14 @@
                 <div class="space-y-3">
                     <div>
                         <p class="text-sm font-semibold text-zinc-950">
-                            {{ $filters['search'] || $filters['type'] || $filters['status'] ? __('admin.collection.empty.filtered_title') : __('admin.collection.empty.title') }}
+                            {{ $filters['search'] || $filters['type'] ? __('admin.collection.empty.filtered_title') : __('admin.collection.empty.title') }}
                         </p>
                         <p class="mt-1 text-sm leading-6 text-zinc-600">
-                            {{ $filters['search'] || $filters['type'] || $filters['status'] ? __('admin.collection.empty.filtered_text') : __('admin.collection.empty.text') }}
+                            {{ $filters['search'] || $filters['type'] ? __('admin.collection.empty.filtered_text') : __('admin.collection.empty.text') }}
                         </p>
                     </div>
                     <div class="flex flex-col gap-3 sm:flex-row">
-                        @if ($filters['search'] || $filters['type'] || $filters['status'])
+                        @if ($filters['search'] || $filters['type'])
                             <a href="{{ route('admin.collection.index') }}" class="inline-flex items-center justify-center rounded-full border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:border-zinc-400 hover:text-zinc-950">
                                 {{ __('admin.collection.filters.reset') }}
                             </a>
@@ -138,8 +128,7 @@
                                 <th class="w-[13%] px-4 py-3 text-left">{{ __('admin.collection.table.format') }}</th>
                                 <th class="w-[12%] px-4 py-3 text-left">{{ __('admin.collection.table.condition') }}</th>
                                 <th class="w-[14%] px-4 py-3 text-left">{{ __('admin.collection.table.location') }}</th>
-                                <th class="w-[11%] px-4 py-3 text-left">{{ __('admin.collection.table.status') }}</th>
-                                <th class="w-[12%] px-4 py-3 text-left">{{ __('admin.collection.table.actions') }}</th>
+                                <th class="w-[23%] px-4 py-3 text-left">{{ __('admin.collection.table.actions') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-zinc-200">
@@ -147,7 +136,7 @@
                                 <tr class="group bg-white transition hover:bg-zinc-50/80">
                                     <td class="px-4 py-4 align-top">
                                         <div class="flex min-w-0 items-center gap-3">
-                                            <a href="{{ route('admin.collection.show', $item) }}" class="flex h-14 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100 text-zinc-500 transition hover:border-zinc-300 hover:text-zinc-700 focus:outline-none focus:ring-4 focus:ring-zinc-100" aria-label="{{ $item->title }}">
+                                            <a href="{{ route('admin.collection.edit', $item) }}" class="flex h-14 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100 text-zinc-500 transition hover:border-zinc-300 hover:text-zinc-700 focus:outline-none focus:ring-4 focus:ring-zinc-100" aria-label="{{ $item->title }}">
                                                 @if ($item->coverUrl())
                                                     <img src="{{ $item->coverUrl() }}" alt="{{ $item->title }}" class="h-full w-full object-cover">
                                                 @else
@@ -156,7 +145,7 @@
                                                 @endif
                                             </a>
                                             <div class="min-w-0">
-                                                <a href="{{ route('admin.collection.show', $item) }}" class="admin-collection-title-clamp block text-sm font-semibold leading-5 text-zinc-950 transition group-hover:text-zinc-700 focus:outline-none focus:underline">
+                                                <a href="{{ route('admin.collection.edit', $item) }}" class="admin-collection-title-clamp block text-sm font-semibold leading-5 text-zinc-950 transition group-hover:text-zinc-700 focus:outline-none focus:underline">
                                                     {{ $item->title }}
                                                 </a>
                                                 <p class="mt-1 text-xs text-zinc-500">
@@ -182,11 +171,6 @@
                                     </td>
                                     <td class="px-4 py-4 align-top text-sm text-zinc-700">
                                         {{ $item->location ?: '—' }}
-                                    </td>
-                                    <td class="px-4 py-4 align-top">
-                                        <span class="admin-stat-chip admin-stat-chip-{{ $item->status->value === 'owned' ? 'emerald' : ($item->status->value === 'loaned' ? 'rose' : 'slate') }}">
-                                            {{ __('admin.collection.statuses.'.$item->status->value) }}
-                                        </span>
                                     </td>
                                     <td class="px-4 py-4 align-top">
                                         <div class="flex justify-start gap-2 whitespace-nowrap pl-1 md:pl-2">
@@ -237,7 +221,7 @@
                                 <article class="rounded-[22px] border border-zinc-200 bg-white p-4 shadow-sm">
                                     <div class="flex items-start justify-between gap-3">
                                         <div class="flex min-w-0 items-start gap-3">
-                                            <a href="{{ route('admin.collection.show', $item) }}" class="flex h-14 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100 text-zinc-500 transition hover:border-zinc-300 hover:text-zinc-700 focus:outline-none focus:ring-4 focus:ring-zinc-100" aria-label="{{ $item->title }}">
+                                            <a href="{{ route('admin.collection.edit', $item) }}" class="flex h-14 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100 text-zinc-500 transition hover:border-zinc-300 hover:text-zinc-700 focus:outline-none focus:ring-4 focus:ring-zinc-100" aria-label="{{ $item->title }}">
                                                 @if ($item->coverUrl())
                                                     <img src="{{ $item->coverUrl() }}" alt="{{ $item->title }}" class="h-full w-full object-cover">
                                                 @else
@@ -246,7 +230,7 @@
                                                 @endif
                                             </a>
                                             <div class="min-w-0">
-                                                <a href="{{ route('admin.collection.show', $item) }}" class="admin-collection-title-clamp block text-base font-semibold leading-5 text-zinc-950 transition hover:text-zinc-700 focus:outline-none focus:underline">
+                                                <a href="{{ route('admin.collection.edit', $item) }}" class="admin-collection-title-clamp block text-base font-semibold leading-5 text-zinc-950 transition hover:text-zinc-700 focus:outline-none focus:underline">
                                                     {{ $item->title }}
                                                 </a>
                                                 <p class="mt-1 text-sm text-zinc-500">
@@ -254,9 +238,6 @@
                                                 </p>
                                             </div>
                                         </div>
-                                        <span class="admin-stat-chip admin-stat-chip-{{ $item->status->value === 'owned' ? 'emerald' : ($item->status->value === 'loaned' ? 'rose' : 'slate') }}">
-                                            {{ __('admin.collection.statuses.'.$item->status->value) }}
-                                </span>
                             </div>
 
                             <dl class="mt-4 grid grid-cols-2 gap-3 text-sm">

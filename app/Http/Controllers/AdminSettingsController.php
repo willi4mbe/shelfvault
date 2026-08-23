@@ -34,6 +34,10 @@ class AdminSettingsController extends Controller
             'libraryName' => $librarySettings->libraryName(),
             'contentTypes' => $this->contentTypes($librarySettings),
             'loansEnabled' => $librarySettings->loansEnabled(),
+            'accentColor' => $librarySettings->accentColor(),
+            'accentColorOptions' => $this->accentColorOptions($librarySettings),
+            'locationsEnabled' => $librarySettings->locationsEnabled(),
+            'locationsText' => $librarySettings->locationsText(),
             'locales' => config('shelfvault.locales'),
             'currentLocale' => Auth::user()?->preferred_locale ?? config('app.locale', 'en'),
         ]);
@@ -53,15 +57,24 @@ class AdminSettingsController extends Controller
             'enabled_types' => ['required', 'array', 'min:1'],
             'enabled_types.*' => ['required', Rule::in($librarySettings->allTypeValues())],
             'loans_enabled' => ['nullable', 'boolean'],
+            'accent_color' => ['required', Rule::in(array_keys($librarySettings->accentColorOptions()))],
+            'locations_enabled' => ['nullable', 'boolean'],
+            'locations' => ['nullable', 'string', 'max:2000'],
         ], [], [
             'library_name' => __('admin.settings.library.name_label'),
             'enabled_types' => __('admin.settings.library.types_title'),
             'loans_enabled' => __('admin.settings.features.loans_title'),
+            'accent_color' => __('admin.settings.appearance.accent_label'),
+            'locations_enabled' => __('admin.settings.locations.enabled_title'),
+            'locations' => __('admin.settings.locations.list_label'),
         ]);
 
         $librarySettings->setLibraryName($validated['library_name']);
         $librarySettings->setEnabledTypes(array_values(array_unique($validated['enabled_types'])));
         $librarySettings->setLoansEnabled($request->boolean('loans_enabled'));
+        $librarySettings->setAccentColor($validated['accent_color']);
+        $librarySettings->setLocationsEnabled($request->boolean('locations_enabled'));
+        $librarySettings->setLocations(preg_split('/\R/u', (string) ($validated['locations'] ?? '')) ?: []);
 
         return redirect()
             ->route('admin.settings.index')
@@ -184,6 +197,21 @@ class AdminSettingsController extends Controller
                 'value' => $type,
                 'label' => __('admin.collection.types.'.$type),
                 'enabled' => (bool) ($enabledTypes[$type] ?? false),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, array{value: string, label: string, rgb: string}>
+     */
+    private function accentColorOptions(LibrarySettings $librarySettings): array
+    {
+        return collect($librarySettings->accentColorOptions())
+            ->map(fn (array $theme, string $key): array => [
+                'value' => $key,
+                'label' => __('admin.settings.accent_colors.'.$key),
+                'rgb' => $theme['rgb'],
             ])
             ->values()
             ->all();

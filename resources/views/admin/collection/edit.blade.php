@@ -11,7 +11,6 @@
         'backUrl' => $backUrl,
         'selectedType' => $selectedType,
         'typeOptions' => $typeOptions,
-        'statusOptions' => $statusOptions,
         'conditionOptions' => $conditionOptions,
         'formatOptions' => $formatOptions,
     ])

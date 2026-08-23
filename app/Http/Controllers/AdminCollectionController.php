@@ -53,10 +53,6 @@ class AdminCollectionController extends Controller
             $query->where('type', $filters['type']);
         }
 
-        if ($filters['status'] !== null) {
-            $query->where('status', $filters['status']);
-        }
-
         $items = $query->get();
 
         return view('admin.collection.index', [
@@ -64,7 +60,6 @@ class AdminCollectionController extends Controller
             'items' => $items,
             'filters' => $filters,
             'typeOptions' => $this->typeOptions($librarySettings),
-            'statusOptions' => $this->statusOptions(),
             'formatLabels' => $this->formatLabels(),
             'conditionLabels' => $this->conditionLabels(),
             'loansEnabled' => $librarySettings->loansEnabled(),
@@ -92,11 +87,12 @@ class AdminCollectionController extends Controller
             'navigation' => $navigation->items($request->route()?->getName()),
             'item' => new Item(),
             'typeOptions' => $this->typeOptions($librarySettings),
-            'statusOptions' => $this->statusOptions(),
             'conditionOptions' => $this->conditionOptions(),
             'formatOptions' => $this->formatOptions(),
             'selectedType' => $type,
             'backUrl' => route('admin.collection.index'),
+            'locationsEnabled' => $librarySettings->locationsEnabled(),
+            'locationOptions' => $librarySettings->locations(),
         ]);
     }
 
@@ -136,6 +132,7 @@ class AdminCollectionController extends Controller
         }
 
         $data = $request->normalizedData();
+        $data['status'] = ItemStatus::Owned->value;
         if ($request->hasFile('cover_image')) {
             $data['cover_path'] = $this->storeCover($request->file('cover_image'));
         }
@@ -169,11 +166,12 @@ class AdminCollectionController extends Controller
             'navigation' => $navigation->items($request->route()?->getName()),
             'item' => $item,
             'typeOptions' => $this->typeOptions($librarySettings, $item->type?->value),
-            'statusOptions' => $this->statusOptions(),
             'conditionOptions' => $this->conditionOptions(),
             'formatOptions' => $this->formatOptions(),
             'selectedType' => $selectedType,
             'backUrl' => route('admin.collection.index'),
+            'locationsEnabled' => $librarySettings->locationsEnabled(),
+            'locationOptions' => $librarySettings->locations(),
         ]);
     }
 
@@ -232,22 +230,17 @@ class AdminCollectionController extends Controller
     }
 
     /**
-     * @return array{search: ?string, type: ?string, status: ?string}
+     * @return array{search: ?string, type: ?string}
      */
     private function filters(Request $request, LibrarySettings $librarySettings): array
     {
         $search = trim((string) $request->string('q'));
         $type = $request->string('type')->toString();
-        $status = $request->string('status')->toString();
-
         $allowedTypes = $librarySettings->enabledTypeValues();
-        $allowedStatuses = array_map(static fn (ItemStatus $status): string => $status->value, ItemStatus::cases());
-        $allowedStatuses = array_values(array_filter($allowedStatuses, static fn (string $status): bool => $status !== ItemStatus::Wanted->value));
 
         return [
             'search' => $search !== '' ? $search : null,
             'type' => in_array($type, $allowedTypes, true) ? $type : null,
-            'status' => in_array($status, $allowedStatuses, true) ? $status : null,
         ];
     }
 
@@ -290,18 +283,6 @@ class AdminCollectionController extends Controller
             fn (string $label, string $type): bool => $librarySettings->isTypeEnabled($type) || $includeType === $type,
             ARRAY_FILTER_USE_BOTH,
         );
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    private function statusOptions(): array
-    {
-        return [
-            ItemStatus::Owned->value => __('admin.collection.statuses.'.ItemStatus::Owned->value),
-            ItemStatus::Loaned->value => __('admin.collection.statuses.'.ItemStatus::Loaned->value),
-            ItemStatus::Archived->value => __('admin.collection.statuses.'.ItemStatus::Archived->value),
-        ];
     }
 
     /**

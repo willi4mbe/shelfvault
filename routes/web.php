@@ -8,6 +8,7 @@ use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminLoanController;
 use App\Http\Controllers\AdminSettingsController;
 use App\Http\Controllers\InstallController;
+use App\Http\Controllers\PublicLibraryController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('install')->name('install.')->group(function (): void {
@@ -19,9 +20,16 @@ Route::prefix('install')->name('install.')->group(function (): void {
     Route::post('/complete', [InstallController::class, 'complete'])->name('complete');
 });
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', [PublicLibraryController::class, 'home'])->name('library.home');
+Route::redirect('/library', '/')->name('library.index');
+Route::get('/library/search', [PublicLibraryController::class, 'search'])->name('library.search');
+Route::get('/library/favorites', [PublicLibraryController::class, 'favorites'])->name('library.favorites');
+Route::get('/library/loans', [PublicLibraryController::class, 'loans'])->name('library.loans');
+Route::get('/library/recent', [PublicLibraryController::class, 'recent'])->name('library.recent');
+Route::get('/library/genres', [PublicLibraryController::class, 'genres'])->name('library.genres');
+Route::get('/library/years', [PublicLibraryController::class, 'years'])->name('library.years');
+Route::get('/library/items/{item}', [PublicLibraryController::class, 'show'])->whereNumber('item')->name('library.items.show');
+Route::get('/library/{type}', [PublicLibraryController::class, 'type'])->name('library.type');
 
 Route::get('/admin/login', [AdminAuthController::class, 'show'])->name('login');
 Route::post('/admin/login', [AdminAuthController::class, 'store'])->name('admin.login');

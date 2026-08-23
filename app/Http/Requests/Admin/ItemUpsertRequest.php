@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Admin;
 
 use App\Enums\ItemCondition;
-use App\Enums\ItemStatus;
 use App\Enums\ItemType;
 use App\Models\Item;
 use App\Services\Library\LibrarySettings;
@@ -52,7 +51,6 @@ class ItemUpsertRequest extends FormRequest
             'region' => ['nullable', 'string', 'max:64'],
             'condition' => ['nullable', Rule::enum(ItemCondition::class)],
             'location' => ['nullable', 'string', 'max:120'],
-            'status' => ['required', Rule::enum(ItemStatus::class)],
             'is_favorite' => ['nullable', 'boolean'],
             'description' => ['nullable', 'string', 'max:4000'],
             'description_original' => ['nullable', 'string', 'max:4000'],
@@ -133,7 +131,6 @@ class ItemUpsertRequest extends FormRequest
             'required' => __('admin.collection.validation.required'),
             'type.required' => __('admin.collection.validation.type_required'),
             'title.required' => __('admin.collection.validation.title_required'),
-            'status.required' => __('admin.collection.validation.status_required'),
             'physical_format.required' => __('admin.collection.validation.physical_format_required'),
             'string' => __('admin.collection.validation.string'),
             'integer' => __('admin.collection.validation.integer'),
@@ -172,7 +169,6 @@ class ItemUpsertRequest extends FormRequest
             'region' => __('admin.collection.fields.region'),
             'condition' => __('admin.collection.fields.condition'),
             'location' => __('admin.collection.fields.location'),
-            'status' => __('admin.collection.fields.status'),
             'is_favorite' => __('admin.collection.fields.is_favorite'),
             'description' => __('admin.collection.fields.description'),
             'description_original' => __('admin.collection.fields.description_original'),
@@ -224,7 +220,6 @@ class ItemUpsertRequest extends FormRequest
             'region' => $this->nullableString($validated['region'] ?? null),
             'condition' => $this->nullableString($validated['condition'] ?? null),
             'location' => $this->nullableString($validated['location'] ?? null),
-            'status' => $validated['status'],
             'is_favorite' => (bool) ($validated['is_favorite'] ?? false),
             'personal_notes' => $this->nullableString($validated['personal_notes'] ?? null),
             'acquired_at' => $validated['acquired_at'] ?? null,
