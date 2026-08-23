@@ -5,10 +5,10 @@
 @section('content')
     @php
         $typeChip = static fn (string $value): string => match ($value) {
-            'film' => 'violet',
+            'film' => 'amber',
             'tv_series' => 'sky',
             'video_game' => 'emerald',
-            'board_game' => 'amber',
+            'board_game' => 'violet',
             default => 'slate',
         };
     @endphp
@@ -88,6 +88,7 @@
                     </a>
                 </div>
             </form>
+
         </section>
 
         @if ($items->isEmpty())
@@ -167,7 +168,7 @@
                                         {{ $item->physical_format ? $formatLabels[$item->physical_format] ?? $item->physical_format : '—' }}
                                     </td>
                                     <td class="px-4 py-4 align-top text-sm text-zinc-700">
-                                        {{ $item->condition ? $conditionLabels[$item->condition->value] ?? $item->condition->value : __('admin.collection.placeholders.not_specified') }}
+                                        {{ $item->physical_format === 'digital_copy' ? '—' : ($item->condition ? $conditionLabels[$item->condition->value] ?? $item->condition->value : __('admin.collection.placeholders.not_specified')) }}
                                     </td>
                                     <td class="px-4 py-4 align-top text-sm text-zinc-700">
                                         {{ $item->location ?: '—' }}
@@ -217,7 +218,7 @@
                 </div>
 
                 <div class="space-y-3 md:hidden">
-                            @foreach ($items as $item)
+                    @foreach ($items as $item)
                                 <article class="rounded-[22px] border border-zinc-200 bg-white p-4 shadow-sm">
                                     <div class="flex items-start justify-between gap-3">
                                         <div class="flex min-w-0 items-start gap-3">
@@ -247,7 +248,7 @@
                                 </div>
                                 <div>
                                     <dt class="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">{{ __('admin.collection.table.condition') }}</dt>
-                                    <dd class="mt-1 text-zinc-700">{{ $item->condition ? $conditionLabels[$item->condition->value] ?? $item->condition->value : __('admin.collection.placeholders.not_specified') }}</dd>
+                                    <dd class="mt-1 text-zinc-700">{{ $item->physical_format === 'digital_copy' ? '—' : ($item->condition ? $conditionLabels[$item->condition->value] ?? $item->condition->value : __('admin.collection.placeholders.not_specified')) }}</dd>
                                 </div>
                                 <div>
                                     <dt class="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">{{ __('admin.collection.table.location') }}</dt>

@@ -207,3 +207,46 @@ assert.equal(values('release_year')[0], '1999');
 assert.equal(values('external_tmdb_id')[0], '603');
 assert.equal(component.title, 'Imported Matrix');
 assert.equal(component.originalTitle, 'The Matrix');
+
+const formatComponent = metadataLookup({
+    type: 'film',
+    physicalFormat: 'digital_copy',
+    formatOptions: {
+        film: {
+            digital_copy: 'Digital copy',
+        },
+    },
+});
+
+assert.equal(formatComponent.currentPhysicalFormatLabel, 'Digital copy');
+
+const originalUrl = globalThis.URL;
+let revokedUrl = null;
+
+globalThis.URL = {
+    createObjectURL(file) {
+        assert.equal(file.type, 'image/png');
+
+        return 'blob:test-cover';
+    },
+    revokeObjectURL(url) {
+        revokedUrl = url;
+    },
+};
+
+try {
+    formatComponent.previewCoverImage({
+        target: {
+            files: [{ type: 'image/png' }],
+        },
+    });
+
+    assert.equal(formatComponent.coverPreviewUrl, 'blob:test-cover');
+    assert.equal(formatComponent.localCoverPreviewUrl, 'blob:test-cover');
+
+    formatComponent.destroy();
+
+    assert.equal(revokedUrl, 'blob:test-cover');
+} finally {
+    globalThis.URL = originalUrl;
+}

@@ -301,6 +301,28 @@ class AdminCollectionTest extends TestCase
         $this->assertNull($item->condition);
     }
 
+    public function test_digital_copy_forces_condition_to_null(): void
+    {
+        $this->actingAs(User::query()->first())
+            ->post('/admin/collection', [
+                'type' => 'film',
+                'title' => 'Digital film',
+                'physical_format' => 'digital_copy',
+                'condition' => 'good',
+            ])
+            ->assertRedirect(route('admin.collection.index'));
+
+        $item = Item::query()->first();
+
+        $this->assertSame('digital_copy', $item->physical_format);
+        $this->assertNull($item->condition);
+
+        $this->actingAs(User::query()->first())
+            ->get(route('admin.collection.show', $item))
+            ->assertOk()
+            ->assertDontSee(__('admin.collection.fields.condition'));
+    }
+
     public function test_collection_list_does_not_show_year_column(): void
     {
         Item::factory()->film()->create([

@@ -101,6 +101,7 @@ export function metadataLookup(config = {}) {
         physicalFormat: config.physicalFormat ?? '',
         coverPath: config.coverPath ?? '',
         coverPreviewUrl: config.coverPreviewUrl ?? '',
+        localCoverPreviewUrl: '',
         typeLabels: config.typeLabels ?? {},
         formatOptions: config.formatOptions ?? {},
         titleSearchUrl: config.titleSearchUrl ?? '',
@@ -137,10 +138,10 @@ export function metadataLookup(config = {}) {
         },
         typeMeta: {
             '': { label: config.typeLabels?.none ?? '', chip: 'slate', rgb: '148 163 184' },
-            film: { label: config.typeLabels?.film ?? '', chip: 'violet', rgb: '99 102 241' },
+            film: { label: config.typeLabels?.film ?? '', chip: 'amber', rgb: '245 158 11' },
             tv_series: { label: config.typeLabels?.tv_series ?? '', chip: 'sky', rgb: '14 165 233' },
             video_game: { label: config.typeLabels?.video_game ?? '', chip: 'emerald', rgb: '20 184 166' },
-            board_game: { label: config.typeLabels?.board_game ?? '', chip: 'amber', rgb: '245 158 11' },
+            board_game: { label: config.typeLabels?.board_game ?? '', chip: 'violet', rgb: '167 139 250' },
         },
         titleBusy: false,
         titleMessage: '',
@@ -192,6 +193,7 @@ export function metadataLookup(config = {}) {
         destroy() {
             this.stopScanner();
             this.closeResults();
+            this.revokeLocalCoverPreview();
 
             if (this.scannerBeforeUnloadHandler) {
                 window.removeEventListener('beforeunload', this.scannerBeforeUnloadHandler);
@@ -222,6 +224,30 @@ export function metadataLookup(config = {}) {
         },
         get currentAccent() {
             return this.currentMeta.rgb;
+        },
+        get currentPhysicalFormatLabel() {
+            return this.formatOptions?.[this.currentTypeValue()]?.[this.physicalFormat] ?? this.physicalFormat;
+        },
+        revokeLocalCoverPreview() {
+            if (this.localCoverPreviewUrl && typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
+                URL.revokeObjectURL(this.localCoverPreviewUrl);
+            }
+
+            this.localCoverPreviewUrl = '';
+        },
+        previewCoverImage(event) {
+            const file = event?.target?.files?.[0] ?? null;
+
+            this.revokeLocalCoverPreview();
+
+            if (!file || !String(file.type ?? '').startsWith('image/')) {
+                return;
+            }
+
+            if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+                this.localCoverPreviewUrl = URL.createObjectURL(file);
+                this.coverPreviewUrl = this.localCoverPreviewUrl;
+            }
         },
         currentCoverPath() {
             return String(this.coverPath ?? '').trim();
@@ -768,7 +794,7 @@ export function metadataLookup(config = {}) {
                 this.scannerReader.reset();
             }
 
-            stopMediaStream(this.$refs.scannerVideo);
+            stopMediaStream(this.$refs?.scannerVideo);
 
             this.scannerControls = null;
             this.scannerReader = null;

@@ -103,6 +103,7 @@ class AdminSettingsTest extends TestCase
             ->assertSee('Google Cloud Translation')
             ->assertSee(__('admin.settings.states.configured'))
             ->assertSee(__('admin.settings.secret_configured_placeholder'))
+            ->assertDontSee('IMDb / OMDb')
             ->assertDontSee('TMDB_API_KEY')
             ->assertDontSee('IGDB_CLIENT_SECRET')
             ->assertDontSee('TRANSLATION_PROVIDER')
@@ -236,6 +237,7 @@ class AdminSettingsTest extends TestCase
                 'accent_color' => 'green',
                 'locations_enabled' => '1',
                 'locations' => "Salon\nSalle de jeux\nCuisine",
+                'preferred_locale' => 'fr',
             ])
             ->assertRedirect(route('admin.settings.index'))
             ->assertSessionHas('status', __('admin.settings.saved'));
@@ -250,6 +252,7 @@ class AdminSettingsTest extends TestCase
         $this->assertSame('green', $settings->accentColor());
         $this->assertTrue($settings->locationsEnabled());
         $this->assertSame(['Salon', 'Salle de jeux', 'Cuisine'], $settings->locations());
+        $this->assertSame('fr', User::query()->first()->preferred_locale);
 
         $this->assertDatabaseHas('external_service_settings', [
             'service' => 'library',

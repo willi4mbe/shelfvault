@@ -17,10 +17,10 @@
     $commonInputClass = 'w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-zinc-400 focus:bg-white focus:ring-4 focus:ring-zinc-100';
     $coverUrl = $item->coverUrl();
     $typeConfig = match ($formType) {
-        'film' => ['rgb' => '99 102 241', 'chip' => 'violet'],
+        'film' => ['rgb' => '245 158 11', 'chip' => 'amber'],
         'tv_series' => ['rgb' => '14 165 233', 'chip' => 'sky'],
         'video_game' => ['rgb' => '20 184 166', 'chip' => 'emerald'],
-        'board_game' => ['rgb' => '245 158 11', 'chip' => 'amber'],
+        'board_game' => ['rgb' => '167 139 250', 'chip' => 'violet'],
         default => ['rgb' => '148 163 184', 'chip' => 'neutral'],
     };
 @endphp
@@ -76,7 +76,7 @@
                         <span x-text="currentLabel"></span>
                     </span>
                     <template x-if="physicalFormat">
-                        <span class="admin-stat-chip admin-stat-chip-sky" x-text="physicalFormat"></span>
+                        <span class="admin-stat-chip admin-stat-chip-sky" x-text="currentPhysicalFormatLabel"></span>
                     </template>
                 </div>
 
@@ -191,7 +191,13 @@
 
                         <label class="block space-y-2">
                             <span class="sr-only">{{ __('admin.collection.fields.cover_image') }}</span>
-                            <input type="file" name="cover_image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" class="{{ $commonInputClass }} py-2.5">
+                            <input
+                                type="file"
+                                name="cover_image"
+                                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                x-on:change="previewCoverImage($event)"
+                                class="{{ $commonInputClass }} py-2.5"
+                            >
                         </label>
 
                         <p class="text-sm leading-6 text-zinc-600">
@@ -230,9 +236,9 @@
                             </select>
                         </label>
 
-                        <label class="block space-y-2">
+                        <label class="block space-y-2" x-show="physicalFormat !== 'digital_copy'" x-cloak>
                             <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.fields.condition') }}</span>
-                            <select name="condition" class="{{ $commonInputClass }}">
+                            <select name="condition" x-bind:disabled="physicalFormat === 'digital_copy'" class="{{ $commonInputClass }}">
                                 @foreach ($conditionOptions as $value => $label)
                                     <option value="{{ $value }}" @selected(old('condition', $item->condition?->value ?? '') === $value)>{{ $label }}</option>
                                 @endforeach

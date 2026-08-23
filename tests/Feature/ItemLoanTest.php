@@ -146,6 +146,8 @@ class ItemLoanTest extends TestCase
             ->assertSee(__('admin.loans.statuses.overdue'))
             ->assertSee('Azul')
             ->assertSee('Morgan')
+            ->assertSee(__('admin.loans.fields.returned_at'))
+            ->assertSee('2026-04-27')
             ->assertSee(__('admin.loans.statuses.returned'));
     }
 

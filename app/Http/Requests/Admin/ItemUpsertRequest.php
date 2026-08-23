@@ -21,8 +21,13 @@ class ItemUpsertRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $condition = $this->nullableString($this->input('condition'));
+        $physicalFormat = $this->nullableString($this->input('physical_format'));
 
         if ($condition !== null && in_array(Str::lower($condition), ['none', 'aucun'], true)) {
+            $condition = null;
+        }
+
+        if ($physicalFormat === 'digital_copy') {
             $condition = null;
         }
 
@@ -218,7 +223,9 @@ class ItemUpsertRequest extends FormRequest
             'physical_format' => $this->nullableString($validated['physical_format'] ?? null),
             'edition' => $this->nullableString($validated['edition'] ?? null),
             'region' => $this->nullableString($validated['region'] ?? null),
-            'condition' => $this->nullableString($validated['condition'] ?? null),
+            'condition' => ($validated['physical_format'] ?? null) === 'digital_copy'
+                ? null
+                : $this->nullableString($validated['condition'] ?? null),
             'location' => $this->nullableString($validated['location'] ?? null),
             'is_favorite' => (bool) ($validated['is_favorite'] ?? false),
             'personal_notes' => $this->nullableString($validated['personal_notes'] ?? null),

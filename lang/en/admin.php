@@ -154,6 +154,8 @@ return [
         'secret_configured_placeholder' => 'Secret already configured - type to replace',
         'secret_help' => 'Secret fields are never refilled; enter a new value only when replacing the stored secret.',
         'future_provider_help' => 'Kept as an optional future provider. It is not used by ShelfVault yet.',
+        'provider_enabled_label' => 'Enable this provider',
+        'provider_enabled_help' => 'Fields stay inactive until the provider is enabled.',
         'library' => [
             'name_label' => 'Library name',
             'types_title' => 'Enabled content types',
@@ -279,6 +281,7 @@ return [
             'borrower_name' => 'Borrower',
             'loaned_at' => 'Loan date',
             'expected_return_at' => 'Expected return',
+            'returned_at' => 'Return date',
             'notes' => 'Notes',
         ],
         'placeholders' => [
