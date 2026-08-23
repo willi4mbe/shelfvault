@@ -128,6 +128,65 @@
                             </label>
                         </div>
 
+                        <div class="mt-4 rounded-xl border border-zinc-200 bg-white/85 px-3 py-3">
+                            <label class="flex items-start justify-between gap-4">
+                                <span class="min-w-0">
+                                    <span class="block text-sm font-semibold text-zinc-900">{{ __('admin.settings.locations.enabled_title') }}</span>
+                                    <span class="mt-1 block text-xs leading-5 text-zinc-500">{{ __('admin.settings.locations.enabled_help') }}</span>
+                                </span>
+                                <input type="hidden" name="locations_enabled" value="0">
+                                <input
+                                    type="checkbox"
+                                    name="locations_enabled"
+                                    value="1"
+                                    @checked((bool) old('locations_enabled', $locationsEnabled))
+                                    class="mt-1 h-4 w-4 rounded border-zinc-300 text-zinc-950 focus:ring-zinc-500"
+                                >
+                            </label>
+
+                            <label class="mt-3 block min-w-0 space-y-1">
+                                <span class="block text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">{{ __('admin.settings.locations.list_label') }}</span>
+                                <textarea
+                                    name="locations"
+                                    rows="3"
+                                    class="w-full min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-medium text-zinc-950 outline-none transition focus:border-zinc-400 focus:bg-white focus:ring-4 focus:ring-zinc-100"
+                                >{{ old('locations', $locationsText) }}</textarea>
+                                <span class="block text-xs leading-5 text-zinc-500">{{ __('admin.settings.locations.list_help') }}</span>
+                                @error('locations')
+                                    <span class="block text-xs font-medium text-rose-700">{{ $message }}</span>
+                                @enderror
+                            </label>
+                        </div>
+
+                        <div class="mt-4 rounded-xl border border-zinc-200 bg-white/85 px-3 py-3">
+                            <p class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                                {{ __('admin.settings.appearance_heading') }}
+                            </p>
+                            <fieldset class="mt-3">
+                                <legend class="sr-only">{{ __('admin.settings.appearance.accent_label') }}</legend>
+                                <div class="grid gap-2 sm:grid-cols-2">
+                                    @foreach ($accentColorOptions as $option)
+                                        <label class="flex min-w-0 cursor-pointer items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 transition hover:border-zinc-300 hover:bg-white">
+                                            <span class="inline-flex min-w-0 items-center gap-2">
+                                                <span class="h-3 w-3 flex-none rounded-full ring-2 ring-white shadow-sm" style="background: rgb({{ $option['rgb'] }});"></span>
+                                                <span class="truncate text-sm font-semibold text-zinc-800">{{ $option['label'] }}</span>
+                                            </span>
+                                            <input
+                                                type="radio"
+                                                name="accent_color"
+                                                value="{{ $option['value'] }}"
+                                                @checked(old('accent_color', $accentColor) === $option['value'])
+                                                class="h-4 w-4 border-zinc-300 text-zinc-950 focus:ring-zinc-500"
+                                            >
+                                        </label>
+                                    @endforeach
+                                </div>
+                            </fieldset>
+                            @error('accent_color')
+                                <span class="mt-2 block text-xs font-medium text-rose-700">{{ $message }}</span>
+                            @enderror
+                        </div>
+
                         <div class="mt-4 flex justify-end">
                             <button type="submit" class="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-full bg-zinc-950 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800 sm:w-auto">
                                 {{ __('admin.settings.save') }}

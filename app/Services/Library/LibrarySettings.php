@@ -13,6 +13,24 @@ class LibrarySettings
 
     public const LOANS_ENABLED_KEY = 'loans_enabled';
 
+    public const ACCENT_COLOR_KEY = 'accent_color';
+
+    public const LOCATIONS_ENABLED_KEY = 'locations_enabled';
+
+    public const LOCATIONS_KEY = 'locations';
+
+    public const DEFAULT_ACCENT_COLOR = 'orange';
+
+    /**
+     * @var array<string, array{rgb: string, contrast_rgb: string}>
+     */
+    private const ACCENT_COLORS = [
+        'orange' => ['rgb' => '249 115 22', 'contrast_rgb' => '23 13 2'],
+        'yellow' => ['rgb' => '245 197 24', 'contrast_rgb' => '27 19 0'],
+        'green' => ['rgb' => '34 197 94', 'contrast_rgb' => '2 20 10'],
+        'red' => ['rgb' => '239 68 68', 'contrast_rgb' => '27 5 5'],
+    ];
+
     /**
      * @var array<string, string>
      */
@@ -45,6 +63,80 @@ class LibrarySettings
     public function setLoansEnabled(bool $enabled): void
     {
         $this->settings->set(self::SERVICE, self::LOANS_ENABLED_KEY, $enabled ? '1' : '0', false);
+    }
+
+    public function accentColor(): string
+    {
+        $accent = $this->settings->get(self::SERVICE, self::ACCENT_COLOR_KEY, self::DEFAULT_ACCENT_COLOR);
+
+        return array_key_exists((string) $accent, self::ACCENT_COLORS)
+            ? (string) $accent
+            : self::DEFAULT_ACCENT_COLOR;
+    }
+
+    public function setAccentColor(string $accentColor): void
+    {
+        $this->settings->set(
+            self::SERVICE,
+            self::ACCENT_COLOR_KEY,
+            array_key_exists($accentColor, self::ACCENT_COLORS) ? $accentColor : self::DEFAULT_ACCENT_COLOR,
+            false,
+        );
+    }
+
+    public function locationsEnabled(): bool
+    {
+        return $this->booleanValue($this->settings->get(self::SERVICE, self::LOCATIONS_ENABLED_KEY, '1'), true);
+    }
+
+    public function setLocationsEnabled(bool $enabled): void
+    {
+        $this->settings->set(self::SERVICE, self::LOCATIONS_ENABLED_KEY, $enabled ? '1' : '0', false);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function locations(): array
+    {
+        $locations = preg_split('/\R/u', (string) $this->settings->get(self::SERVICE, self::LOCATIONS_KEY, '')) ?: [];
+
+        return $this->normalizeLocations($locations);
+    }
+
+    /**
+     * @param  array<int, string>  $locations
+     */
+    public function setLocations(array $locations): void
+    {
+        $this->settings->set(self::SERVICE, self::LOCATIONS_KEY, implode("\n", $this->normalizeLocations($locations)), false);
+    }
+
+    public function locationsText(): string
+    {
+        return implode("\n", $this->locations());
+    }
+
+    /**
+     * @return array<string, array{rgb: string, contrast_rgb: string}>
+     */
+    public function accentColorOptions(): array
+    {
+        return self::ACCENT_COLORS;
+    }
+
+    /**
+     * @return array{key: string, rgb: string, contrastRgb: string}
+     */
+    public function accentTheme(): array
+    {
+        $key = $this->accentColor();
+
+        return [
+            'key' => $key,
+            'rgb' => self::ACCENT_COLORS[$key]['rgb'],
+            'contrastRgb' => self::ACCENT_COLORS[$key]['contrast_rgb'],
+        ];
     }
 
     /**
@@ -103,5 +195,19 @@ class LibrarySettings
         }
 
         return filter_var($value, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE) ?? $default;
+    }
+
+    /**
+     * @param  array<int, string>  $locations
+     * @return array<int, string>
+     */
+    private function normalizeLocations(array $locations): array
+    {
+        return collect($locations)
+            ->map(fn (string $location): string => trim($location))
+            ->filter(fn (string $location): bool => $location !== '')
+            ->unique(fn (string $location): string => mb_strtolower($location))
+            ->values()
+            ->all();
     }
 }

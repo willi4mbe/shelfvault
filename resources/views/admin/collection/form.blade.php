@@ -1,5 +1,4 @@
 @php
-    use App\Enums\ItemStatus;
     use App\Enums\ItemType;
     use App\Models\Item;
 
@@ -232,15 +231,6 @@
                         </label>
 
                         <label class="block space-y-2">
-                            <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.fields.status') }}</span>
-                            <select name="status" class="{{ $commonInputClass }}">
-                                @foreach ($statusOptions as $value => $label)
-                                    <option value="{{ $value }}" @selected(old('status', $item->status?->value ?? ItemStatus::Owned->value) === $value)>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                        </label>
-
-                        <label class="block space-y-2">
                             <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.fields.condition') }}</span>
                             <select name="condition" class="{{ $commonInputClass }}">
                                 @foreach ($conditionOptions as $value => $label)
@@ -327,10 +317,27 @@
                             <input type="text" name="barcode" x-model="barcode" @input="clearBarcodeState()" class="{{ $commonInputClass }}">
                         </label>
 
-                        <label class="block space-y-2">
-                            <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.fields.location') }}</span>
-                            <input type="text" name="location" value="{{ old('location', $item->location) }}" class="{{ $commonInputClass }}">
-                        </label>
+                        @if ($locationsEnabled ?? true)
+                            <label class="block space-y-2">
+                                <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.fields.location') }}</span>
+                                @if (! empty($locationOptions ?? []))
+                                    @php($locationValue = old('location', $item->location))
+                                    <select name="location" class="{{ $commonInputClass }}">
+                                        <option value="">{{ __('admin.collection.placeholders.none') }}</option>
+                                        @if (filled($locationValue) && ! in_array($locationValue, $locationOptions, true))
+                                            <option value="{{ $locationValue }}" selected>{{ $locationValue }}</option>
+                                        @endif
+                                        @foreach ($locationOptions as $location)
+                                            <option value="{{ $location }}" @selected($locationValue === $location)>{{ $location }}</option>
+                                        @endforeach
+                                    </select>
+                                @else
+                                    <input type="text" name="location" value="{{ old('location', $item->location) }}" class="{{ $commonInputClass }}">
+                                @endif
+                            </label>
+                        @else
+                            <input type="hidden" name="location" value="{{ old('location', $item->location) }}">
+                        @endif
 
                         <label class="block space-y-2">
                             <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.fields.acquired_at') }}</span>

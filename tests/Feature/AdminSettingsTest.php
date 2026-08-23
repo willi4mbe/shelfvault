@@ -233,6 +233,9 @@ class AdminSettingsTest extends TestCase
                 'library_name' => 'William Media Library',
                 'enabled_types' => ['film', 'board_game'],
                 'loans_enabled' => '1',
+                'accent_color' => 'green',
+                'locations_enabled' => '1',
+                'locations' => "Salon\nSalle de jeux\nCuisine",
             ])
             ->assertRedirect(route('admin.settings.index'))
             ->assertSessionHas('status', __('admin.settings.saved'));
@@ -244,6 +247,9 @@ class AdminSettingsTest extends TestCase
         $this->assertTrue($settings->isTypeEnabled('board_game'));
         $this->assertFalse($settings->isTypeEnabled('tv_series'));
         $this->assertFalse($settings->isTypeEnabled('video_game'));
+        $this->assertSame('green', $settings->accentColor());
+        $this->assertTrue($settings->locationsEnabled());
+        $this->assertSame(['Salon', 'Salle de jeux', 'Cuisine'], $settings->locations());
 
         $this->assertDatabaseHas('external_service_settings', [
             'service' => 'library',
@@ -251,6 +257,31 @@ class AdminSettingsTest extends TestCase
             'value' => 'William Media Library',
             'is_secret' => false,
         ]);
+        $this->assertDatabaseHas('external_service_settings', [
+            'service' => 'library',
+            'key' => 'accent_color',
+            'value' => 'green',
+            'is_secret' => false,
+        ]);
+        $this->assertDatabaseHas('external_service_settings', [
+            'service' => 'library',
+            'key' => 'locations',
+            'value' => "Salon\nSalle de jeux\nCuisine",
+            'is_secret' => false,
+        ]);
+    }
+
+    public function test_settings_page_shows_accent_color_choices(): void
+    {
+        $this->actingAs(User::query()->first())
+            ->get(route('admin.settings.index'))
+            ->assertOk()
+            ->assertSee(__('admin.settings.appearance_heading'))
+            ->assertSee(__('admin.settings.appearance.accent_label'))
+            ->assertSee(__('admin.settings.accent_colors.orange'))
+            ->assertSee(__('admin.settings.accent_colors.yellow'))
+            ->assertSee(__('admin.settings.accent_colors.green'))
+            ->assertSee(__('admin.settings.accent_colors.red'));
     }
 
     public function test_loans_feature_toggle_controls_navigation_and_access(): void

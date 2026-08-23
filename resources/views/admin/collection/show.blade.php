@@ -30,10 +30,6 @@
             ],
         };
 
-        $statusChip = $item->status->value === 'owned'
-            ? 'emerald'
-            : ($item->status->value === 'loaned' ? 'rose' : 'slate');
-
         $formatLabel = match ($typeValue) {
             'film' => match ($item->physical_format) {
                 'dvd' => __('admin.collection.formats.film.dvd'),
@@ -76,7 +72,6 @@
             ['label' => __('admin.collection.fields.release_year'), 'value' => $item->release_year],
             ['label' => __('admin.collection.fields.barcode'), 'value' => $item->barcode],
             ['label' => __('admin.collection.fields.condition'), 'value' => $item->condition ? __('admin.collection.conditions.'.$item->condition->value) : __('admin.collection.placeholders.not_specified')],
-            ['label' => __('admin.collection.fields.status'), 'value' => __('admin.collection.statuses.'.$item->status->value)],
             ['label' => __('admin.collection.fields.is_favorite'), 'value' => $item->is_favorite ? __('admin.collection.values.yes') : __('admin.collection.values.no')],
         ], static fn (array $row): bool => filled($row['value'])));
 
@@ -158,9 +153,6 @@
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="admin-stat-chip admin-stat-chip-{{ $typeBadgeClass }}">
                             {{ __('admin.collection.types.'.$typeValue) }}
-                        </span>
-                        <span class="admin-stat-chip admin-stat-chip-{{ $statusChip }}">
-                            {{ __('admin.collection.statuses.'.$item->status->value) }}
                         </span>
                         @if ($item->is_favorite)
                             <span class="admin-stat-chip admin-stat-chip-amber">

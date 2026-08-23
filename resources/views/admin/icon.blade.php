@@ -154,6 +154,9 @@
             <circle cx="10.5" cy="10.5" r="5.5"></circle>
             <path d="M15 15l4.5 4.5"></path>
             @break
+        @case('heart')
+            <path d="M20.3 8.8c0 4.6-8.3 9.7-8.3 9.7s-8.3-5.1-8.3-9.7A4.4 4.4 0 0 1 12 6.5a4.4 4.4 0 0 1 8.3 2.3Z"></path>
+            @break
         @case('setup')
             <path d="M4.5 12h6.5l1.5-3 2.5 6 1.5-3H19.5"></path>
             @break

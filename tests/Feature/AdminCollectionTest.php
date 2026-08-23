@@ -111,8 +111,8 @@ class AdminCollectionTest extends TestCase
         $this->actingAs(User::query()->first())
             ->get('/admin/collection')
             ->assertOk()
-            ->assertSee(route('admin.collection.show', $item), false)
             ->assertSee(route('admin.collection.edit', $item), false)
+            ->assertDontSee('href="'.route('admin.collection.show', $item).'"', false)
             ->assertSee('The Matrix')
             ->assertSee('aria-label="Edit"', false)
             ->assertSee('aria-label="Delete"', false)
@@ -381,12 +381,11 @@ class AdminCollectionTest extends TestCase
             ->assertSee('value="video_game"', false);
     }
 
-    public function test_collection_requires_the_type_title_status_and_physical_format_fields(): void
+    public function test_collection_requires_the_type_title_and_physical_format_fields(): void
     {
         $cases = [
             ['field' => 'type', 'payload' => ['title' => 'Missing type', 'status' => 'owned', 'condition' => 'good', 'physical_format' => 'dvd'], 'message' => 'The type is required.'],
             ['field' => 'title', 'payload' => ['type' => 'film', 'status' => 'owned', 'condition' => 'good', 'physical_format' => 'dvd'], 'message' => 'The title is required.'],
-            ['field' => 'status', 'payload' => ['type' => 'film', 'title' => 'Missing status', 'condition' => 'good', 'physical_format' => 'dvd'], 'message' => 'The status is required.'],
             ['field' => 'physical_format', 'payload' => ['type' => 'film', 'title' => 'Missing format', 'status' => 'owned', 'condition' => 'good'], 'message' => 'The physical format is required.'],
         ];
 
@@ -686,7 +685,7 @@ class AdminCollectionTest extends TestCase
         $this->assertSame(['Drama', 'Thriller'], $item->genres);
         $this->assertSame(['Actor One', 'Actor Two'], $item->cast_members);
         $this->assertSame('good', $item->condition->value);
-        $this->assertSame('loaned', $item->status->value);
+        $this->assertSame('owned', $item->status->value);
     }
 
     public function test_admin_can_remove_an_existing_condition_when_editing(): void
@@ -965,7 +964,7 @@ class AdminCollectionTest extends TestCase
             ->assertDontSee('The Matrix');
     }
 
-    public function test_admin_can_filter_by_type_and_status(): void
+    public function test_admin_can_filter_by_type(): void
     {
         Item::factory()->film()->owned()->create(['title' => 'Owned film']);
         Item::factory()->videoGame()->loaned()->create(['title' => 'Loaned game']);
@@ -978,12 +977,6 @@ class AdminCollectionTest extends TestCase
             ->assertDontSee('Loaned game')
             ->assertDontSee('Archived game');
 
-        $this->actingAs(User::query()->first())
-            ->get('/admin/collection?status=loaned')
-            ->assertOk()
-            ->assertSee('Loaned game')
-            ->assertDontSee('Owned film')
-            ->assertDontSee('Archived game');
     }
 
     public function test_admin_can_view_board_game_specific_fields_on_detail_page(): void
@@ -1067,15 +1060,12 @@ class AdminCollectionTest extends TestCase
             ->assertSee('Actor One, Actor Two');
     }
 
-    public function test_status_options_do_not_expose_wanted(): void
+    public function test_collection_form_does_not_expose_a_manual_status_choice(): void
     {
         $this->actingAs(User::query()->first())
             ->get('/admin/collection/create')
             ->assertOk()
-            ->assertSee('Owned')
-            ->assertSee('Loaned')
-            ->assertSee('Archived')
-            ->assertDontSee('Wanted');
+            ->assertDontSee('name="status"', false);
     }
 
     public function test_collection_index_shows_success_message_after_update(): void
