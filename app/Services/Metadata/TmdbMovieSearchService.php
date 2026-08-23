@@ -2,6 +2,7 @@
 
 namespace App\Services\Metadata;
 
+use App\Services\ExternalServices\ExternalServiceSettings;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
@@ -13,13 +14,14 @@ class TmdbMovieSearchService
 {
     public function __construct(
         private readonly MetadataImportMapper $mapper = new MetadataImportMapper(),
+        private readonly ?ExternalServiceSettings $settings = null,
     ) {
     }
 
     public function configured(): bool
     {
-        return filled((string) config('services.tmdb.api_key', ''))
-            || filled((string) config('services.tmdb.bearer_token', ''));
+        return filled($this->secret('api_key', 'services.tmdb.api_key'))
+            || filled($this->secret('bearer_token', 'services.tmdb.bearer_token'));
     }
 
     public function search(string $title, ?int $releaseYear = null): MetadataLookupResult
@@ -40,7 +42,7 @@ class TmdbMovieSearchService
                     ...$this->authQueryParameters(),
                     'query' => $title,
                     'include_adult' => false,
-                    'language' => config('services.tmdb.language', 'fr-FR'),
+                    'language' => $this->value('language', 'services.tmdb.language', 'fr-FR'),
                     'year' => $releaseYear,
                     'primary_release_year' => $releaseYear,
                 ], static fn (mixed $value): bool => $value !== null && $value !== ''));
@@ -91,7 +93,7 @@ class TmdbMovieSearchService
                     ...$this->authQueryParameters(),
                     'query' => $title,
                     'include_adult' => false,
-                    'language' => config('services.tmdb.language', 'fr-FR'),
+                    'language' => $this->value('language', 'services.tmdb.language', 'fr-FR'),
                     'first_air_date_year' => $releaseYear,
                 ], static fn (mixed $value): bool => $value !== null && $value !== ''));
 
@@ -203,7 +205,7 @@ class TmdbMovieSearchService
         $response = $this->client()
             ->get("/movie/{$tmdbId}", [
                 ...$this->authQueryParameters(),
-                'language' => config('services.tmdb.language', 'fr-FR'),
+                'language' => $this->value('language', 'services.tmdb.language', 'fr-FR'),
                 'append_to_response' => 'credits,release_dates',
             ]);
 
@@ -220,7 +222,7 @@ class TmdbMovieSearchService
         $response = $this->client()
             ->get("/tv/{$tmdbId}", [
                 ...$this->authQueryParameters(),
-                'language' => config('services.tmdb.language', 'fr-FR'),
+                'language' => $this->value('language', 'services.tmdb.language', 'fr-FR'),
                 'append_to_response' => 'aggregate_credits,content_ratings',
             ]);
 
@@ -292,7 +294,7 @@ class TmdbMovieSearchService
             ->acceptJson()
             ->timeout((int) config('barcode.cover_timeout', 8));
 
-        $bearerToken = trim((string) config('services.tmdb.bearer_token', ''));
+        $bearerToken = $this->secret('bearer_token', 'services.tmdb.bearer_token');
 
         if ($bearerToken !== '') {
             return $client->withToken($bearerToken);
@@ -306,8 +308,23 @@ class TmdbMovieSearchService
      */
     private function authQueryParameters(): array
     {
-        $apiKey = trim((string) config('services.tmdb.api_key', ''));
+        $apiKey = $this->secret('api_key', 'services.tmdb.api_key');
 
         return $apiKey !== '' ? ['api_key' => $apiKey] : [];
+    }
+
+    private function value(string $key, string $configKey, ?string $default = null): string
+    {
+        return trim((string) $this->settings()->get('tmdb', $key, config($configKey, $default)));
+    }
+
+    private function secret(string $key, string $configKey): string
+    {
+        return trim((string) $this->settings()->getSecret('tmdb', $key, config($configKey, '')));
+    }
+
+    private function settings(): ExternalServiceSettings
+    {
+        return $this->settings ?? app(ExternalServiceSettings::class);
     }
 }

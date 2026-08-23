@@ -8,6 +8,7 @@ use App\Enums\ItemType;
 use App\Http\Requests\Admin\ItemUpsertRequest;
 use App\Models\Item;
 use App\Services\Installer\InstallationState;
+use App\Services\Library\LibrarySettings;
 use App\Support\AdminNavigation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,7 +19,12 @@ use Illuminate\View\View;
 
 class AdminCollectionController extends Controller
 {
-    public function index(InstallationState $installationState, Request $request, AdminNavigation $navigation): RedirectResponse|View
+    public function index(
+        InstallationState $installationState,
+        Request $request,
+        AdminNavigation $navigation,
+        LibrarySettings $librarySettings,
+    ): RedirectResponse|View
     {
         if (! $installationState->installed()) {
             return redirect()->route('install.show');
@@ -28,9 +34,11 @@ class AdminCollectionController extends Controller
             return redirect()->route('login');
         }
 
-        $filters = $this->filters($request);
+        $filters = $this->filters($request, $librarySettings);
 
-        $query = Item::query()->orderByRaw('LOWER(COALESCE(sort_title, title)) asc');
+        $query = Item::query()
+            ->withExists(['itemLoans as has_active_loan' => fn ($query) => $query->active()])
+            ->orderByRaw('LOWER(COALESCE(sort_title, title)) asc');
 
         if ($filters['search'] !== null) {
             $search = $filters['search'];
@@ -55,14 +63,20 @@ class AdminCollectionController extends Controller
             'navigation' => $navigation->items($request->route()?->getName()),
             'items' => $items,
             'filters' => $filters,
-            'typeOptions' => $this->typeOptions(),
+            'typeOptions' => $this->typeOptions($librarySettings),
             'statusOptions' => $this->statusOptions(),
             'formatLabels' => $this->formatLabels(),
             'conditionLabels' => $this->conditionLabels(),
+            'loansEnabled' => $librarySettings->loansEnabled(),
         ]);
     }
 
-    public function create(InstallationState $installationState, Request $request, AdminNavigation $navigation): RedirectResponse|View
+    public function create(
+        InstallationState $installationState,
+        Request $request,
+        AdminNavigation $navigation,
+        LibrarySettings $librarySettings,
+    ): RedirectResponse|View
     {
         if (! $installationState->installed()) {
             return redirect()->route('install.show');
@@ -77,7 +91,7 @@ class AdminCollectionController extends Controller
         return view('admin.collection.create', [
             'navigation' => $navigation->items($request->route()?->getName()),
             'item' => new Item(),
-            'typeOptions' => $this->typeOptions(),
+            'typeOptions' => $this->typeOptions($librarySettings),
             'statusOptions' => $this->statusOptions(),
             'conditionOptions' => $this->conditionOptions(),
             'formatOptions' => $this->formatOptions(),
@@ -86,7 +100,13 @@ class AdminCollectionController extends Controller
         ]);
     }
 
-    public function show(InstallationState $installationState, Request $request, AdminNavigation $navigation, Item $item): RedirectResponse|View
+    public function show(
+        InstallationState $installationState,
+        Request $request,
+        AdminNavigation $navigation,
+        LibrarySettings $librarySettings,
+        Item $item,
+    ): RedirectResponse|View
     {
         if (! $installationState->installed()) {
             return redirect()->route('install.show');
@@ -98,8 +118,10 @@ class AdminCollectionController extends Controller
 
         return view('admin.collection.show', [
             'navigation' => $navigation->items($request->route()?->getName()),
-            'item' => $item,
+            'item' => $item->load(['itemLoans' => fn ($query) => $query->active()]),
             'backUrl' => route('admin.collection.index'),
+            'loansEnabled' => $librarySettings->loansEnabled(),
+            'activeLoan' => $item->itemLoans->first(),
         ]);
     }
 
@@ -125,7 +147,13 @@ class AdminCollectionController extends Controller
             ->with('status', __('admin.collection.notifications.created', ['title' => $item->title]));
     }
 
-    public function edit(InstallationState $installationState, Request $request, AdminNavigation $navigation, Item $item): RedirectResponse|View
+    public function edit(
+        InstallationState $installationState,
+        Request $request,
+        AdminNavigation $navigation,
+        LibrarySettings $librarySettings,
+        Item $item,
+    ): RedirectResponse|View
     {
         if (! $installationState->installed()) {
             return redirect()->route('install.show');
@@ -140,7 +168,7 @@ class AdminCollectionController extends Controller
         return view('admin.collection.edit', [
             'navigation' => $navigation->items($request->route()?->getName()),
             'item' => $item,
-            'typeOptions' => $this->typeOptions(),
+            'typeOptions' => $this->typeOptions($librarySettings, $item->type?->value),
             'statusOptions' => $this->statusOptions(),
             'conditionOptions' => $this->conditionOptions(),
             'formatOptions' => $this->formatOptions(),
@@ -206,13 +234,13 @@ class AdminCollectionController extends Controller
     /**
      * @return array{search: ?string, type: ?string, status: ?string}
      */
-    private function filters(Request $request): array
+    private function filters(Request $request, LibrarySettings $librarySettings): array
     {
         $search = trim((string) $request->string('q'));
         $type = $request->string('type')->toString();
         $status = $request->string('status')->toString();
 
-        $allowedTypes = array_map(static fn (ItemType $type): string => $type->value, ItemType::cases());
+        $allowedTypes = $librarySettings->enabledTypeValues();
         $allowedStatuses = array_map(static fn (ItemStatus $status): string => $status->value, ItemStatus::cases());
         $allowedStatuses = array_values(array_filter($allowedStatuses, static fn (string $status): bool => $status !== ItemStatus::Wanted->value));
 
@@ -248,14 +276,20 @@ class AdminCollectionController extends Controller
     /**
      * @return array<string, string>
      */
-    private function typeOptions(): array
+    private function typeOptions(LibrarySettings $librarySettings, ?string $includeType = null): array
     {
-        return [
+        $options = [
             ItemType::Film->value => __('admin.collection.types.'.ItemType::Film->value),
             ItemType::TvSeries->value => __('admin.collection.types.'.ItemType::TvSeries->value),
             ItemType::VideoGame->value => __('admin.collection.types.'.ItemType::VideoGame->value),
             ItemType::BoardGame->value => __('admin.collection.types.'.ItemType::BoardGame->value),
         ];
+
+        return array_filter(
+            $options,
+            fn (string $label, string $type): bool => $librarySettings->isTypeEnabled($type) || $includeType === $type,
+            ARRAY_FILTER_USE_BOTH,
+        );
     }
 
     /**

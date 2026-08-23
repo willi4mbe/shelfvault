@@ -61,6 +61,10 @@ return [
         ],
     ],
 
+    'bgg' => [
+        'token' => env('BGG_TOKEN'),
+    ],
+
     'omdb' => [
         'api_key' => env('OMDB_API_KEY'),
     ],

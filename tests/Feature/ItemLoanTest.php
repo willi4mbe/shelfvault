@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ItemStatus;
 use App\Models\Item;
 use App\Models\ItemLoan;
 use App\Models\User;
+use App\Services\Library\LibrarySettings;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;
@@ -27,6 +29,7 @@ class ItemLoanTest extends TestCase
         File::delete($this->databasePath);
         File::delete($this->lockPath);
         File::put($this->databasePath, '');
+        File::put($this->lockPath, now()->toIso8601String());
 
         config([
             'database.default' => 'sqlite',
@@ -115,5 +118,124 @@ class ItemLoanTest extends TestCase
 
         $this->assertSame(1, ItemLoan::active()->count());
         $this->assertSame(1, ItemLoan::returned()->count());
+    }
+
+    public function test_admin_can_view_active_and_returned_loans(): void
+    {
+        $activeItem = Item::factory()->film()->loaned()->create(['title' => 'Alien']);
+        $returnedItem = Item::factory()->boardGame()->owned()->create(['title' => 'Azul']);
+
+        ItemLoan::factory()->active()->create([
+            'item_id' => $activeItem->id,
+            'borrower_name' => 'Jamie',
+            'loaned_at' => '2026-05-01',
+            'expected_return_at' => now()->subDay()->toDateString(),
+        ]);
+        ItemLoan::factory()->returned()->create([
+            'item_id' => $returnedItem->id,
+            'borrower_name' => 'Morgan',
+            'loaned_at' => '2026-04-20',
+            'returned_at' => '2026-04-27',
+        ]);
+
+        $this->actingAs(User::query()->first())
+            ->get(route('admin.loans.index'))
+            ->assertOk()
+            ->assertSee('Alien')
+            ->assertSee('Jamie')
+            ->assertSee(__('admin.loans.statuses.overdue'))
+            ->assertSee('Azul')
+            ->assertSee('Morgan')
+            ->assertSee(__('admin.loans.statuses.returned'));
+    }
+
+    public function test_admin_can_create_a_loan(): void
+    {
+        $item = Item::factory()->film()->owned()->create(['title' => 'The Matrix']);
+
+        $this->actingAs(User::query()->first())
+            ->post(route('admin.loans.store'), [
+                'item_id' => $item->id,
+                'borrower_name' => 'Alex',
+                'loaned_at' => '2026-05-12',
+                'expected_return_at' => '2026-05-30',
+                'notes' => 'Blu-ray case included.',
+            ])
+            ->assertRedirect(route('admin.loans.index'))
+            ->assertSessionHas('status');
+
+        $this->assertDatabaseHas('item_loans', [
+            'item_id' => $item->id,
+            'borrower_name' => 'Alex',
+            'loaned_at' => '2026-05-12 00:00:00',
+            'expected_return_at' => '2026-05-30 00:00:00',
+            'returned_at' => null,
+        ]);
+        $this->assertSame(ItemStatus::Loaned, $item->refresh()->status);
+    }
+
+    public function test_admin_can_mark_a_loan_as_returned(): void
+    {
+        $item = Item::factory()->film()->loaned()->create(['title' => 'Blade Runner']);
+        $loan = ItemLoan::factory()->active()->create([
+            'item_id' => $item->id,
+            'borrower_name' => 'Casey',
+        ]);
+
+        $this->actingAs(User::query()->first())
+            ->patch(route('admin.loans.return', $loan))
+            ->assertRedirect(route('admin.loans.index'))
+            ->assertSessionHas('status');
+
+        $this->assertNotNull($loan->refresh()->returned_at);
+        $this->assertSame(ItemStatus::Owned, $item->refresh()->status);
+    }
+
+    public function test_admin_cannot_create_two_active_loans_for_the_same_item(): void
+    {
+        $item = Item::factory()->film()->loaned()->create(['title' => 'Dune']);
+
+        ItemLoan::factory()->active()->create([
+            'item_id' => $item->id,
+            'borrower_name' => 'Taylor',
+        ]);
+
+        $this->actingAs(User::query()->first())
+            ->from(route('admin.loans.index'))
+            ->post(route('admin.loans.store'), [
+                'item_id' => $item->id,
+                'borrower_name' => 'Alex',
+                'loaned_at' => '2026-05-12',
+            ])
+            ->assertRedirect(route('admin.loans.index'))
+            ->assertSessionHasErrors('item_id');
+
+        $this->assertSame(1, $item->itemLoans()->active()->count());
+    }
+
+    public function test_existing_loans_are_kept_when_loans_feature_is_disabled(): void
+    {
+        $item = Item::factory()->film()->loaned()->create(['title' => 'Tenet']);
+        $loan = ItemLoan::factory()->active()->create([
+            'item_id' => $item->id,
+            'borrower_name' => 'Sam',
+        ]);
+
+        app(LibrarySettings::class)->setLoansEnabled(false);
+
+        $this->actingAs(User::query()->first())
+            ->get(route('admin.loans.index'))
+            ->assertNotFound();
+
+        $this->actingAs(User::query()->first())
+            ->get(route('admin'))
+            ->assertOk()
+            ->assertDontSee(route('admin.loans.index'), false);
+
+        $this->assertDatabaseHas('item_loans', [
+            'id' => $loan->id,
+            'item_id' => $item->id,
+            'borrower_name' => 'Sam',
+        ]);
     }
 }

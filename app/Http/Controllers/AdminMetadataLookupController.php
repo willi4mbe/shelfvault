@@ -8,6 +8,7 @@ use App\Services\Metadata\BarcodeLookupService;
 use App\Services\Metadata\IgdbVideoGameSearchService;
 use App\Services\Metadata\MetadataLookupResult;
 use App\Services\Metadata\TmdbMovieSearchService;
+use App\Services\Library\LibrarySettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -145,6 +146,10 @@ class AdminMetadataLookupController extends Controller
             return MetadataLookupResult::invalid(__('admin.collection.lookup.choose_type_before_searching'));
         }
 
+        if (! app(LibrarySettings::class)->isTypeEnabled($type)) {
+            return MetadataLookupResult::invalid(__('admin.loans.validation.disabled_type'));
+        }
+
         if ($title === '') {
             return MetadataLookupResult::invalid(__('admin.collection.lookup.enter_title_to_search'));
         }
@@ -163,8 +168,13 @@ class AdminMetadataLookupController extends Controller
     private function importTmdbResult(array $validated, TmdbMovieSearchService $tmdbMovieSearchService): MetadataLookupResult
     {
         $tmdbId = (int) ($validated['tmdb_id'] ?? 0);
+        $type = (string) ($validated['type'] ?? ItemType::Film->value);
 
-        if (($validated['type'] ?? null) === ItemType::TvSeries->value) {
+        if (! app(LibrarySettings::class)->isTypeEnabled($type)) {
+            return MetadataLookupResult::invalid(__('admin.loans.validation.disabled_type'));
+        }
+
+        if ($type === ItemType::TvSeries->value) {
             return $tmdbMovieSearchService->importTvSeries($tmdbId);
         }
 
@@ -178,6 +188,10 @@ class AdminMetadataLookupController extends Controller
     {
         $barcode = trim((string) ($validated['barcode'] ?? ''));
         $type = trim((string) ($validated['type'] ?? ''));
+
+        if ($type !== '' && ! app(LibrarySettings::class)->isTypeEnabled($type)) {
+            return MetadataLookupResult::invalid(__('admin.loans.validation.disabled_type'));
+        }
 
         if ($barcode === '') {
             return MetadataLookupResult::invalid(__('admin.collection.lookup.enter_barcode_to_search'));

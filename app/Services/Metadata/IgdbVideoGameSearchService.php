@@ -2,6 +2,7 @@
 
 namespace App\Services\Metadata;
 
+use App\Services\ExternalServices\ExternalServiceSettings;
 use App\Services\Translation\Contracts\TextTranslationProvider;
 use App\Services\Translation\Providers\NullTextTranslationProvider;
 use Illuminate\Http\Client\RequestException;
@@ -17,14 +18,15 @@ class IgdbVideoGameSearchService
     public function __construct(
         private readonly MetadataImportMapper $mapper = new MetadataImportMapper(),
         private readonly ?TextTranslationProvider $translationProvider = null,
+        private readonly ?ExternalServiceSettings $settings = null,
     ) {
     }
 
     public function configured(): bool
     {
-        $clientId = trim((string) config('services.igdb.client_id', ''));
-        $accessToken = trim((string) config('services.igdb.access_token', ''));
-        $clientSecret = trim((string) config('services.igdb.client_secret', ''));
+        $clientId = $this->secret('client_id', 'services.igdb.client_id');
+        $accessToken = $this->secret('access_token', 'services.igdb.access_token');
+        $clientSecret = $this->secret('client_secret', 'services.igdb.client_secret');
 
         return $clientId !== '' && ($accessToken !== '' || $clientSecret !== '');
     }
@@ -190,7 +192,7 @@ class IgdbVideoGameSearchService
         }
 
         $targetLocale = trim($targetLocale) !== '' ? trim($targetLocale) : app()->getLocale();
-        $sourceLocale = trim((string) config('services.translation.source_locale', 'en'));
+        $sourceLocale = trim((string) $this->settings()->get('google_translation', 'source_locale', config('services.translation.source_locale', 'en')));
         $translator = $this->translator();
 
         if (! $translator->configured()) {
@@ -314,7 +316,7 @@ class IgdbVideoGameSearchService
         return Http::baseUrl(rtrim((string) config('services.igdb.base_url'), '/'))
             ->acceptJson()
             ->withHeaders([
-                'Client-ID' => trim((string) config('services.igdb.client_id', '')),
+                'Client-ID' => $this->secret('client_id', 'services.igdb.client_id'),
                 'Authorization' => 'Bearer '.$this->accessToken(),
             ])
             ->timeout((int) config('barcode.cover_timeout', 8));
@@ -322,7 +324,7 @@ class IgdbVideoGameSearchService
 
     private function accessToken(): string
     {
-        $configuredToken = trim((string) config('services.igdb.access_token', ''));
+        $configuredToken = $this->secret('access_token', 'services.igdb.access_token');
 
         if ($configuredToken !== '') {
             return $configuredToken;
@@ -332,8 +334,8 @@ class IgdbVideoGameSearchService
             $response = Http::asForm()
                 ->acceptJson()
                 ->post((string) config('services.igdb.token_url'), [
-                    'client_id' => trim((string) config('services.igdb.client_id', '')),
-                    'client_secret' => trim((string) config('services.igdb.client_secret', '')),
+                    'client_id' => $this->secret('client_id', 'services.igdb.client_id'),
+                    'client_secret' => $this->secret('client_secret', 'services.igdb.client_secret'),
                     'grant_type' => 'client_credentials',
                 ]);
 
@@ -341,5 +343,15 @@ class IgdbVideoGameSearchService
 
             return (string) $response->json('access_token', '');
         });
+    }
+
+    private function secret(string $key, string $configKey): string
+    {
+        return trim((string) $this->settings()->getSecret('igdb', $key, config($configKey, '')));
+    }
+
+    private function settings(): ExternalServiceSettings
+    {
+        return $this->settings ?? app(ExternalServiceSettings::class);
     }
 }

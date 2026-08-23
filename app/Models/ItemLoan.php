@@ -39,6 +39,19 @@ class ItemLoan extends Model
         return $this->belongsTo(Item::class);
     }
 
+    public function statusKey(): string
+    {
+        if ($this->returned_at !== null) {
+            return 'returned';
+        }
+
+        if ($this->expected_return_at !== null && $this->expected_return_at->isPast() && ! $this->expected_return_at->isToday()) {
+            return 'overdue';
+        }
+
+        return 'active';
+    }
+
     public function scopeActive(Builder $query): Builder
     {
         return $query->whereNull('returned_at');
