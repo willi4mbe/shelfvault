@@ -207,6 +207,21 @@
                     <a href="{{ route('admin.collection.edit', $item) }}" class="admin-media-button admin-media-button-primary">
                         {{ __('admin.collection.actions.edit') }}
                     </a>
+                    @if ($loansEnabled)
+                        @if ($activeLoan)
+                            <form method="POST" action="{{ route('admin.loans.return', $activeLoan) }}">
+                                @csrf
+                                @method('PATCH')
+                                <button type="submit" class="admin-media-button admin-media-button-secondary">
+                                    {{ __('admin.loans.actions.mark_returned') }}
+                                </button>
+                            </form>
+                        @else
+                            <a href="{{ route('admin.loans.index', ['item' => $item->id]) }}" class="admin-media-button admin-media-button-secondary">
+                                {{ __('admin.loans.actions.create') }}
+                            </a>
+                        @endif
+                    @endif
                     <form method="POST" action="{{ route('admin.collection.destroy', $item) }}" onsubmit="return confirm(@js(__('admin.collection.actions.confirm_delete')));">
                         @csrf
                         @method('DELETE')

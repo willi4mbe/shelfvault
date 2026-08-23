@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Item;
 use App\Models\ItemLoan;
 use App\Services\Installer\InstallationState;
+use App\Services\Library\LibrarySettings;
 use App\Support\AdminNavigation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -12,7 +13,7 @@ use Illuminate\View\View;
 
 class AdminDashboardController extends Controller
 {
-    public function index(InstallationState $installationState, AdminNavigation $navigation): RedirectResponse|View
+    public function index(InstallationState $installationState, AdminNavigation $navigation, LibrarySettings $librarySettings): RedirectResponse|View
     {
         if (! $installationState->installed()) {
             return redirect()->route('install.show');
@@ -25,7 +26,7 @@ class AdminDashboardController extends Controller
         return view('admin.dashboard', [
             'navigation' => $navigation->items(request()->route()?->getName()),
             'stats' => $this->stats(),
-            'quickAccess' => $this->quickAccess(),
+            'quickAccess' => $this->quickAccess($librarySettings),
             'overview' => $this->overview(),
             'activity' => $this->activity(),
             'setupStatus' => $this->setupStatus(),
@@ -51,13 +52,13 @@ class AdminDashboardController extends Controller
     /**
      * @return array<int, array{key: string, title: string, note: string}>
      */
-    private function quickAccess(): array
+    private function quickAccess(LibrarySettings $librarySettings): array
     {
-        return [
+        return array_values(array_filter([
             ['key' => 'collection', 'icon' => 'collection', 'note' => 'collection_note', 'soon' => true, 'tone' => 'blue'],
-            ['key' => 'loans', 'icon' => 'loans', 'note' => 'loans_note', 'soon' => true, 'tone' => 'violet'],
+            ['key' => 'loans', 'icon' => 'loans', 'note' => 'loans_note', 'soon' => false, 'tone' => 'violet', 'visible' => $librarySettings->loansEnabled()],
             ['key' => 'settings', 'icon' => 'settings', 'note' => 'settings_note', 'soon' => false, 'tone' => 'emerald'],
-        ];
+        ], static fn (array $item): bool => $item['visible'] ?? true));
     }
 
     /**

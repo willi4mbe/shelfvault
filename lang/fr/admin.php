@@ -134,6 +134,11 @@ return [
         'language_help' => 'Cette langue pilote l’interface admin et sert de langue cible quand les descriptions importées sont traduites.',
         'save' => 'Enregistrer les paramètres',
         'saved' => 'Paramètres mis à jour.',
+        'external_saved' => 'Paramètres :service mis à jour.',
+        'library_heading' => 'Bibliothèque',
+        'library_title' => 'Nom et périmètre de contenu',
+        'features_heading' => 'Fonctionnalités',
+        'features_title' => 'Modules disponibles',
         'integrations_heading' => 'Services externes',
         'integrations_title' => 'Fournisseurs de métadonnées et d’enrichissement',
         'security_heading' => 'Sécurité',
@@ -143,16 +148,66 @@ return [
         'next_text' => 'Cette page prépare l’espace des paramètres admin. Une prochaine itération pourra ajouter des formulaires validés qui écrivent la configuration proprement sans exposer les tokens dans le navigateur.',
         'provider_label' => 'Fournisseur',
         'api_key_label' => 'Clé API',
+        'test_connection' => 'Tester la connexion',
+        'secret_placeholder' => 'Saisir un secret',
+        'secret_configured_placeholder' => 'Secret déjà configuré - saisir pour remplacer',
+        'secret_help' => 'Les champs secrets ne sont jamais préremplis ; saisissez une nouvelle valeur uniquement pour remplacer le secret stocké.',
+        'future_provider_help' => 'Conservé comme fournisseur optionnel futur. ShelfVault ne l’utilise pas encore.',
+        'library' => [
+            'name_label' => 'Nom de la bibliothèque',
+            'types_title' => 'Types de contenu activés',
+        ],
+        'features' => [
+            'loans_title' => 'Activer les prêts',
+            'loans_help' => 'Affiche l’onglet Prêts et autorise la création et le retour des prêts.',
+        ],
         'states' => [
             'configured' => 'Configuré',
             'missing' => 'Non configuré',
+            'pending' => 'Pending',
             'planned' => 'Prévu',
             'optional_future' => 'Optionnel plus tard',
+        ],
+        'secret_state' => [
+            'configured' => 'Secret configuré en base ou disponible via .env.',
+            'missing' => 'Aucun secret configuré.',
         ],
         'translation_providers' => [
             'google' => 'Google Cloud Translation',
             'custom' => 'Fournisseur personnalisé',
             'none' => 'Aucun',
+        ],
+        'fields' => [
+            'tmdb' => [
+                'api_key' => 'Clé API',
+                'bearer_token' => 'Bearer token',
+                'language' => 'Langue',
+                'region' => 'Région',
+            ],
+            'igdb' => [
+                'client_id' => 'Client ID',
+                'client_secret' => 'Client secret',
+                'access_token' => 'Access token',
+            ],
+            'google_translation' => [
+                'provider' => 'Fournisseur actif',
+                'api_key' => 'Clé API Google Translate',
+            ],
+            'bgg' => [
+                'token' => 'Token BGG',
+            ],
+            'omdb' => [
+                'api_key' => 'Clé API OMDb',
+            ],
+        ],
+        'tests' => [
+            'success' => 'Connexion :service fonctionnelle.',
+            'failed' => 'Connexion :service échouée.',
+            'failed_status' => ':service a répondu HTTP :status.',
+            'missing_credentials' => 'Ajoutez des identifiants avant de tester ce service.',
+            'igdb_requires_token' => 'Le test IGDB nécessite un Client ID et un Access Token.',
+            'bgg_pending' => 'BoardGameGeek n’est pas encore configuré ou reste pending.',
+            'not_available' => 'Le test de connexion n’est pas encore disponible pour ce service.',
         ],
         'integrations' => [
             'tmdb' => [
@@ -163,9 +218,13 @@ return [
                 'title' => 'IGDB / Twitch jeux',
                 'description' => 'Utilisé pour importer les métadonnées et jaquettes de jeux vidéo via des identifiants Twitch ou un token IGDB.',
             ],
-            'translation' => [
+            'google_translation' => [
                 'title' => 'Traduction des descriptions',
                 'description' => 'Fournisseur optionnel utilisé pour traduire les descriptions IGDB importées dans la langue de l’admin.',
+            ],
+            'bgg' => [
+                'title' => 'BoardGameGeek',
+                'description' => 'Préparé pour les métadonnées de jeux de société tout en gardant la saisie manuelle et les fournisseurs secondaires disponibles.',
             ],
             'omdb' => [
                 'title' => 'IMDb / OMDb',
@@ -175,7 +234,7 @@ return [
         'security' => [
             'secrets_hidden' => [
                 'title' => 'Secrets masqués',
-                'detail' => 'La page admin montre seulement l’état de configuration et les noms de variables, jamais les valeurs des tokens.',
+                'detail' => 'La page admin montre seulement l’état de configuration, jamais les valeurs des tokens.',
             ],
             'optional_integrations' => [
                 'title' => 'Intégrations optionnelles',
@@ -185,6 +244,52 @@ return [
                 'title' => 'Piloté par l’environnement',
                 'detail' => 'Les classes de fournisseurs et les clés sont lues depuis la configuration, sans service ni secret codé en dur.',
             ],
+        ],
+    ],
+    'loans' => [
+        'page_title' => 'Prêts ShelfVault',
+        'title' => 'Prêts',
+        'subtitle' => 'Suivez les objets actuellement prêtés et conservez un historique simple des retours.',
+        'back_to_collection' => 'Retour à la collection',
+        'new_heading' => 'Nouveau prêt',
+        'new_title' => 'Enregistrer un prêt',
+        'active_heading' => 'Prêts en cours',
+        'active_title' => 'Objets sortis',
+        'history_heading' => 'Historique',
+        'history_title' => 'Prêts retournés',
+        'item_missing' => 'Objet supprimé',
+        'fields' => [
+            'item' => 'Objet',
+            'borrower_name' => 'Emprunteur',
+            'loaned_at' => 'Date de prêt',
+            'expected_return_at' => 'Retour prévu',
+            'notes' => 'Notes',
+        ],
+        'placeholders' => [
+            'choose_item' => 'Choisir un objet',
+            'no_expected_return' => 'Aucune date',
+        ],
+        'statuses' => [
+            'active' => 'En cours',
+            'returned' => 'Retourné',
+            'overdue' => 'En retard',
+        ],
+        'actions' => [
+            'create' => 'Nouveau prêt',
+            'mark_returned' => 'Marquer comme retourné',
+        ],
+        'empty' => [
+            'active' => 'Aucun prêt en cours.',
+            'history' => 'Aucun prêt retourné pour le moment.',
+        ],
+        'notifications' => [
+            'created' => ':title a été prêté.',
+            'returned' => ':title a été marqué comme retourné.',
+        ],
+        'validation' => [
+            'heading' => 'Vérifiez les informations du prêt.',
+            'already_loaned' => 'Cet objet est déjà prêté.',
+            'disabled_type' => 'Ce type de contenu est désactivé dans les paramètres.',
         ],
     ],
     'collection' => [

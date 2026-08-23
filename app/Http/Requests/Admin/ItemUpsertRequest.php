@@ -5,6 +5,8 @@ namespace App\Http\Requests\Admin;
 use App\Enums\ItemCondition;
 use App\Enums\ItemStatus;
 use App\Enums\ItemType;
+use App\Models\Item;
+use App\Services\Library\LibrarySettings;
 use Illuminate\Support\Str;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -36,7 +38,7 @@ class ItemUpsertRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'type' => ['required', Rule::enum(ItemType::class)],
+            'type' => ['required', Rule::in($this->allowedTypeValues())],
             'title' => ['required', 'string', 'max:255'],
             'original_title' => ['nullable', 'string', 'max:255'],
             'release_year' => ['nullable', 'integer', 'between:1800,2100'],
@@ -93,6 +95,21 @@ class ItemUpsertRequest extends FormRequest
             ItemType::BoardGame => ['box', 'expansion', 'card_game', 'accessory'],
             default => ['dvd', 'blu_ray', '4k_uhd', 'vhs', 'box_set', 'digital_copy', 'cartridge', 'disc', 'code_in_box', 'collector_edition', 'box', 'expansion', 'card_game', 'accessory'],
         };
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function allowedTypeValues(): array
+    {
+        $values = app(LibrarySettings::class)->enabledTypeValues();
+        $item = $this->route('item');
+
+        if ($item instanceof Item && $item->type instanceof ItemType) {
+            $values[] = $item->type->value;
+        }
+
+        return array_values(array_unique($values));
     }
 
     public function withValidator(Validator $validator): void

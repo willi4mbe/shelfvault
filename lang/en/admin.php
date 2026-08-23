@@ -134,6 +134,11 @@ return [
         'language_help' => 'This language is used for the admin interface and as the target language when imported descriptions are translated.',
         'save' => 'Save settings',
         'saved' => 'Settings updated.',
+        'external_saved' => ':service settings updated.',
+        'library_heading' => 'Library',
+        'library_title' => 'Name and content scope',
+        'features_heading' => 'Features',
+        'features_title' => 'Available modules',
         'integrations_heading' => 'External services',
         'integrations_title' => 'Metadata and enrichment providers',
         'security_heading' => 'Security',
@@ -143,16 +148,66 @@ return [
         'next_text' => 'This page prepares the admin settings area. A later iteration can add validated forms that write configuration safely without exposing tokens in the browser.',
         'provider_label' => 'Provider',
         'api_key_label' => 'API key',
+        'test_connection' => 'Test connection',
+        'secret_placeholder' => 'Enter a secret',
+        'secret_configured_placeholder' => 'Secret already configured - type to replace',
+        'secret_help' => 'Secret fields are never refilled; enter a new value only when replacing the stored secret.',
+        'future_provider_help' => 'Kept as an optional future provider. It is not used by ShelfVault yet.',
+        'library' => [
+            'name_label' => 'Library name',
+            'types_title' => 'Enabled content types',
+        ],
+        'features' => [
+            'loans_title' => 'Enable loans',
+            'loans_help' => 'Show the Loans tab and allow loan creation and returns.',
+        ],
         'states' => [
             'configured' => 'Configured',
             'missing' => 'Not configured',
+            'pending' => 'Pending',
             'planned' => 'Planned',
             'optional_future' => 'Optional later',
+        ],
+        'secret_state' => [
+            'configured' => 'Configured secret stored or available from .env.',
+            'missing' => 'No secret configured.',
         ],
         'translation_providers' => [
             'google' => 'Google Cloud Translation',
             'custom' => 'Custom provider',
             'none' => 'None',
+        ],
+        'fields' => [
+            'tmdb' => [
+                'api_key' => 'API key',
+                'bearer_token' => 'Bearer token',
+                'language' => 'Language',
+                'region' => 'Region',
+            ],
+            'igdb' => [
+                'client_id' => 'Client ID',
+                'client_secret' => 'Client secret',
+                'access_token' => 'Access token',
+            ],
+            'google_translation' => [
+                'provider' => 'Active provider',
+                'api_key' => 'Google Translate API key',
+            ],
+            'bgg' => [
+                'token' => 'BGG token',
+            ],
+            'omdb' => [
+                'api_key' => 'OMDb API key',
+            ],
+        ],
+        'tests' => [
+            'success' => ':service connection works.',
+            'failed' => ':service connection failed.',
+            'failed_status' => ':service returned HTTP :status.',
+            'missing_credentials' => 'Add credentials before testing this service.',
+            'igdb_requires_token' => 'IGDB testing requires a Client ID and Access Token.',
+            'bgg_pending' => 'BoardGameGeek is not configured yet or is still pending.',
+            'not_available' => 'Connection test is not available for this service yet.',
         ],
         'integrations' => [
             'tmdb' => [
@@ -163,9 +218,13 @@ return [
                 'title' => 'IGDB / Twitch games',
                 'description' => 'Used to import video game metadata and covers through Twitch credentials or an IGDB access token.',
             ],
-            'translation' => [
+            'google_translation' => [
                 'title' => 'Description translation',
                 'description' => 'Optional provider used to translate imported IGDB descriptions into the admin language.',
+            ],
+            'bgg' => [
+                'title' => 'BoardGameGeek',
+                'description' => 'Prepared for board game metadata while keeping manual entry and secondary providers available.',
             ],
             'omdb' => [
                 'title' => 'IMDb / OMDb',
@@ -175,7 +234,7 @@ return [
         'security' => [
             'secrets_hidden' => [
                 'title' => 'Secrets stay hidden',
-                'detail' => 'The admin page only shows configuration status and variable names, never token values.',
+                'detail' => 'The admin page only shows configuration status, never token values.',
             ],
             'optional_integrations' => [
                 'title' => 'Optional integrations',
@@ -185,6 +244,52 @@ return [
                 'title' => 'Environment driven',
                 'detail' => 'Provider classes and keys are read from configuration, so no service or secret is hardcoded.',
             ],
+        ],
+    ],
+    'loans' => [
+        'page_title' => 'ShelfVault loans',
+        'title' => 'Loans',
+        'subtitle' => 'Track items currently loaned out and keep a simple return history.',
+        'back_to_collection' => 'Back to collection',
+        'new_heading' => 'New loan',
+        'new_title' => 'Record a loan',
+        'active_heading' => 'Current loans',
+        'active_title' => 'Items out now',
+        'history_heading' => 'History',
+        'history_title' => 'Returned loans',
+        'item_missing' => 'Deleted item',
+        'fields' => [
+            'item' => 'Item',
+            'borrower_name' => 'Borrower',
+            'loaned_at' => 'Loan date',
+            'expected_return_at' => 'Expected return',
+            'notes' => 'Notes',
+        ],
+        'placeholders' => [
+            'choose_item' => 'Choose an item',
+            'no_expected_return' => 'No date',
+        ],
+        'statuses' => [
+            'active' => 'Active',
+            'returned' => 'Returned',
+            'overdue' => 'Overdue',
+        ],
+        'actions' => [
+            'create' => 'New loan',
+            'mark_returned' => 'Mark returned',
+        ],
+        'empty' => [
+            'active' => 'No active loans.',
+            'history' => 'No returned loans yet.',
+        ],
+        'notifications' => [
+            'created' => ':title was loaned.',
+            'returned' => ':title was marked as returned.',
+        ],
+        'validation' => [
+            'heading' => 'Check the loan details.',
+            'already_loaned' => 'This item is already on loan.',
+            'disabled_type' => 'This content type is disabled in settings.',
         ],
     ],
     'collection' => [

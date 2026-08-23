@@ -2,6 +2,7 @@
 
 namespace App\Services\Metadata;
 
+use App\Services\ExternalServices\ExternalServiceSettings;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -340,7 +341,7 @@ class MetadataImportMapper
      */
     private function ageRating(array $releaseDates): ?string
     {
-        $region = strtoupper((string) config('services.tmdb.region', ''));
+        $region = $this->tmdbRegion();
         $results = Arr::get($releaseDates, 'results', []);
 
         if ($region !== '') {
@@ -375,7 +376,7 @@ class MetadataImportMapper
      */
     private function contentRating(array $contentRatings): ?string
     {
-        $region = strtoupper((string) config('services.tmdb.region', ''));
+        $region = $this->tmdbRegion();
         $results = Arr::get($contentRatings, 'results', []);
 
         if (! is_array($results)) {
@@ -432,5 +433,14 @@ class MetadataImportMapper
         }
 
         return Str::lower(trim($title));
+    }
+
+    private function tmdbRegion(): string
+    {
+        return strtoupper((string) app(ExternalServiceSettings::class)->get(
+            'tmdb',
+            'region',
+            config('services.tmdb.region', ''),
+        ));
     }
 }

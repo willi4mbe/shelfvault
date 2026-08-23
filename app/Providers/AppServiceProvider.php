@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\ExternalServices\ExternalServiceSettings;
 use App\Services\Translation\Contracts\TextTranslationProvider;
 use App\Services\Translation\Providers\GoogleTextTranslationProvider;
 use App\Services\Translation\Providers\NullTextTranslationProvider;
@@ -15,10 +16,11 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(TextTranslationProvider::class, function ($app): TextTranslationProvider {
-            $provider = trim((string) config('services.translation.provider', ''));
+            $settings = $app->make(ExternalServiceSettings::class);
+            $provider = trim((string) $settings->get('google_translation', 'provider', config('services.translation.provider', '')));
 
             if (strtolower($provider) === 'google') {
-                $apiKey = trim((string) config('services.translation.google.api_key', ''));
+                $apiKey = trim((string) $settings->getSecret('google_translation', 'api_key', config('services.translation.google.api_key', '')));
 
                 return $apiKey !== ''
                     ? $app->make(GoogleTextTranslationProvider::class)

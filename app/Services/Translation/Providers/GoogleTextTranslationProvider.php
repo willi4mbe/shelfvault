@@ -2,6 +2,7 @@
 
 namespace App\Services\Translation\Providers;
 
+use App\Services\ExternalServices\ExternalServiceSettings;
 use App\Services\Translation\Contracts\TextTranslationProvider;
 use App\Services\Translation\TextTranslationResult;
 use Illuminate\Support\Arr;
@@ -10,6 +11,11 @@ use Throwable;
 
 class GoogleTextTranslationProvider implements TextTranslationProvider
 {
+    public function __construct(
+        private readonly ?ExternalServiceSettings $settings = null,
+    ) {
+    }
+
     public function configured(): bool
     {
         return $this->apiKey() !== '' && $this->baseUrl() !== '';
@@ -65,7 +71,11 @@ class GoogleTextTranslationProvider implements TextTranslationProvider
 
     private function apiKey(): string
     {
-        return trim((string) config('services.translation.google.api_key', ''));
+        return trim((string) $this->settings()->getSecret(
+            'google_translation',
+            'api_key',
+            config('services.translation.google.api_key', ''),
+        ));
     }
 
     private function baseUrl(): string
@@ -80,5 +90,10 @@ class GoogleTextTranslationProvider implements TextTranslationProvider
         }
 
         return strtolower(strtok(str_replace('_', '-', trim($locale)), '-') ?: '');
+    }
+
+    private function settings(): ExternalServiceSettings
+    {
+        return $this->settings ?? app(ExternalServiceSettings::class);
     }
 }

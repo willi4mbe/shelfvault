@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Item;
 use App\Models\User;
+use App\Services\Library\LibrarySettings;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -331,6 +332,53 @@ class AdminCollectionTest extends TestCase
         $this->assertDatabaseMissing('items', [
             'title' => 'Invalid format film',
         ]);
+    }
+
+    public function test_disabled_content_types_are_hidden_from_creation_and_rejected_on_store(): void
+    {
+        app(LibrarySettings::class)->setEnabledTypes(['film', 'board_game']);
+
+        $this->actingAs(User::query()->first())
+            ->get(route('admin.collection.create'))
+            ->assertOk()
+            ->assertSee('value="film"', false)
+            ->assertSee('value="board_game"', false)
+            ->assertDontSee('value="video_game"', false)
+            ->assertDontSee('value="tv_series"', false);
+
+        $this->actingAs(User::query()->first())
+            ->from(route('admin.collection.create'))
+            ->post(route('admin.collection.store'), [
+                'type' => 'video_game',
+                'title' => 'Disabled game',
+                'status' => 'owned',
+                'physical_format' => 'disc',
+            ])
+            ->assertRedirect(route('admin.collection.create'))
+            ->assertSessionHasErrors('type');
+
+        $this->assertDatabaseMissing('items', [
+            'title' => 'Disabled game',
+        ]);
+    }
+
+    public function test_existing_items_are_kept_when_their_type_is_disabled(): void
+    {
+        $item = Item::factory()->videoGame()->create(['title' => 'Existing game']);
+
+        app(LibrarySettings::class)->setEnabledTypes(['film']);
+
+        $this->assertDatabaseHas('items', [
+            'id' => $item->id,
+            'title' => 'Existing game',
+            'type' => 'video_game',
+        ]);
+
+        $this->actingAs(User::query()->first())
+            ->get(route('admin.collection.edit', $item))
+            ->assertOk()
+            ->assertSee('Existing game')
+            ->assertSee('value="video_game"', false);
     }
 
     public function test_collection_requires_the_type_title_status_and_physical_format_fields(): void

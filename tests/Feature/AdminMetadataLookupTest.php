@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Models\Item;
+use App\Services\ExternalServices\ExternalServiceSettings;
 use App\Services\Metadata\MetadataImportMapper;
 use App\Services\Metadata\Providers\LocalItemBarcodeLookupProvider;
 use Illuminate\Support\Facades\DB;
@@ -187,6 +188,43 @@ class AdminMetadataLookupTest extends TestCase
             ->assertJsonPath('data.candidates.0.title', 'The Matrix')
             ->assertJsonPath('data.candidates.0.release_year', 1999)
             ->assertJsonPath('data.candidates.0.poster_url', 'https://image.tmdb.org/t/p/w500/matrix.jpg');
+    }
+
+    public function test_tmdb_search_uses_database_settings_before_config_fallback(): void
+    {
+        config(['services.tmdb.api_key' => 'fallback-key']);
+
+        app(ExternalServiceSettings::class)->set('tmdb', 'api_key', 'db-tmdb-key', true);
+
+        Http::fake([
+            'https://api.themoviedb.org/3/search/movie*' => Http::response([
+                'results' => [
+                    [
+                        'id' => 603,
+                        'title' => 'The Matrix',
+                        'original_title' => 'The Matrix',
+                        'release_date' => '1999-03-31',
+                        'overview' => 'A hacker discovers the truth.',
+                        'poster_path' => '/matrix.jpg',
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $this->actingAs(User::query()->first())
+            ->postJson(route('admin.collection.metadata.search'), [
+                'mode' => 'title',
+                'type' => 'film',
+                'title' => 'Matrix',
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'found');
+
+        Http::assertSent(function ($request): bool {
+            return str_starts_with($request->url(), 'https://api.themoviedb.org/3/search/movie')
+                && str_contains($request->url(), 'api_key=db-tmdb-key')
+                && ! str_contains($request->url(), 'api_key=fallback-key');
+        });
     }
 
     public function test_tmdb_tv_search_returns_normalized_candidates_when_tmdb_is_configured(): void

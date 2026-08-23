@@ -190,6 +190,17 @@
                                     </td>
                                     <td class="px-4 py-4 align-top">
                                         <div class="flex justify-start gap-2 whitespace-nowrap pl-1 md:pl-2">
+                                            @if ($loansEnabled && ! $item->has_active_loan)
+                                                <a
+                                                    href="{{ route('admin.loans.index', ['item' => $item->id]) }}"
+                                                    class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-zinc-300 bg-white text-zinc-700 transition hover:border-zinc-400 hover:text-zinc-950 focus:outline-none focus:ring-4 focus:ring-zinc-100"
+                                                    aria-label="{{ __('admin.loans.actions.create') }}"
+                                                    title="{{ __('admin.loans.actions.create') }}"
+                                                >
+                                                    @include('admin.icon', ['name' => 'loans', 'class' => 'h-4 w-4'])
+                                                    <span class="sr-only">{{ __('admin.loans.actions.create') }}</span>
+                                                </a>
+                                            @endif
                                             <a
                                                 href="{{ route('admin.collection.edit', $item) }}"
                                                 class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-zinc-300 bg-white text-zinc-700 transition hover:border-zinc-400 hover:text-zinc-950 focus:outline-none focus:ring-4 focus:ring-zinc-100"
@@ -268,6 +279,17 @@
                                     {{ $item->barcode ? __('admin.collection.table.barcode').': '.$item->barcode : __('admin.collection.table.no_barcode') }}
                                 </p>
                                 <div class="flex items-center gap-2">
+                                    @if ($loansEnabled && ! $item->has_active_loan)
+                                        <a
+                                            href="{{ route('admin.loans.index', ['item' => $item->id]) }}"
+                                            class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-zinc-300 bg-white text-zinc-700 transition hover:border-zinc-400 hover:text-zinc-950 focus:outline-none focus:ring-4 focus:ring-zinc-100"
+                                            aria-label="{{ __('admin.loans.actions.create') }}"
+                                            title="{{ __('admin.loans.actions.create') }}"
+                                        >
+                                            @include('admin.icon', ['name' => 'loans', 'class' => 'h-4 w-4'])
+                                            <span class="sr-only">{{ __('admin.loans.actions.create') }}</span>
+                                        </a>
+                                    @endif
                                     <a
                                         href="{{ route('admin.collection.edit', $item) }}"
                                         class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-zinc-300 bg-white text-zinc-700 transition hover:border-zinc-400 hover:text-zinc-950 focus:outline-none focus:ring-4 focus:ring-zinc-100"
