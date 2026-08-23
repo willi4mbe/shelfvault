@@ -2,10 +2,10 @@
 
 use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\AdminBarcodeLookupController;
-use App\Http\Controllers\AdminMetadataLookupController;
 use App\Http\Controllers\AdminCollectionController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminLoanController;
+use App\Http\Controllers\AdminMetadataLookupController;
 use App\Http\Controllers\AdminSettingsController;
 use App\Http\Controllers\InstallController;
 use App\Http\Controllers\PublicLibraryController;
@@ -39,6 +39,8 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
     Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings.index');
     Route::post('/settings', [AdminSettingsController::class, 'update'])->name('settings.update');
     Route::put('/settings/library', [AdminSettingsController::class, 'updateLibrary'])->name('settings.library.update');
+    Route::post('/settings/updates/check', [AdminSettingsController::class, 'checkUpdates'])->name('settings.updates.check');
+    Route::post('/settings/updates/prepare', [AdminSettingsController::class, 'prepareUpdate'])->name('settings.updates.prepare');
     Route::put('/settings/external-services/{service}', [AdminSettingsController::class, 'updateExternalService'])->name('settings.external-services.update');
     Route::post('/settings/external-services/{service}/test', [AdminSettingsController::class, 'testExternalService'])->name('settings.external-services.test');
     Route::get('/loans', [AdminLoanController::class, 'index'])->name('loans.index');

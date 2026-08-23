@@ -228,6 +228,104 @@
                 </div>
             </form>
 
+            @php
+                $updateStatusTone = match ($updatePanel['status']) {
+                    'available' => 'amber',
+                    'current' => 'emerald',
+                    'unavailable' => 'rose',
+                    default => 'slate',
+                };
+            @endphp
+
+            <section class="admin-panel !rounded-[20px] !p-4 sm:!p-5">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div class="min-w-0">
+                        <p class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                            {{ __('admin.settings.updates.heading') }}
+                        </p>
+                        <div class="mt-1 flex flex-wrap items-center gap-2">
+                            <h2 class="text-base font-semibold tracking-tight text-zinc-950">
+                                {{ __('admin.settings.updates.title') }}
+                            </h2>
+                            <span class="inline-flex h-5 items-center rounded-full px-2 text-[0.65rem] font-bold admin-stat-chip-{{ $updateStatusTone }}">
+                                {{ __('admin.settings.updates.statuses.'.$updatePanel['status']) }}
+                            </span>
+                        </div>
+                        <p class="mt-1 max-w-2xl text-xs leading-5 text-zinc-500">
+                            {{ __('admin.settings.updates.help') }}
+                        </p>
+                    </div>
+
+                    <form method="POST" action="{{ route('admin.settings.updates.check') }}">
+                        @csrf
+                        <button type="submit" class="inline-flex h-9 w-full items-center justify-center whitespace-nowrap rounded-full border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-700 transition hover:border-zinc-400 hover:text-zinc-950 sm:w-auto">
+                            {{ __('admin.settings.updates.actions.check') }}
+                        </button>
+                    </form>
+                </div>
+
+                <div class="mt-4 grid gap-3 lg:grid-cols-3">
+                    <div class="rounded-xl border border-zinc-200 bg-white/85 px-3 py-3">
+                        <p class="text-[0.66rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">{{ __('admin.settings.updates.current_version') }}</p>
+                        <p class="mt-1 text-sm font-semibold text-zinc-950">v{{ $updatePanel['current_version'] }}</p>
+                    </div>
+                    <div class="rounded-xl border border-zinc-200 bg-white/85 px-3 py-3">
+                        <p class="text-[0.66rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">{{ __('admin.settings.updates.latest_version') }}</p>
+                        <p class="mt-1 text-sm font-semibold text-zinc-950">
+                            {{ $updatePanel['latest_version'] ?? __('admin.settings.updates.not_checked') }}
+                        </p>
+                    </div>
+                    <div class="rounded-xl border border-zinc-200 bg-white/85 px-3 py-3">
+                        <p class="text-[0.66rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">{{ __('admin.settings.updates.installation_mode') }}</p>
+                        <p class="mt-1 text-sm font-semibold text-zinc-950">{{ $updatePanel['strategy_label'] }}</p>
+                    </div>
+                </div>
+
+                <div class="mt-4 rounded-xl border border-zinc-200 bg-white/85 px-3 py-3">
+                    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div class="min-w-0">
+                            <p class="text-sm font-semibold text-zinc-950">{{ __('admin.settings.updates.strategy_title') }}</p>
+                            <p class="mt-1 text-xs leading-5 text-zinc-500">
+                                {{ __('admin.settings.updates.strategy_'.$updatePanel['installation_mode']) }}
+                            </p>
+                            <p class="mt-2 text-xs leading-5 text-zinc-500">
+                                {{ $updatePanel['backup_required'] ? __('admin.settings.updates.backup_required') : __('admin.settings.updates.backup_optional') }}
+                            </p>
+                        </div>
+
+                        @if ($updatePanel['can_prepare'])
+                            <div class="flex flex-col gap-2 sm:flex-row lg:flex-col xl:flex-row">
+                                <a href="{{ $updatePanel['release_url'] }}" target="_blank" rel="noopener noreferrer" class="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-700 transition hover:border-zinc-400 hover:text-zinc-950">
+                                    {{ __('admin.settings.updates.actions.download') }}
+                                </a>
+                                <form method="POST" action="{{ route('admin.settings.updates.prepare') }}">
+                                    @csrf
+                                    <button type="submit" class="inline-flex h-9 w-full items-center justify-center whitespace-nowrap rounded-full bg-zinc-950 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800 sm:w-auto">
+                                        {{ __('admin.settings.updates.actions.prepare') }}
+                                    </button>
+                                </form>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                @if ($updatePanel['release_name'] || $updatePanel['changelog'])
+                    <div class="mt-4 rounded-xl border border-zinc-200 bg-white/85 px-3 py-3">
+                        <p class="text-[0.66rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">{{ __('admin.settings.updates.changelog') }}</p>
+                        @if ($updatePanel['release_name'])
+                            <p class="mt-1 text-sm font-semibold text-zinc-950">{{ $updatePanel['release_name'] }}</p>
+                        @endif
+                        @if ($updatePanel['changelog'])
+                            <div class="mt-2 max-w-3xl whitespace-pre-line text-xs leading-5 text-zinc-500">
+                                {{ \Illuminate\Support\Str::limit($updatePanel['changelog'], 1200) }}
+                            </div>
+                        @else
+                            <p class="mt-2 text-xs leading-5 text-zinc-500">{{ __('admin.settings.updates.empty_changelog') }}</p>
+                        @endif
+                    </div>
+                @endif
+            </section>
+
             <section class="admin-panel !rounded-[20px] !p-4 sm:!p-5">
                 <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                     <div class="min-w-0">

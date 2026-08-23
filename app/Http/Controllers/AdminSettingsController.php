@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Services\ExternalServices\ExternalServiceSettings;
 use App\Services\Installer\InstallationState;
 use App\Services\Library\LibrarySettings;
+use App\Services\Updates\ReleaseCheckResult;
+use App\Services\Updates\UpdateService;
 use App\Support\AdminNavigation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,6 +25,7 @@ class AdminSettingsController extends Controller
         AdminNavigation $navigation,
         ExternalServiceSettings $settings,
         LibrarySettings $librarySettings,
+        UpdateService $updateService,
     ): RedirectResponse|View {
         if ($redirect = $this->guardAdmin($installationState)) {
             return $redirect;
@@ -40,6 +43,7 @@ class AdminSettingsController extends Controller
             'locationsText' => $librarySettings->locationsText(),
             'locales' => config('shelfvault.locales'),
             'currentLocale' => Auth::user()?->preferred_locale ?? config('app.locale', 'en'),
+            'updatePanel' => $updateService->summary($request->session()->get('shelfvault.update_check')),
         ]);
     }
 
@@ -179,6 +183,52 @@ class AdminSettingsController extends Controller
         return redirect()
             ->route('admin.settings.index')
             ->with($ok ? 'status' : 'settings_error', $message);
+    }
+
+    public function checkUpdates(InstallationState $installationState, UpdateService $updateService): RedirectResponse
+    {
+        if ($redirect = $this->guardAdmin($installationState)) {
+            return $redirect;
+        }
+
+        $check = $updateService->check();
+        session()->put('shelfvault.update_check', $check->toArray());
+
+        if ($check->status === ReleaseCheckResult::STATUS_UNAVAILABLE) {
+            return redirect()
+                ->route('admin.settings.index')
+                ->with('settings_error', __('admin.settings.updates.notifications.unavailable'));
+        }
+
+        $message = $check->updateAvailable()
+            ? __('admin.settings.updates.notifications.available', ['version' => $check->release?->tagName])
+            : __('admin.settings.updates.notifications.current');
+
+        return redirect()
+            ->route('admin.settings.index')
+            ->with('status', $message);
+    }
+
+    public function prepareUpdate(InstallationState $installationState, UpdateService $updateService): RedirectResponse
+    {
+        if ($redirect = $this->guardAdmin($installationState)) {
+            return $redirect;
+        }
+
+        $preparation = $updateService->prepare();
+        session()->put('shelfvault.update_check', $preparation->check->toArray());
+
+        if (! $preparation->ready) {
+            return redirect()
+                ->route('admin.settings.index')
+                ->with('settings_error', __('admin.settings.updates.notifications.prepare_unavailable'));
+        }
+
+        return redirect()
+            ->route('admin.settings.index')
+            ->with('status', __('admin.settings.updates.notifications.prepare_ready', [
+                'version' => $preparation->check->release?->tagName,
+            ]));
     }
 
     /**
@@ -360,25 +410,25 @@ class AdminSettingsController extends Controller
         return [
             'settings.enabled' => ['nullable', 'boolean'],
             ...match ($service) {
-            'tmdb' => [
-                'settings.api_key' => ['nullable', 'string', 'max:2000'],
-                'settings.bearer_token' => ['nullable', 'string', 'max:4000'],
-                'settings.language' => ['nullable', 'string', 'max:20'],
-                'settings.region' => ['nullable', 'string', 'max:10'],
-            ],
-            'igdb' => [
-                'settings.client_id' => ['nullable', 'string', 'max:2000'],
-                'settings.client_secret' => ['nullable', 'string', 'max:4000'],
-                'settings.access_token' => ['nullable', 'string', 'max:4000'],
-            ],
-            'google_translation' => [
-                'settings.provider' => ['nullable', Rule::in(['', 'google'])],
-                'settings.api_key' => ['nullable', 'string', 'max:4000'],
-            ],
-            'bgg' => [
-                'settings.token' => ['nullable', 'string', 'max:4000'],
-            ],
-            default => [],
+                'tmdb' => [
+                    'settings.api_key' => ['nullable', 'string', 'max:2000'],
+                    'settings.bearer_token' => ['nullable', 'string', 'max:4000'],
+                    'settings.language' => ['nullable', 'string', 'max:20'],
+                    'settings.region' => ['nullable', 'string', 'max:10'],
+                ],
+                'igdb' => [
+                    'settings.client_id' => ['nullable', 'string', 'max:2000'],
+                    'settings.client_secret' => ['nullable', 'string', 'max:4000'],
+                    'settings.access_token' => ['nullable', 'string', 'max:4000'],
+                ],
+                'google_translation' => [
+                    'settings.provider' => ['nullable', Rule::in(['', 'google'])],
+                    'settings.api_key' => ['nullable', 'string', 'max:4000'],
+                ],
+                'bgg' => [
+                    'settings.token' => ['nullable', 'string', 'max:4000'],
+                ],
+                default => [],
             },
         ];
     }
