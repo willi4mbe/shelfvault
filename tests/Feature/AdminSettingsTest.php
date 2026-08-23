@@ -6,10 +6,10 @@ use App\Models\ExternalServiceSetting;
 use App\Models\User;
 use App\Services\ExternalServices\ExternalServiceSettings;
 use App\Services\Library\LibrarySettings;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Crypt;
 use Tests\TestCase;
 
 class AdminSettingsTest extends TestCase
@@ -330,5 +330,127 @@ class AdminSettingsTest extends TestCase
             ->assertOk()
             ->assertSee(route('admin.settings.index'), false)
             ->assertSee(__('admin.navigation.settings'));
+    }
+
+    public function test_settings_page_displays_current_shelfvault_version(): void
+    {
+        config(['shelfvault.version' => '9.8.7']);
+
+        $this->actingAs(User::query()->first())
+            ->get(route('admin.settings.index'))
+            ->assertOk()
+            ->assertSee('v9.8.7')
+            ->assertSee(__('admin.settings.updates.title'))
+            ->assertSee(__('admin.settings.updates.statuses.unknown'));
+    }
+
+    public function test_update_check_detects_newer_stable_github_release(): void
+    {
+        config(['shelfvault.version' => '1.0.0']);
+
+        Http::fake([
+            'https://api.github.com/repos/willi4mbe/shelfvault/releases' => Http::response([
+                $this->githubRelease('v1.1.0', body: "Security fixes\nAdmin polish"),
+            ], 200),
+        ]);
+
+        $this->actingAs(User::query()->first());
+
+        $this->followingRedirects()
+            ->post(route('admin.settings.updates.check'))
+            ->assertOk()
+            ->assertSee(__('admin.settings.updates.notifications.available', ['version' => 'v1.1.0']))
+            ->assertSee(__('admin.settings.updates.statuses.available'))
+            ->assertSee('v1.1.0')
+            ->assertSee('Security fixes')
+            ->assertSee(__('admin.settings.updates.actions.prepare'))
+            ->assertSee(__('admin.settings.updates.actions.download'));
+
+        Http::assertSentCount(1);
+    }
+
+    public function test_update_check_reports_already_current_version(): void
+    {
+        config(['shelfvault.version' => '1.1.0']);
+
+        Http::fake([
+            'https://api.github.com/repos/willi4mbe/shelfvault/releases' => Http::response([
+                $this->githubRelease('v1.1.0'),
+            ], 200),
+        ]);
+
+        $this->actingAs(User::query()->first());
+
+        $this->followingRedirects()
+            ->post(route('admin.settings.updates.check'))
+            ->assertOk()
+            ->assertSee(__('admin.settings.updates.notifications.current'))
+            ->assertSee(__('admin.settings.updates.statuses.current'))
+            ->assertDontSee(__('admin.settings.updates.actions.prepare'));
+    }
+
+    public function test_update_check_falls_back_cleanly_when_github_is_unavailable(): void
+    {
+        config(['shelfvault.version' => '1.0.0']);
+
+        Http::fake([
+            'https://api.github.com/repos/willi4mbe/shelfvault/releases' => Http::response([], 503),
+        ]);
+
+        $this->actingAs(User::query()->first());
+
+        $this->followingRedirects()
+            ->post(route('admin.settings.updates.check'))
+            ->assertOk()
+            ->assertSee(__('admin.settings.updates.notifications.unavailable'))
+            ->assertSee(__('admin.settings.updates.statuses.unavailable'))
+            ->assertDontSee(__('admin.settings.updates.actions.prepare'));
+    }
+
+    public function test_update_check_ignores_prerelease_versions_by_default(): void
+    {
+        config(['shelfvault.version' => '1.1.0']);
+
+        Http::fake([
+            'https://api.github.com/repos/willi4mbe/shelfvault/releases' => Http::response([
+                $this->githubRelease('v2.0.0-beta', prerelease: true, body: 'Beta-only notes'),
+                $this->githubRelease('v1.1.0', body: 'Stable notes'),
+            ], 200),
+        ]);
+
+        $this->actingAs(User::query()->first());
+
+        $this->followingRedirects()
+            ->post(route('admin.settings.updates.check'))
+            ->assertOk()
+            ->assertSee(__('admin.settings.updates.statuses.current'))
+            ->assertSee('Stable notes')
+            ->assertDontSee('v2.0.0-beta')
+            ->assertDontSee('Beta-only notes');
+    }
+
+    public function test_update_routes_require_authenticated_admin(): void
+    {
+        $this->post(route('admin.settings.updates.check'))
+            ->assertRedirect(route('login'));
+
+        $this->post(route('admin.settings.updates.prepare'))
+            ->assertRedirect(route('login'));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function githubRelease(string $tag, bool $prerelease = false, bool $draft = false, string $body = 'Release notes'): array
+    {
+        return [
+            'tag_name' => $tag,
+            'name' => 'ShelfVault '.$tag,
+            'html_url' => 'https://github.com/willi4mbe/shelfvault/releases/tag/'.$tag,
+            'body' => $body,
+            'draft' => $draft,
+            'prerelease' => $prerelease,
+            'published_at' => '2026-08-23T10:00:00Z',
+        ];
     }
 }

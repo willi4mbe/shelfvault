@@ -3,7 +3,7 @@
 return [
     'brand' => 'ShelfVault',
     'footer' => [
-        'version' => 'ShelfVault v0.1.0-dev',
+        'version' => 'ShelfVault v:version',
     ],
     'navigation' => [
         'home' => 'Accueil',
@@ -156,6 +156,44 @@ return [
         'future_provider_help' => 'Conservé comme fournisseur optionnel futur. ShelfVault ne l’utilise pas encore.',
         'provider_enabled_label' => 'Activer ce fournisseur',
         'provider_enabled_help' => 'Les champs restent inactifs tant que le fournisseur n’est pas activé.',
+        'updates' => [
+            'heading' => 'Système',
+            'title' => 'Mise à jour',
+            'help' => 'Vérifie les releases GitHub stables sans remplacer les fichiers applicatifs depuis le navigateur.',
+            'current_version' => 'Version actuelle',
+            'latest_version' => 'Dernière release stable',
+            'installation_mode' => 'Type d’installation',
+            'not_checked' => 'Pas encore vérifié',
+            'strategy_title' => 'Stratégie de mise à jour préparée',
+            'strategy_docker' => 'Les installations Docker/NAS devront se mettre à jour via une nouvelle image, un redémarrage du conteneur, puis les migrations.',
+            'strategy_classic' => 'Les hébergements PHP classiques devront utiliser un package de release signé et un flux updater encadré.',
+            'backup_required' => 'Les mises à jour automatiques restent bloquées tant qu’un service de sauvegarde complet n’existe pas.',
+            'backup_optional' => 'Le garde-fou de sauvegarde est actuellement désactivé dans la configuration.',
+            'changelog' => 'Changelog',
+            'empty_changelog' => 'Cette release ne contient pas de notes de changelog.',
+            'statuses' => [
+                'unknown' => 'Non vérifié',
+                'current' => 'À jour',
+                'available' => 'Mise à jour disponible',
+                'unavailable' => 'Vérification impossible',
+            ],
+            'installation_modes' => [
+                'docker' => 'Docker / NAS',
+                'classic' => 'Hébergement PHP classique',
+            ],
+            'actions' => [
+                'check' => 'Vérifier les mises à jour',
+                'download' => 'Télécharger sur GitHub',
+                'prepare' => 'Préparer la mise à jour',
+            ],
+            'notifications' => [
+                'available' => 'ShelfVault :version est disponible.',
+                'current' => 'ShelfVault est à jour.',
+                'unavailable' => 'GitHub est inaccessible ou aucune release stable n’a été trouvée.',
+                'prepare_ready' => 'ShelfVault :version est prêt à vérifier. Aucun fichier n’a été modifié.',
+                'prepare_unavailable' => 'Aucune mise à jour stable ne peut être préparée pour le moment.',
+            ],
+        ],
         'library' => [
             'name_label' => 'Nom de la bibliothèque',
             'types_title' => 'Types de contenu activés',

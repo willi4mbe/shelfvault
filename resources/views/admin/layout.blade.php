@@ -77,7 +77,7 @@
 
                     <div class="mt-4 border-t border-white/10 pt-4">
                         <span class="text-xs font-medium text-white/52">
-                            {{ __('admin.footer.version') }}
+                            {{ __('admin.footer.version', ['version' => config('shelfvault.version')]) }}
                         </span>
                     </div>
                 </aside>
@@ -109,7 +109,7 @@
 
                     <div class="mt-4 border-t border-white/10 pt-4">
                         <span class="text-xs font-medium text-white/52">
-                            {{ __('admin.footer.version') }}
+                            {{ __('admin.footer.version', ['version' => config('shelfvault.version')]) }}
                         </span>
                     </div>
                 </aside>

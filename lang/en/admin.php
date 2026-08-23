@@ -3,7 +3,7 @@
 return [
     'brand' => 'ShelfVault',
     'footer' => [
-        'version' => 'ShelfVault v0.1.0-dev',
+        'version' => 'ShelfVault v:version',
     ],
     'navigation' => [
         'home' => 'Home',
@@ -156,6 +156,44 @@ return [
         'future_provider_help' => 'Kept as an optional future provider. It is not used by ShelfVault yet.',
         'provider_enabled_label' => 'Enable this provider',
         'provider_enabled_help' => 'Fields stay inactive until the provider is enabled.',
+        'updates' => [
+            'heading' => 'System',
+            'title' => 'Updates',
+            'help' => 'Check stable GitHub releases without replacing application files from the browser.',
+            'current_version' => 'Current version',
+            'latest_version' => 'Latest stable release',
+            'installation_mode' => 'Installation type',
+            'not_checked' => 'Not checked yet',
+            'strategy_title' => 'Prepared update strategy',
+            'strategy_docker' => 'Docker/NAS installs should update by pulling a new image, restarting the container, then running migrations.',
+            'strategy_classic' => 'Classic PHP hosting installs will need a signed release package and guarded updater flow.',
+            'backup_required' => 'Automatic updates stay blocked until a complete backup service exists.',
+            'backup_optional' => 'Backup guard is currently disabled in configuration.',
+            'changelog' => 'Changelog',
+            'empty_changelog' => 'This release does not include changelog notes.',
+            'statuses' => [
+                'unknown' => 'Not checked',
+                'current' => 'Up to date',
+                'available' => 'Update available',
+                'unavailable' => 'Check unavailable',
+            ],
+            'installation_modes' => [
+                'docker' => 'Docker / NAS',
+                'classic' => 'Classic PHP hosting',
+            ],
+            'actions' => [
+                'check' => 'Check for updates',
+                'download' => 'Download on GitHub',
+                'prepare' => 'Prepare update',
+            ],
+            'notifications' => [
+                'available' => 'ShelfVault :version is available.',
+                'current' => 'ShelfVault is up to date.',
+                'unavailable' => 'GitHub could not be reached or no stable release was found.',
+                'prepare_ready' => 'ShelfVault :version is ready to review. No files were changed.',
+                'prepare_unavailable' => 'No stable update can be prepared right now.',
+            ],
+        ],
         'library' => [
             'name_label' => 'Library name',
             'types_title' => 'Enabled content types',
