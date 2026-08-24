@@ -1,0 +1,11 @@
+{
+    "version": "0.1.0-beta.4",
+    "tag_name": "v0.1.0-beta.4",
+    "name": "ShelfVault 0.1.0-beta.4",
+    "html_url": "https://github.com/willi4mbe/shelfvault/releases/tag/v0.1.0-beta.4",
+    "zip_url": "https://github.com/willi4mbe/shelfvault/releases/download/v0.1.0-beta.4/ShelfVault-0.1.0-beta.4.zip",
+    "sha256": "299a79b57cd3a9bcc185b4db039dcaada97e686617b32084101fc45463ddc7d9",
+    "notes": "Shared-hosting beta with standalone installer, unified public/admin/install design, public/private visibility, in-app update checks, SHA-256 archive validation, pre-update backup, file rollback, and PHP 8.3+ requirements.",
+    "minimum_php": "8.3.0",
+    "requires_migrations": true
+}

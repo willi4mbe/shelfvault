@@ -128,6 +128,32 @@
                         </div>
 
                         <div class="mt-4 rounded-xl border border-zinc-200 bg-white/85 px-3 py-3">
+                            <p class="text-sm font-semibold text-zinc-900">{{ __('admin.settings.visibility.label') }}</p>
+                            <p class="mt-1 text-xs leading-5 text-zinc-500">{{ __('admin.settings.visibility.help') }}</p>
+                            <fieldset class="mt-3 grid gap-2 sm:grid-cols-2">
+                                <legend class="sr-only">{{ __('admin.settings.visibility.label') }}</legend>
+                                @foreach (['public', 'private'] as $visibility)
+                                    <label class="flex min-w-0 cursor-pointer items-start gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-3 transition hover:border-zinc-300 hover:bg-white">
+                                        <input
+                                            type="radio"
+                                            name="library_visibility"
+                                            value="{{ $visibility }}"
+                                            @checked(old('library_visibility', $libraryVisibility) === $visibility)
+                                            class="mt-1 h-4 w-4 border-zinc-300 text-zinc-950 focus:ring-zinc-500"
+                                        >
+                                        <span class="min-w-0">
+                                            <span class="block text-sm font-semibold text-zinc-900">{{ __('admin.settings.visibility.options.'.$visibility.'.label') }}</span>
+                                            <span class="mt-1 block text-xs leading-5 text-zinc-500">{{ __('admin.settings.visibility.options.'.$visibility.'.help') }}</span>
+                                        </span>
+                                    </label>
+                                @endforeach
+                            </fieldset>
+                            @error('library_visibility')
+                                <span class="mt-2 block text-xs font-medium text-rose-700">{{ $message }}</span>
+                            @enderror
+                        </div>
+
+                        <div class="mt-4 rounded-xl border border-zinc-200 bg-white/85 px-3 py-3">
                             <label class="flex items-start justify-between gap-4">
                                 <span class="min-w-0">
                                     <span class="block text-sm font-semibold text-zinc-900">{{ __('admin.settings.locations.enabled_title') }}</span>
@@ -281,6 +307,13 @@
                     </div>
                 </div>
 
+                @if ($updatePanel['manifest_url'])
+                    <div class="mt-4 rounded-xl border border-zinc-200 bg-white/85 px-3 py-3">
+                        <p class="text-[0.66rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">{{ __('admin.settings.updates.manifest_url') }}</p>
+                        <p class="mt-1 break-all text-xs font-semibold text-zinc-700">{{ $updatePanel['manifest_url'] }}</p>
+                    </div>
+                @endif
+
                 <div class="mt-4 rounded-xl border border-zinc-200 bg-white/85 px-3 py-3">
                     <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                         <div class="min-w-0">
@@ -291,23 +324,50 @@
                             <p class="mt-2 text-xs leading-5 text-zinc-500">
                                 {{ $updatePanel['backup_required'] ? __('admin.settings.updates.backup_required') : __('admin.settings.updates.backup_optional') }}
                             </p>
+                            @if ($updatePanel['minimum_php'])
+                                <p class="mt-2 text-xs leading-5 text-zinc-500">
+                                    {{ __('admin.settings.updates.minimum_php', ['version' => $updatePanel['minimum_php']]) }}
+                                </p>
+                            @endif
+                            @if ($updatePanel['sha256'])
+                                <p class="mt-2 break-all text-xs leading-5 text-zinc-500">
+                                    {{ __('admin.settings.updates.checksum') }}:
+                                    <span class="font-mono">{{ $updatePanel['sha256'] }}</span>
+                                </p>
+                            @endif
                         </div>
 
                         @if ($updatePanel['can_prepare'])
                             <div class="flex flex-col gap-2 sm:flex-row lg:flex-col xl:flex-row">
-                                <a href="{{ $updatePanel['release_url'] }}" target="_blank" rel="noopener noreferrer" class="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-700 transition hover:border-zinc-400 hover:text-zinc-950">
+                                <a href="{{ $updatePanel['zip_url'] ?: $updatePanel['release_url'] }}" target="_blank" rel="noopener noreferrer" class="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-700 transition hover:border-zinc-400 hover:text-zinc-950">
                                     {{ __('admin.settings.updates.actions.download') }}
                                 </a>
-                                <form method="POST" action="{{ route('admin.settings.updates.prepare') }}">
+                                <form
+                                    method="POST"
+                                    action="{{ route('admin.settings.updates.install') }}"
+                                    onsubmit="return confirm(@js(__('admin.settings.updates.confirm_install')))"
+                                >
                                     @csrf
-                                    <button type="submit" class="inline-flex h-9 w-full items-center justify-center whitespace-nowrap rounded-full bg-zinc-950 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800 sm:w-auto">
-                                        {{ __('admin.settings.updates.actions.prepare') }}
+                                    <button type="submit" @disabled(! $updatePanel['can_install']) class="inline-flex h-9 w-full items-center justify-center whitespace-nowrap rounded-full bg-zinc-950 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:text-zinc-500 sm:w-auto">
+                                        {{ __('admin.settings.updates.actions.install') }}
                                     </button>
                                 </form>
                             </div>
                         @endif
                     </div>
                 </div>
+
+                @if ($updatePanel['last_update'])
+                    <div class="mt-4 rounded-xl border border-zinc-200 bg-white/85 px-3 py-3">
+                        <p class="text-[0.66rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">{{ __('admin.settings.updates.last_status') }}</p>
+                        <p class="mt-1 text-sm font-semibold text-zinc-950">
+                            {{ __('admin.settings.updates.last_status_value', [
+                                'status' => $updatePanel['last_update']['status'] ?? '-',
+                                'date' => $updatePanel['last_update']['at'] ?? '-',
+                            ]) }}
+                        </p>
+                    </div>
+                @endif
 
                 @if ($updatePanel['release_name'] || $updatePanel['changelog'])
                     <div class="mt-4 rounded-xl border border-zinc-200 bg-white/85 px-3 py-3">

@@ -11,17 +11,13 @@ use App\Http\Controllers\InstallController;
 use App\Http\Controllers\PublicLibraryController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('install')->name('install.')->group(function (): void {
-    Route::get('/', [InstallController::class, 'show'])->name('show');
-    Route::post('/locale', [InstallController::class, 'locale'])->name('locale');
-    Route::get('/database', [InstallController::class, 'database'])->name('database');
-    Route::post('/database', [InstallController::class, 'storeDatabase'])->name('database.store');
-    Route::get('/admin', [InstallController::class, 'admin'])->name('admin');
-    Route::post('/complete', [InstallController::class, 'complete'])->name('complete');
-});
+Route::redirect('/install', '/install.php');
 
 Route::get('/', [PublicLibraryController::class, 'home'])->name('library.home');
 Route::redirect('/library', '/')->name('library.index');
+Route::get('/storage/{path}', [InstallController::class, 'publicStorage'])
+    ->where('path', '.*')
+    ->name('storage.public');
 Route::get('/library/search', [PublicLibraryController::class, 'search'])->name('library.search');
 Route::get('/library/favorites', [PublicLibraryController::class, 'favorites'])->name('library.favorites');
 Route::get('/library/loans', [PublicLibraryController::class, 'loans'])->name('library.loans');
@@ -40,7 +36,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
     Route::post('/settings', [AdminSettingsController::class, 'update'])->name('settings.update');
     Route::put('/settings/library', [AdminSettingsController::class, 'updateLibrary'])->name('settings.library.update');
     Route::post('/settings/updates/check', [AdminSettingsController::class, 'checkUpdates'])->name('settings.updates.check');
-    Route::post('/settings/updates/prepare', [AdminSettingsController::class, 'prepareUpdate'])->name('settings.updates.prepare');
+    Route::post('/settings/updates/install', [AdminSettingsController::class, 'installUpdate'])->name('settings.updates.install');
     Route::put('/settings/external-services/{service}', [AdminSettingsController::class, 'updateExternalService'])->name('settings.external-services.update');
     Route::post('/settings/external-services/{service}/test', [AdminSettingsController::class, 'testExternalService'])->name('settings.external-services.test');
     Route::get('/loans', [AdminLoanController::class, 'index'])->name('loans.index');

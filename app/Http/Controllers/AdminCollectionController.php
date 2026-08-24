@@ -27,7 +27,7 @@ class AdminCollectionController extends Controller
     ): RedirectResponse|View
     {
         if (! $installationState->installed()) {
-            return redirect()->route('install.show');
+            return redirect()->to('/install.php');
         }
 
         if (! Auth::check()) {
@@ -75,7 +75,7 @@ class AdminCollectionController extends Controller
     ): RedirectResponse|View
     {
         if (! $installationState->installed()) {
-            return redirect()->route('install.show');
+            return redirect()->to('/install.php');
         }
 
         if (! Auth::check()) {
@@ -106,7 +106,7 @@ class AdminCollectionController extends Controller
     ): RedirectResponse|View
     {
         if (! $installationState->installed()) {
-            return redirect()->route('install.show');
+            return redirect()->to('/install.php');
         }
 
         if (! Auth::check()) {
@@ -125,7 +125,7 @@ class AdminCollectionController extends Controller
     public function store(InstallationState $installationState, ItemUpsertRequest $request): RedirectResponse
     {
         if (! $installationState->installed()) {
-            return redirect()->route('install.show');
+            return redirect()->to('/install.php');
         }
 
         if (! Auth::check()) {
@@ -154,7 +154,7 @@ class AdminCollectionController extends Controller
     ): RedirectResponse|View
     {
         if (! $installationState->installed()) {
-            return redirect()->route('install.show');
+            return redirect()->to('/install.php');
         }
 
         if (! Auth::check()) {
@@ -179,7 +179,7 @@ class AdminCollectionController extends Controller
     public function update(InstallationState $installationState, ItemUpsertRequest $request, Item $item): RedirectResponse
     {
         if (! $installationState->installed()) {
-            return redirect()->route('install.show');
+            return redirect()->to('/install.php');
         }
 
         if (! Auth::check()) {
@@ -214,7 +214,7 @@ class AdminCollectionController extends Controller
     public function destroy(InstallationState $installationState, Item $item): RedirectResponse
     {
         if (! $installationState->installed()) {
-            return redirect()->route('install.show');
+            return redirect()->to('/install.php');
         }
 
         if (! Auth::check()) {

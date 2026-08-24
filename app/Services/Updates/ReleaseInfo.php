@@ -11,6 +11,10 @@ final readonly class ReleaseInfo
         public string $htmlUrl,
         public string $body,
         public ?string $publishedAt,
+        public string $zipUrl = '',
+        public string $sha256 = '',
+        public ?string $minimumPhp = null,
+        public bool $requiresMigrations = true,
     ) {}
 
     /**
@@ -41,6 +45,46 @@ final readonly class ReleaseInfo
     }
 
     /**
+     * @param  array<string, mixed>  $payload
+     */
+    public static function fromManifestPayload(array $payload): ?self
+    {
+        $version = self::versionFromTag(self::cleanString($payload['version'] ?? null, 80));
+        $tagName = self::cleanString($payload['tag_name'] ?? null, 80);
+        $zipUrl = self::cleanString($payload['zip_url'] ?? null, 600);
+        $sha256 = strtolower(self::cleanString($payload['sha256'] ?? null, 128));
+
+        if ($version === null || ! self::isHttpsUrl($zipUrl) || preg_match('/^[a-f0-9]{64}$/', $sha256) !== 1) {
+            return null;
+        }
+
+        if ($tagName === '') {
+            $tagName = 'v'.$version;
+        }
+
+        $htmlUrl = self::cleanString($payload['html_url'] ?? null, 600);
+
+        if ($htmlUrl === '' || ! self::isHttpsUrl($htmlUrl)) {
+            $htmlUrl = $zipUrl;
+        }
+
+        $minimumPhp = self::cleanString($payload['minimum_php'] ?? null, 40);
+
+        return new self(
+            tagName: $tagName,
+            version: $version,
+            name: self::cleanString($payload['name'] ?? null, 140) ?: $tagName,
+            htmlUrl: $htmlUrl,
+            body: self::cleanString($payload['notes'] ?? $payload['body'] ?? null, 12000),
+            publishedAt: self::cleanString($payload['published_at'] ?? null, 60) ?: null,
+            zipUrl: $zipUrl,
+            sha256: $sha256,
+            minimumPhp: $minimumPhp !== '' ? $minimumPhp : null,
+            requiresMigrations: filter_var($payload['requires_migrations'] ?? true, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE) ?? true,
+        );
+    }
+
+    /**
      * @return array<string, string|null>
      */
     public function toArray(): array
@@ -52,6 +96,10 @@ final readonly class ReleaseInfo
             'html_url' => $this->htmlUrl,
             'body' => $this->body,
             'published_at' => $this->publishedAt,
+            'zip_url' => $this->zipUrl,
+            'sha256' => $this->sha256,
+            'minimum_php' => $this->minimumPhp,
+            'requires_migrations' => $this->requiresMigrations,
         ];
     }
 
@@ -68,7 +116,10 @@ final readonly class ReleaseInfo
         $version = self::cleanString($payload['version'] ?? null, 80);
         $htmlUrl = self::cleanString($payload['html_url'] ?? null, 400);
 
-        if ($tagName === '' || $version === '' || ! self::isSafeGithubUrl($htmlUrl)) {
+        $zipUrl = self::cleanString($payload['zip_url'] ?? null, 600);
+        $sha256 = strtolower(self::cleanString($payload['sha256'] ?? null, 128));
+
+        if ($tagName === '' || $version === '' || ! self::isHttpsUrl($htmlUrl)) {
             return null;
         }
 
@@ -79,6 +130,10 @@ final readonly class ReleaseInfo
             htmlUrl: $htmlUrl,
             body: self::cleanString($payload['body'] ?? null, 12000),
             publishedAt: self::cleanString($payload['published_at'] ?? null, 60) ?: null,
+            zipUrl: self::isHttpsUrl($zipUrl) ? $zipUrl : '',
+            sha256: preg_match('/^[a-f0-9]{64}$/', $sha256) === 1 ? $sha256 : '',
+            minimumPhp: self::cleanString($payload['minimum_php'] ?? null, 40) ?: null,
+            requiresMigrations: filter_var($payload['requires_migrations'] ?? true, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE) ?? true,
         );
     }
 
@@ -93,7 +148,7 @@ final readonly class ReleaseInfo
 
     private static function isSafeGithubUrl(string $url): bool
     {
-        if (filter_var($url, FILTER_VALIDATE_URL) === false) {
+        if (! self::isHttpsUrl($url)) {
             return false;
         }
 
@@ -101,6 +156,17 @@ final readonly class ReleaseInfo
 
         return ($parts['scheme'] ?? null) === 'https'
             && in_array(strtolower((string) ($parts['host'] ?? '')), ['github.com', 'www.github.com'], true);
+    }
+
+    private static function isHttpsUrl(string $url): bool
+    {
+        if (filter_var($url, FILTER_VALIDATE_URL) === false) {
+            return false;
+        }
+
+        $parts = parse_url($url);
+
+        return ($parts['scheme'] ?? null) === 'https';
     }
 
     private static function cleanString(mixed $value, int $maxLength): string

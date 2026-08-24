@@ -30,6 +30,7 @@
                 <label class="block">
                     <span class="text-sm font-bold text-zinc-700">{{ __('install.fields.password') }}</span>
                     <input type="password" name="password" autocomplete="new-password" class="install-input mt-2">
+                    <span class="mt-2 block text-sm text-zinc-500">{{ __('install.admin.password_help') }}</span>
                 </label>
 
                 <label class="block">

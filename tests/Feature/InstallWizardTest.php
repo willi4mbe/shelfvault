@@ -2,16 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Services\Installer\DatabaseConnectionTester;
-use App\Services\Installer\EnvWriter;
-use App\Services\Installer\InstallationManager;
-use App\Services\Installer\InstallationState;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
-use Mockery;
-use Mockery\MockInterface;
-use RuntimeException;
+use Symfony\Component\Process\Process;
 use Tests\TestCase;
 
 class InstallWizardTest extends TestCase
@@ -20,183 +13,318 @@ class InstallWizardTest extends TestCase
 
     private string $lockPath;
 
-    private string $sqlitePath;
-
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->defaultLockPath = storage_path('app/shelfvault/installed.lock');
         $this->lockPath = storage_path('framework/testing/shelfvault-installed.lock');
-        $this->sqlitePath = storage_path('framework/testing/shelfvault-install.sqlite');
 
         File::delete($this->defaultLockPath);
-        File::ensureDirectoryExists(dirname($this->sqlitePath));
         File::ensureDirectoryExists(dirname($this->lockPath));
-        File::delete($this->sqlitePath);
-        File::put($this->sqlitePath, '');
         File::delete($this->lockPath);
 
         config([
             'database.default' => 'sqlite',
-            'database.connections.sqlite.database' => $this->sqlitePath,
+            'database.connections.sqlite.database' => ':memory:',
             'shelfvault.installer.lock_path' => $this->lockPath,
-            'session.driver' => 'file',
+            'session.driver' => 'array',
         ]);
 
         DB::purge('sqlite');
-        DB::reconnect('sqlite');
     }
 
     protected function tearDown(): void
     {
         File::delete($this->defaultLockPath);
         File::delete($this->lockPath);
-        File::delete($this->sqlitePath);
+        File::delete(storage_path('app/public/covers/test-cover.txt'));
 
         parent::tearDown();
     }
 
-    public function test_application_routes_redirect_to_install_before_setup(): void
+    public function test_application_routes_redirect_to_standalone_installer_before_setup(): void
     {
-        $this->get('/')->assertRedirect(route('install.show'));
-        $this->get('/admin')->assertRedirect(route('install.show'));
+        $this->get('/')->assertRedirect('/install.php');
+        $this->get('/admin')->assertRedirect('/install.php');
     }
 
-    public function test_install_requirements_page_uses_default_english_copy_and_logo(): void
+    public function test_laravel_install_route_redirects_to_php_installer_when_bootstrapped(): void
     {
-        $this->get('/install')
-            ->assertOk()
-            ->assertSee('Initial setup')
-            ->assertSee('Server ready')
-            ->assertSee('English')
-            ->assertSee('Set up your physical library')
-            ->assertSee('PHP extension: ctype')
-            ->assertSee('Installed')
-            ->assertSee('branding/shelfvault.png', false);
+        $this->get('/install')->assertRedirect('/install.php');
     }
 
-    public function test_install_locale_switch_persists_in_session_and_updates_copy(): void
+    public function test_standalone_install_page_boots_without_env_file_or_app_key(): void
     {
-        $this->post('/install/locale', [
-            'locale' => 'fr',
-        ])->assertRedirect(route('install.show'));
+        $fixtureRoot = $this->freshInstallFixtureRoot();
+        $port = $this->reserveLocalPort();
+        $process = new Process([
+            PHP_BINARY,
+            '-S',
+            '127.0.0.1:'.$port,
+            '-t',
+            $fixtureRoot.'/public',
+        ], $fixtureRoot, [
+            'APP_ENV' => 'production',
+            'APP_KEY' => '',
+            'APP_DEBUG' => 'true',
+        ]);
 
-        $this->assertSame('fr', session('install.locale'));
+        $process->setTimeout(15);
+        $process->start();
 
-        $this->withSession([
-            'install.database' => [
-                'connection' => 'sqlite',
-                'database' => $this->sqlitePath,
-            ],
-        ])->get('/install/admin')
-            ->assertOk()
-            ->assertSee('Langue de l’admin')
-            ->assertDontSee('Langue par défaut')
-            ->assertDontSee('Default language');
+        try {
+            [$status, $body] = $this->waitForHttpResponse('http://127.0.0.1:'.$port.'/install.php');
+
+            $this->assertSame(200, $status, $process->getErrorOutput().PHP_EOL.$body);
+            $this->assertStringContainsString('ShelfVault setup', $body);
+            $this->assertStringContainsString('Choose your language', $body);
+            $this->assertStringNotContainsString('MissingAppKeyException', $body);
+            $this->assertFileDoesNotExist($fixtureRoot.'/.env');
+            $this->assertFileDoesNotExist($fixtureRoot.'/storage/app/shelfvault/installed.lock');
+        } finally {
+            $process->stop(0);
+            $this->removeDirectory($fixtureRoot);
+        }
     }
 
-    public function test_install_is_blocked_after_setup_lock_exists(): void
+    public function test_front_controller_routes_install_to_standalone_installer_before_laravel_bootstrap(): void
     {
-        File::ensureDirectoryExists(dirname($this->lockPath));
+        $fixtureRoot = $this->freshInstallFixtureRoot();
+        $port = $this->reserveLocalPort();
+        $process = new Process([
+            PHP_BINARY,
+            '-S',
+            '127.0.0.1:'.$port,
+            '-t',
+            $fixtureRoot.'/public',
+            $fixtureRoot.'/public/index.php',
+        ], $fixtureRoot, [
+            'APP_ENV' => 'production',
+            'APP_KEY' => '',
+            'APP_DEBUG' => 'true',
+        ]);
+
+        $process->setTimeout(15);
+        $process->start();
+
+        try {
+            [$status, $body] = $this->waitForHttpResponse('http://127.0.0.1:'.$port.'/install');
+
+            $this->assertSame(200, $status, $process->getErrorOutput().PHP_EOL.$body);
+            $this->assertStringContainsString('Standalone installer for shared hosting.', $body);
+            $this->assertStringNotContainsString('MissingAppKeyException', $body);
+            $this->assertFileDoesNotExist($fixtureRoot.'/.env');
+        } finally {
+            $process->stop(0);
+            $this->removeDirectory($fixtureRoot);
+        }
+    }
+
+    public function test_standalone_installer_is_blocked_after_lock_exists(): void
+    {
+        $fixtureRoot = $this->freshInstallFixtureRoot();
+        File::ensureDirectoryExists($fixtureRoot.'/storage/app/shelfvault');
+        File::put($fixtureRoot.'/storage/app/shelfvault/installed.lock', now()->toIso8601String());
+
+        $port = $this->reserveLocalPort();
+        $process = new Process([
+            PHP_BINARY,
+            '-S',
+            '127.0.0.1:'.$port,
+            '-t',
+            $fixtureRoot.'/public',
+        ], $fixtureRoot);
+
+        $process->setTimeout(15);
+        $process->start();
+
+        try {
+            [$status, $body] = $this->waitForHttpResponse('http://127.0.0.1:'.$port.'/install.php');
+
+            $this->assertSame(200, $status, $process->getErrorOutput().PHP_EOL.$body);
+            $this->assertStringContainsString('ShelfVault is already installed', $body);
+            $this->assertStringContainsString('Go to admin login', $body);
+        } finally {
+            $process->stop(0);
+            $this->removeDirectory($fixtureRoot);
+        }
+    }
+
+    public function test_laravel_bootstraps_after_env_and_app_key_exist(): void
+    {
+        $fixtureRoot = $this->freshInstallFixtureRoot(includeLaravel: true);
+        $appKey = 'base64:'.base64_encode(random_bytes(32));
+
+        File::put($fixtureRoot.'/.env', implode(PHP_EOL, [
+            'APP_NAME=ShelfVault',
+            'APP_ENV=production',
+            'APP_KEY='.$appKey,
+            'APP_DEBUG=false',
+            'APP_URL=http://localhost',
+            'DB_CONNECTION=sqlite',
+            'DB_DATABASE=:memory:',
+            'SESSION_DRIVER=file',
+            'CACHE_STORE=file',
+            'QUEUE_CONNECTION=sync',
+        ]).PHP_EOL);
+
+        $process = new Process([
+            PHP_BINARY,
+            '-r',
+            'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class); $kernel->bootstrap(); echo config("app.key");',
+        ], $fixtureRoot, [
+            'APP_ENV' => 'production',
+            'APP_KEY' => $appKey,
+        ]);
+
+        $process->setTimeout(15);
+        $process->run();
+
+        try {
+            $this->assertTrue($process->isSuccessful(), $process->getErrorOutput().PHP_EOL.$process->getOutput());
+            $this->assertSame($appKey, $process->getOutput());
+        } finally {
+            $this->removeDirectory($fixtureRoot);
+        }
+    }
+
+    public function test_public_storage_fallback_serves_cover_files_when_installed(): void
+    {
         File::put($this->lockPath, now()->toIso8601String());
+        File::ensureDirectoryExists(storage_path('app/public/covers'));
+        File::put(storage_path('app/public/covers/test-cover.txt'), 'cover-ok');
 
-        $this->get('/install')->assertRedirect(route('login'));
+        $response = $this->get('/storage/covers/test-cover.txt')
+            ->assertOk();
+
+        $this->assertSame('cover-ok', $response->streamedContent());
     }
 
-    public function test_invalid_database_credentials_return_a_useful_error(): void
+    private function freshInstallFixtureRoot(bool $includeLaravel = false): string
     {
-        $this->mock(DatabaseConnectionTester::class, function (MockInterface $mock): void {
-            $mock->shouldReceive('test')
-                ->once()
-                ->andReturn('ShelfVault could not connect to the database. Check the details and try again.');
-        });
+        $root = storage_path('framework/testing/fresh-install-'.bin2hex(random_bytes(6)));
 
-        $this->post('/install/database', [
-            'connection' => 'mysql',
-            'host' => '127.0.0.1',
-            'port' => '3306',
-            'database' => 'shelfvault',
-            'username' => 'shelfvault',
-            'password' => 'bad-password',
-        ])->assertSessionHasErrors('database_connection');
+        $this->removeDirectory($root);
+
+        File::ensureDirectoryExists($root);
+        File::ensureDirectoryExists($root.'/bootstrap/cache');
+        File::ensureDirectoryExists($root.'/public');
+
+        foreach (['composer.json', 'composer.lock', 'VERSION', '.env.example'] as $file) {
+            File::copy(base_path($file), $root.'/'.$file);
+        }
+
+        foreach (['index.php', 'install.php'] as $file) {
+            File::copy(public_path($file), $root.'/public/'.$file);
+        }
+
+        foreach (['build', 'branding'] as $directory) {
+            symlink(public_path($directory), $root.'/public/'.$directory);
+        }
+
+        foreach (['apple-touch-icon.png', 'favicon.ico', 'favicon.svg', 'robots.txt'] as $file) {
+            File::copy(public_path($file), $root.'/public/'.$file);
+        }
+
+        foreach ([
+            'storage/app/public',
+            'storage/framework/cache/data',
+            'storage/framework/sessions',
+            'storage/framework/views',
+            'storage/logs',
+        ] as $directory) {
+            File::ensureDirectoryExists($root.'/'.$directory);
+        }
+
+        if ($includeLaravel) {
+            foreach (['app', 'config', 'database', 'lang', 'resources', 'routes', 'vendor'] as $directory) {
+                symlink(base_path($directory), $root.'/'.$directory);
+            }
+
+            foreach (['app.php', 'providers.php'] as $file) {
+                File::copy(base_path('bootstrap/'.$file), $root.'/bootstrap/'.$file);
+            }
+        }
+
+        return $root;
     }
 
-    public function test_installation_creates_admin_and_lock_file(): void
+    private function reserveLocalPort(): int
     {
-        File::ensureDirectoryExists(dirname($this->sqlitePath));
+        $socket = stream_socket_server('tcp://127.0.0.1:0');
+        $name = stream_socket_get_name($socket, false);
 
-        $this->withSession([
-            'install.database' => [
-                'connection' => 'sqlite',
-                'database' => $this->sqlitePath,
-                'host' => '',
-                'port' => '',
-                'username' => '',
-                'password' => '',
-            ],
-        ])->post('/install/complete', [
-            'login' => 'admin',
-            'email' => 'admin@example.test',
-            'password' => 'correct-horse-battery',
-            'password_confirmation' => 'correct-horse-battery',
-            'preferred_locale' => 'fr',
-            'app_name' => 'ShelfVault',
-            'app_url' => 'http://localhost',
-        ])->assertRedirect(route('login'));
+        fclose($socket);
 
-        $admins = User::on('sqlite')->get();
-
-        $this->assertCount(1, $admins);
-
-        $admin = $admins->first();
-
-        $this->assertSame('admin', $admin->login);
-        $this->assertSame('admin@example.test', $admin->email);
-        $this->assertSame('fr', $admin->preferred_locale);
-        $this->assertSame(1, User::on('sqlite')->count());
-        $this->assertFileExists($this->lockPath);
+        return (int) substr(strrchr((string) $name, ':'), 1);
     }
 
-    public function test_installation_returns_a_clear_error_and_skips_lock_when_admin_creation_fails(): void
+    /**
+     * @return array{0: int, 1: string}
+     */
+    private function waitForHttpResponse(string $url): array
     {
-        File::ensureDirectoryExists(dirname($this->sqlitePath));
+        $deadline = microtime(true) + 10;
+        $lastBody = '';
 
-        $manager = Mockery::mock(
-            InstallationManager::class,
-            [
-                $this->app->make(DatabaseConnectionTester::class),
-                $this->app->make(EnvWriter::class),
-                $this->app->make(InstallationState::class),
-            ],
-        )->makePartial()->shouldAllowMockingProtectedMethods();
+        while (microtime(true) < $deadline) {
+            $context = stream_context_create([
+                'http' => [
+                    'ignore_errors' => true,
+                    'timeout' => 1,
+                ],
+            ]);
 
-        $manager->shouldReceive('createAdminAccount')
-            ->once()
-            ->andThrow(new RuntimeException('simulated admin creation failure'));
+            $body = @file_get_contents($url, false, $context);
+            $headers = $http_response_header ?? [];
 
-        $this->app->instance(InstallationManager::class, $manager);
+            if ($body !== false && $headers !== []) {
+                return [$this->httpStatusCode($headers), $body];
+            }
 
-        $this->withSession([
-            'install.database' => [
-                'connection' => 'sqlite',
-                'database' => $this->sqlitePath,
-                'host' => '',
-                'port' => '',
-                'username' => '',
-                'password' => '',
-            ],
-        ])->post('/install/complete', [
-            'login' => 'admin',
-            'email' => 'admin@example.test',
-            'password' => 'correct-horse-battery',
-            'password_confirmation' => 'correct-horse-battery',
-            'preferred_locale' => 'fr',
-            'app_name' => 'ShelfVault',
-            'app_url' => 'http://localhost',
-        ])->assertRedirect()->assertSessionHasErrors('installation');
+            $lastBody = $body === false ? '' : $body;
+            usleep(100_000);
+        }
 
-        $this->assertFileDoesNotExist($this->lockPath);
-        $this->assertSame(0, User::on('sqlite')->count());
+        return [0, $lastBody];
+    }
+
+    /**
+     * @param  array<int, string>  $headers
+     */
+    private function httpStatusCode(array $headers): int
+    {
+        if (preg_match('/^HTTP\/\S+\s+(\d{3})/', $headers[0] ?? '', $matches) !== 1) {
+            return 0;
+        }
+
+        return (int) $matches[1];
+    }
+
+    private function removeDirectory(string $path): void
+    {
+        if (! file_exists($path) && ! is_link($path)) {
+            return;
+        }
+
+        if (is_link($path) || is_file($path)) {
+            unlink($path);
+
+            return;
+        }
+
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($path, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::CHILD_FIRST,
+        );
+
+        foreach ($iterator as $fileInfo) {
+            $fileInfo->isLink() || $fileInfo->isFile()
+                ? unlink($fileInfo->getPathname())
+                : rmdir($fileInfo->getPathname());
+        }
+
+        rmdir($path);
     }
 }

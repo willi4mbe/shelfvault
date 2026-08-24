@@ -234,6 +234,7 @@ class AdminSettingsTest extends TestCase
                 'library_name' => 'William Media Library',
                 'enabled_types' => ['film', 'board_game'],
                 'loans_enabled' => '1',
+                'library_visibility' => 'private',
                 'accent_color' => 'green',
                 'locations_enabled' => '1',
                 'locations' => "Salon\nSalle de jeux\nCuisine",
@@ -249,6 +250,7 @@ class AdminSettingsTest extends TestCase
         $this->assertTrue($settings->isTypeEnabled('board_game'));
         $this->assertFalse($settings->isTypeEnabled('tv_series'));
         $this->assertFalse($settings->isTypeEnabled('video_game'));
+        $this->assertSame('private', $settings->visibility());
         $this->assertSame('green', $settings->accentColor());
         $this->assertTrue($settings->locationsEnabled());
         $this->assertSame(['Salon', 'Salle de jeux', 'Cuisine'], $settings->locations());
@@ -363,7 +365,7 @@ class AdminSettingsTest extends TestCase
             ->assertSee(__('admin.settings.updates.statuses.available'))
             ->assertSee('v1.1.0')
             ->assertSee('Security fixes')
-            ->assertSee(__('admin.settings.updates.actions.prepare'))
+            ->assertSee(__('admin.settings.updates.actions.install'))
             ->assertSee(__('admin.settings.updates.actions.download'));
 
         Http::assertSentCount(1);
@@ -386,7 +388,7 @@ class AdminSettingsTest extends TestCase
             ->assertOk()
             ->assertSee(__('admin.settings.updates.notifications.current'))
             ->assertSee(__('admin.settings.updates.statuses.current'))
-            ->assertDontSee(__('admin.settings.updates.actions.prepare'));
+            ->assertDontSee(__('admin.settings.updates.actions.install'));
     }
 
     public function test_update_check_falls_back_cleanly_when_github_is_unavailable(): void
@@ -404,7 +406,7 @@ class AdminSettingsTest extends TestCase
             ->assertOk()
             ->assertSee(__('admin.settings.updates.notifications.unavailable'))
             ->assertSee(__('admin.settings.updates.statuses.unavailable'))
-            ->assertDontSee(__('admin.settings.updates.actions.prepare'));
+            ->assertDontSee(__('admin.settings.updates.actions.install'));
     }
 
     public function test_update_check_ignores_prerelease_versions_by_default(): void
@@ -434,7 +436,7 @@ class AdminSettingsTest extends TestCase
         $this->post(route('admin.settings.updates.check'))
             ->assertRedirect(route('login'));
 
-        $this->post(route('admin.settings.updates.prepare'))
+        $this->post(route('admin.settings.updates.install'))
             ->assertRedirect(route('login'));
     }
 

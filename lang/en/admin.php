@@ -159,16 +159,22 @@ return [
         'updates' => [
             'heading' => 'System',
             'title' => 'Updates',
-            'help' => 'Check stable GitHub releases without replacing application files from the browser.',
+            'help' => 'Check a HTTPS release manifest, back up the current install, then apply a shared-hosting update without Git or SSH.',
             'current_version' => 'Current version',
-            'latest_version' => 'Latest stable release',
+            'latest_version' => 'Latest manifest release',
             'installation_mode' => 'Installation type',
+            'manifest_url' => 'Configured manifest',
             'not_checked' => 'Not checked yet',
-            'strategy_title' => 'Prepared update strategy',
+            'strategy_title' => 'Shared-hosting update strategy',
             'strategy_docker' => 'Docker/NAS installs should update by pulling a new image, restarting the container, then running migrations.',
-            'strategy_classic' => 'Classic PHP hosting installs will need a signed release package and guarded updater flow.',
-            'backup_required' => 'Automatic updates stay blocked until a complete backup service exists.',
+            'strategy_classic' => 'Classic PHP hosting installs download the ZIP to private storage, verify SHA-256, stage it, preserve local data, run migrations, and keep a rollback copy of replaced files.',
+            'backup_required' => 'A safety backup is created automatically before files are replaced.',
             'backup_optional' => 'Backup guard is currently disabled in configuration.',
+            'minimum_php' => 'Requires PHP :version or newer.',
+            'checksum' => 'SHA-256',
+            'last_status' => 'Last update status',
+            'last_status_value' => ':status at :date',
+            'confirm_install' => 'ShelfVault will create a backup, enter maintenance mode, replace application files, run migrations, and roll back files if the update fails. Continue?',
             'changelog' => 'Changelog',
             'empty_changelog' => 'This release does not include changelog notes.',
             'statuses' => [
@@ -183,15 +189,15 @@ return [
             ],
             'actions' => [
                 'check' => 'Check for updates',
-                'download' => 'Download on GitHub',
-                'prepare' => 'Prepare update',
+                'download' => 'Download ZIP',
+                'install' => 'Download and install',
             ],
             'notifications' => [
                 'available' => 'ShelfVault :version is available.',
                 'current' => 'ShelfVault is up to date.',
-                'unavailable' => 'GitHub could not be reached or no stable release was found.',
-                'prepare_ready' => 'ShelfVault :version is ready to review. No files were changed.',
-                'prepare_unavailable' => 'No stable update can be prepared right now.',
+                'unavailable' => 'The update manifest is unreachable or invalid.',
+                'installed' => 'ShelfVault :version was installed. Verify the application before deleting backups.',
+                'install_failed' => 'The update failed. Existing files were rolled back when possible; check storage/app/shelfvault/updates/last-status.json.',
             ],
         ],
         'library' => [
@@ -210,6 +216,20 @@ return [
         'features' => [
             'loans_title' => 'Enable loans',
             'loans_help' => 'Show the Loans tab and allow loan creation and returns.',
+        ],
+        'visibility' => [
+            'label' => 'Library visibility',
+            'help' => 'Choose who can browse the read-only library. The admin area always stays protected.',
+            'options' => [
+                'public' => [
+                    'label' => 'Public',
+                    'help' => 'Visitors can browse the library without signing in.',
+                ],
+                'private' => [
+                    'label' => 'Private',
+                    'help' => 'Visitors are redirected to login, then returned to the requested page.',
+                ],
+            ],
         ],
         'locations' => [
             'enabled_title' => 'Enable locations',

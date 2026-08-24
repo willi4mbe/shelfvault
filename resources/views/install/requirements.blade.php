@@ -52,6 +52,7 @@
                         </div>
                     @endforeach
                 </div>
+                <p class="mt-3 text-sm leading-6 text-zinc-500">{{ __('install.requirements.storage_note') }}</p>
             </section>
         </div>
 

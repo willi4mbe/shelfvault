@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Item;
 use App\Models\ItemLoan;
+use App\Models\User;
 use App\Services\Library\LibrarySettings;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -97,6 +98,50 @@ class PublicLibraryTest extends TestCase
             ->assertOk()
             ->assertSee('library-accent-red', false)
             ->assertSee('--library-accent: 239 68 68', false);
+    }
+
+    public function test_public_visibility_allows_guest_library_access_by_default(): void
+    {
+        $this->assertSame('public', app(LibrarySettings::class)->visibility());
+
+        $this->get(route('library.home'))->assertOk();
+        $this->get(route('library.favorites'))->assertOk();
+    }
+
+    public function test_private_visibility_redirects_guests_to_login_and_returns_after_authentication(): void
+    {
+        app(LibrarySettings::class)->setVisibility('private');
+
+        $item = Item::factory()->film()->create(['title' => 'Private Item']);
+        $admin = User::query()->create([
+            'name' => 'Admin',
+            'login' => 'admin',
+            'email' => 'admin@example.test',
+            'password' => bcrypt('password'),
+            'preferred_locale' => 'en',
+        ]);
+
+        $target = route('library.items.show', $item);
+
+        $this->get($target)
+            ->assertRedirect(route('login'));
+
+        $this->post(route('admin.login'), [
+            'identifier' => $admin->email,
+            'password' => 'password',
+        ])->assertRedirect($target);
+
+        $this->get($target)
+            ->assertOk()
+            ->assertSee('Private Item');
+    }
+
+    public function test_private_visibility_keeps_admin_routes_protected_for_guests(): void
+    {
+        app(LibrarySettings::class)->setVisibility('private');
+
+        $this->get(route('admin'))
+            ->assertRedirect(route('login'));
     }
 
     public function test_disabled_type_listing_and_detail_are_not_publicly_available(): void

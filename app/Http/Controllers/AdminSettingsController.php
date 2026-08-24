@@ -37,6 +37,7 @@ class AdminSettingsController extends Controller
             'libraryName' => $librarySettings->libraryName(),
             'contentTypes' => $this->contentTypes($librarySettings),
             'loansEnabled' => $librarySettings->loansEnabled(),
+            'libraryVisibility' => $librarySettings->visibility(),
             'accentColor' => $librarySettings->accentColor(),
             'accentColorOptions' => $this->accentColorOptions($librarySettings),
             'locationsEnabled' => $librarySettings->locationsEnabled(),
@@ -61,6 +62,7 @@ class AdminSettingsController extends Controller
             'enabled_types' => ['required', 'array', 'min:1'],
             'enabled_types.*' => ['required', Rule::in($librarySettings->allTypeValues())],
             'loans_enabled' => ['nullable', 'boolean'],
+            'library_visibility' => ['required', Rule::in(['public', 'private'])],
             'accent_color' => ['required', Rule::in(array_keys($librarySettings->accentColorOptions()))],
             'locations_enabled' => ['nullable', 'boolean'],
             'locations' => ['nullable', 'string', 'max:2000'],
@@ -69,6 +71,7 @@ class AdminSettingsController extends Controller
             'library_name' => __('admin.settings.library.name_label'),
             'enabled_types' => __('admin.settings.library.types_title'),
             'loans_enabled' => __('admin.settings.features.loans_title'),
+            'library_visibility' => __('admin.settings.visibility.label'),
             'accent_color' => __('admin.settings.appearance.accent_label'),
             'locations_enabled' => __('admin.settings.locations.enabled_title'),
             'locations' => __('admin.settings.locations.list_label'),
@@ -78,6 +81,7 @@ class AdminSettingsController extends Controller
         $librarySettings->setLibraryName($validated['library_name']);
         $librarySettings->setEnabledTypes(array_values(array_unique($validated['enabled_types'])));
         $librarySettings->setLoansEnabled($request->boolean('loans_enabled'));
+        $librarySettings->setVisibility($validated['library_visibility']);
         $librarySettings->setAccentColor($validated['accent_color']);
         $librarySettings->setLocationsEnabled($request->boolean('locations_enabled'));
         $librarySettings->setLocations(preg_split('/\R/u', (string) ($validated['locations'] ?? '')) ?: []);
@@ -209,25 +213,26 @@ class AdminSettingsController extends Controller
             ->with('status', $message);
     }
 
-    public function prepareUpdate(InstallationState $installationState, UpdateService $updateService): RedirectResponse
+    public function installUpdate(InstallationState $installationState, UpdateService $updateService): RedirectResponse
     {
         if ($redirect = $this->guardAdmin($installationState)) {
             return $redirect;
         }
 
-        $preparation = $updateService->prepare();
-        session()->put('shelfvault.update_check', $preparation->check->toArray());
-
-        if (! $preparation->ready) {
+        try {
+            $result = $updateService->install(session()->get('shelfvault.update_check'));
+        } catch (Throwable $exception) {
             return redirect()
                 ->route('admin.settings.index')
-                ->with('settings_error', __('admin.settings.updates.notifications.prepare_unavailable'));
+                ->with('settings_error', __('admin.settings.updates.notifications.install_failed'));
         }
+
+        session()->forget('shelfvault.update_check');
 
         return redirect()
             ->route('admin.settings.index')
-            ->with('status', __('admin.settings.updates.notifications.prepare_ready', [
-                'version' => $preparation->check->release?->tagName,
+            ->with('status', __('admin.settings.updates.notifications.installed', [
+                'version' => $result['version'],
             ]));
     }
 
@@ -610,7 +615,7 @@ class AdminSettingsController extends Controller
     private function guardAdmin(InstallationState $installationState): ?RedirectResponse
     {
         if (! $installationState->installed()) {
-            return redirect()->route('install.show');
+            return redirect()->to('/install.php');
         }
 
         if (! Auth::check()) {

@@ -15,7 +15,7 @@ class AdminDashboardController extends Controller
     public function index(InstallationState $installationState, AdminNavigation $navigation): RedirectResponse|View
     {
         if (! $installationState->installed()) {
-            return redirect()->route('install.show');
+            return redirect()->to('/install.php');
         }
 
         if (! Auth::check()) {

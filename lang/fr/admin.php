@@ -159,16 +159,22 @@ return [
         'updates' => [
             'heading' => 'Système',
             'title' => 'Mise à jour',
-            'help' => 'Vérifie les releases GitHub stables sans remplacer les fichiers applicatifs depuis le navigateur.',
+            'help' => 'Vérifie un manifest HTTPS de release, sauvegarde l’installation actuelle, puis applique une mise à jour mutualisée sans Git ni SSH.',
             'current_version' => 'Version actuelle',
-            'latest_version' => 'Dernière release stable',
+            'latest_version' => 'Dernière release du manifest',
             'installation_mode' => 'Type d’installation',
+            'manifest_url' => 'Manifest configuré',
             'not_checked' => 'Pas encore vérifié',
-            'strategy_title' => 'Stratégie de mise à jour préparée',
+            'strategy_title' => 'Stratégie de mise à jour mutualisée',
             'strategy_docker' => 'Les installations Docker/NAS devront se mettre à jour via une nouvelle image, un redémarrage du conteneur, puis les migrations.',
-            'strategy_classic' => 'Les hébergements PHP classiques devront utiliser un package de release signé et un flux updater encadré.',
-            'backup_required' => 'Les mises à jour automatiques restent bloquées tant qu’un service de sauvegarde complet n’existe pas.',
+            'strategy_classic' => 'Les hébergements PHP classiques téléchargent le ZIP en stockage privé, vérifient le SHA-256, préparent un staging, préservent les données locales, lancent les migrations et conservent une copie rollback des fichiers remplacés.',
+            'backup_required' => 'Une sauvegarde de sécurité est créée automatiquement avant le remplacement des fichiers.',
             'backup_optional' => 'Le garde-fou de sauvegarde est actuellement désactivé dans la configuration.',
+            'minimum_php' => 'Nécessite PHP :version ou plus récent.',
+            'checksum' => 'SHA-256',
+            'last_status' => 'Dernier statut de mise à jour',
+            'last_status_value' => ':status le :date',
+            'confirm_install' => 'ShelfVault va créer une sauvegarde, passer en maintenance, remplacer les fichiers applicatifs, lancer les migrations et restaurer les fichiers si la mise à jour échoue. Continuer ?',
             'changelog' => 'Changelog',
             'empty_changelog' => 'Cette release ne contient pas de notes de changelog.',
             'statuses' => [
@@ -183,15 +189,15 @@ return [
             ],
             'actions' => [
                 'check' => 'Vérifier les mises à jour',
-                'download' => 'Télécharger sur GitHub',
-                'prepare' => 'Préparer la mise à jour',
+                'download' => 'Télécharger le ZIP',
+                'install' => 'Télécharger et installer',
             ],
             'notifications' => [
                 'available' => 'ShelfVault :version est disponible.',
                 'current' => 'ShelfVault est à jour.',
-                'unavailable' => 'GitHub est inaccessible ou aucune release stable n’a été trouvée.',
-                'prepare_ready' => 'ShelfVault :version est prêt à vérifier. Aucun fichier n’a été modifié.',
-                'prepare_unavailable' => 'Aucune mise à jour stable ne peut être préparée pour le moment.',
+                'unavailable' => 'Le manifest de mise à jour est inaccessible ou invalide.',
+                'installed' => 'ShelfVault :version a été installé. Vérifiez l’application avant de supprimer les sauvegardes.',
+                'install_failed' => 'La mise à jour a échoué. Les fichiers existants ont été restaurés quand possible ; consultez storage/app/shelfvault/updates/last-status.json.',
             ],
         ],
         'library' => [
@@ -210,6 +216,20 @@ return [
         'features' => [
             'loans_title' => 'Activer les prêts',
             'loans_help' => 'Affiche l’onglet Prêts et autorise la création et le retour des prêts.',
+        ],
+        'visibility' => [
+            'label' => 'Visibilité de la bibliothèque',
+            'help' => 'Choisissez qui peut consulter la bibliothèque en lecture seule. L’admin reste toujours protégé.',
+            'options' => [
+                'public' => [
+                    'label' => 'Publique',
+                    'help' => 'Les visiteurs peuvent consulter la bibliothèque sans connexion.',
+                ],
+                'private' => [
+                    'label' => 'Privée',
+                    'help' => 'Les visiteurs sont redirigés vers la connexion puis renvoyés vers la page demandée.',
+                ],
+            ],
         ],
         'locations' => [
             'enabled_title' => 'Activer les emplacements',

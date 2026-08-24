@@ -19,6 +19,12 @@ class LibrarySettings
 
     public const LOCATIONS_KEY = 'locations';
 
+    public const VISIBILITY_KEY = 'visibility';
+
+    public const VISIBILITY_PUBLIC = 'public';
+
+    public const VISIBILITY_PRIVATE = 'private';
+
     public const DEFAULT_ACCENT_COLOR = 'orange';
 
     /**
@@ -115,6 +121,32 @@ class LibrarySettings
     public function locationsText(): string
     {
         return implode("\n", $this->locations());
+    }
+
+    public function visibility(): string
+    {
+        $visibility = $this->settings->get(self::SERVICE, self::VISIBILITY_KEY, self::VISIBILITY_PUBLIC);
+
+        return in_array($visibility, [self::VISIBILITY_PUBLIC, self::VISIBILITY_PRIVATE], true)
+            ? (string) $visibility
+            : self::VISIBILITY_PUBLIC;
+    }
+
+    public function setVisibility(string $visibility): void
+    {
+        $this->settings->set(
+            self::SERVICE,
+            self::VISIBILITY_KEY,
+            in_array($visibility, [self::VISIBILITY_PUBLIC, self::VISIBILITY_PRIVATE], true)
+                ? $visibility
+                : self::VISIBILITY_PUBLIC,
+            false,
+        );
+    }
+
+    public function isPrivate(): bool
+    {
+        return $this->visibility() === self::VISIBILITY_PRIVATE;
     }
 
     /**
