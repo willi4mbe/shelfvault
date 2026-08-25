@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'version' => env('SHELFVAULT_VERSION', '0.1.0-beta.4'),
+    'version' => env('SHELFVAULT_VERSION', '0.1.0-beta.5'),
 
     'installer' => [
         'lock_path' => env('SHELFVAULT_INSTALLED_LOCK', storage_path('app/shelfvault/installed.lock')),

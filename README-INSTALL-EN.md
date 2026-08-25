@@ -1,4 +1,4 @@
-# ShelfVault beta 0.1.0-beta.4 - PHP + MySQL install
+# ShelfVault beta 0.1.0-beta.5 - PHP + MySQL install
 
 ## Requirements
 
@@ -11,7 +11,7 @@
 ## o2switch / cPanel install
 
 1. Create an empty MySQL/MariaDB database and MySQL user in cPanel, then keep the host, port, database name, username, and password.
-2. Upload `ShelfVault-0.1.0-beta.4.zip` or `ShelfVault-beta.zip`, then extract it.
+2. Upload `ShelfVault-0.1.0-beta.5.zip` or `ShelfVault-beta.zip`, then extract it.
 3. Recommended: keep the project outside the web root, for example `~/shelfvault`, and point the domain document root to `~/shelfvault/public`.
 4. cPanel fallback: if the host forces everything into `public_html`, extract the whole project there. The root `.htaccess` blocks `app/`, `config/`, `database/`, sensitive `storage/` subdirectories, `vendor/`, `.env`, `composer.*`, and routes requests into `public/`. This is less clean than pointing the document root at `public/`.
 5. Open `https://your-domain/install.php` and choose English or Francais.

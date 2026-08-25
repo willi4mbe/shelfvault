@@ -841,7 +841,7 @@ function installer_version(string $root): string
 {
     $version = is_file($root.'/VERSION') ? trim((string) file_get_contents($root.'/VERSION')) : '';
 
-    return $version !== '' ? $version : '0.1.0-beta.4';
+    return $version !== '' ? $version : '0.1.0-beta.5';
 }
 
 /**
