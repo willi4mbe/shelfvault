@@ -90,6 +90,23 @@ function jsonHeaders(csrfToken = '') {
     };
 }
 
+function metadataCandidateKey(candidate) {
+    if (!candidate || typeof candidate !== 'object') {
+        return '';
+    }
+
+    const source = candidate.source ?? '';
+    const id = candidate.tmdb_id ?? candidate.igdb_id ?? candidate.bgg_id ?? candidate.barcode ?? candidate.id ?? '';
+
+    if (id !== '') {
+        return `${source}:${id}`;
+    }
+
+    return [source, candidate.type ?? '', candidate.title ?? '', candidate.release_year ?? '', candidate.poster_url ?? '']
+        .map((value) => String(value).trim().toLowerCase())
+        .join(':');
+}
+
 export function metadataLookup(config = {}) {
     return {
         type: config.type ?? '',
@@ -102,6 +119,7 @@ export function metadataLookup(config = {}) {
         coverPath: config.coverPath ?? '',
         coverPreviewUrl: config.coverPreviewUrl ?? '',
         localCoverPreviewUrl: '',
+        removeCover: Boolean(config.removeCover ?? false),
         typeLabels: config.typeLabels ?? {},
         formatOptions: config.formatOptions ?? {},
         titleSearchUrl: config.titleSearchUrl ?? '',
@@ -131,10 +149,14 @@ export function metadataLookup(config = {}) {
             barcodeDetected: config.labels?.barcodeDetected ?? '',
             manualEntryAvailable: config.labels?.manualEntryAvailable ?? '',
             placeBarcodeInFrame: config.labels?.placeBarcodeInFrame ?? '',
+            minutes: config.labels?.minutes ?? '',
             scan: config.labels?.scan ?? '',
             scanBarcode: config.labels?.scanBarcode ?? '',
             close: config.labels?.close ?? '',
             cancel: config.labels?.cancel ?? '',
+            loadMore: config.labels?.loadMore ?? '',
+            allResultsShown: config.labels?.allResultsShown ?? '',
+            coverRemoved: config.labels?.coverRemoved ?? '',
         },
         typeMeta: {
             '': { label: config.typeLabels?.none ?? '', chip: 'slate', rgb: '148 163 184' },
@@ -154,6 +176,12 @@ export function metadataLookup(config = {}) {
         resultsSource: '',
         resultsCandidates: [],
         resultsMessage: '',
+        resultsPagination: { currentPage: 1, hasMore: false, nextPage: null, perPage: null },
+        resultsLoadMoreBusy: false,
+        resultsAllShown: false,
+        resultsSearchParams: null,
+        resultsScrollY: 0,
+        resultsBodyStyles: null,
         importBusy: false,
         importNotice: '',
         activeCandidateId: null,
@@ -244,10 +272,27 @@ export function metadataLookup(config = {}) {
                 return;
             }
 
+            this.removeCover = false;
+
             if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
                 this.localCoverPreviewUrl = URL.createObjectURL(file);
                 this.coverPreviewUrl = this.localCoverPreviewUrl;
             }
+        },
+        clearCoverInput() {
+            namedFieldElements(this.formElement(), 'cover_image').forEach((field) => {
+                if (field.type === 'file') {
+                    field.value = '';
+                }
+            });
+        },
+        removeCoverImage() {
+            this.revokeLocalCoverPreview();
+            this.coverPath = '';
+            this.coverPreviewUrl = '';
+            this.removeCover = true;
+            this.importNotice = this.labels.coverRemoved;
+            this.clearCoverInput();
         },
         currentCoverPath() {
             return String(this.coverPath ?? '').trim();
@@ -306,19 +351,117 @@ export function metadataLookup(config = {}) {
             this.barcodeError = '';
         },
         closeResults() {
+            this.unlockResultsScroll();
             this.resultsOpen = false;
             this.resultsScope = '';
             this.resultsSource = '';
             this.resultsCandidates = [];
             this.resultsMessage = '';
+            this.resultsPagination = { currentPage: 1, hasMore: false, nextPage: null, perPage: null };
+            this.resultsLoadMoreBusy = false;
+            this.resultsAllShown = false;
+            this.resultsSearchParams = null;
             this.activeCandidateId = null;
         },
-        openResults(scope, source, candidates, message) {
+        candidateKey(candidate) {
+            return metadataCandidateKey(candidate);
+        },
+        uniqueCandidates(candidates) {
+            const seen = new Set();
+
+            return candidates.filter((candidate) => {
+                const key = this.candidateKey(candidate);
+
+                if (key === '' || seen.has(key)) {
+                    return false;
+                }
+
+                seen.add(key);
+                return true;
+            });
+        },
+        normalizePagination(pagination = {}) {
+            const nextPage = Number(pagination?.next_page ?? 0);
+
+            return {
+                currentPage: Number(pagination?.current_page ?? 1) || 1,
+                hasMore: Boolean(pagination?.has_more),
+                nextPage: nextPage > 0 ? nextPage : null,
+                perPage: Number(pagination?.per_page ?? 0) || null,
+            };
+        },
+        openResults(scope, source, candidates, message, pagination = {}, { append = false } = {}) {
+            const incomingCandidates = Array.isArray(candidates) ? candidates : [];
             this.resultsScope = scope;
             this.resultsSource = source;
-            this.resultsCandidates = candidates;
+            this.resultsCandidates = append
+                ? this.uniqueCandidates([...this.resultsCandidates, ...incomingCandidates])
+                : this.uniqueCandidates(incomingCandidates);
             this.resultsMessage = message;
-            this.resultsOpen = candidates.length > 0;
+            this.resultsPagination = this.normalizePagination(pagination);
+            this.resultsAllShown = this.resultsCandidates.length > 0 && !this.resultsPagination.hasMore;
+            this.resultsOpen = this.resultsCandidates.length > 0;
+
+            if (this.resultsOpen) {
+                this.lockResultsScroll();
+
+                if (!append) {
+                    this.$nextTick?.(() => {
+                        this.$refs?.resultsClose?.focus?.();
+                    });
+                }
+            }
+        },
+        lockResultsScroll() {
+            if (typeof document === 'undefined' || typeof window === 'undefined' || this.resultsBodyStyles !== null) {
+                return;
+            }
+
+            const body = document.body;
+
+            if (!body?.style) {
+                return;
+            }
+
+            this.resultsScrollY = window.scrollY || window.pageYOffset || 0;
+            this.resultsBodyStyles = {
+                position: body.style.position,
+                top: body.style.top,
+                left: body.style.left,
+                right: body.style.right,
+                width: body.style.width,
+                overflow: body.style.overflow,
+            };
+
+            body.style.position = 'fixed';
+            body.style.top = `-${this.resultsScrollY}px`;
+            body.style.left = '0';
+            body.style.right = '0';
+            body.style.width = '100%';
+            body.style.overflow = 'hidden';
+        },
+        unlockResultsScroll() {
+            if (typeof document === 'undefined' || typeof window === 'undefined' || this.resultsBodyStyles === null) {
+                return;
+            }
+
+            const body = document.body;
+
+            if (!body?.style) {
+                this.resultsBodyStyles = null;
+                return;
+            }
+
+            body.style.position = this.resultsBodyStyles.position;
+            body.style.top = this.resultsBodyStyles.top;
+            body.style.left = this.resultsBodyStyles.left;
+            body.style.right = this.resultsBodyStyles.right;
+            body.style.width = this.resultsBodyStyles.width;
+            body.style.overflow = this.resultsBodyStyles.overflow;
+
+            window.scrollTo?.(0, this.resultsScrollY);
+            this.resultsBodyStyles = null;
+            this.resultsScrollY = 0;
         },
         clearResultsFor(scope) {
             if (this.resultsScope === scope) {
@@ -344,6 +487,7 @@ export function metadataLookup(config = {}) {
             const type = this.currentTypeValue();
             const title = String(this.title ?? '').trim();
             const releaseYear = String(this.releaseYear ?? '').trim();
+            const normalizedReleaseYear = releaseYear === '' ? null : Number(releaseYear);
             this.lastTitleQuery = title;
 
             if (type === '') {
@@ -356,7 +500,7 @@ export function metadataLookup(config = {}) {
                 return;
             }
 
-            if (!['film', 'tv_series', 'video_game'].includes(type)) {
+            if (!['film', 'tv_series', 'video_game', 'board_game'].includes(type)) {
                 this.titleMessage = this.labels.automaticSearchNotAvailableForThisType;
                 return;
             }
@@ -379,7 +523,8 @@ export function metadataLookup(config = {}) {
                         mode: 'title',
                         type,
                         title,
-                        release_year: releaseYear === '' ? null : Number(releaseYear),
+                        release_year: normalizedReleaseYear,
+                        page: 1,
                     }),
                 });
 
@@ -399,11 +544,54 @@ export function metadataLookup(config = {}) {
                 const candidates = Array.isArray(payload?.data?.candidates) ? payload.data.candidates : [];
                 const message = payload?.message
                     ?? (candidates.length > 0 ? this.labels.resultsFound : this.labels.noResultFound);
+                const pagination = payload?.data?.pagination ?? {};
 
+                this.resultsSearchParams = { type, title, releaseYear: normalizedReleaseYear };
                 this.titleMessage = message;
-                this.openResults('title', payload?.source ?? (type === 'video_game' ? 'igdb' : 'tmdb'), candidates, message);
+                this.openResults('title', payload?.source ?? (type === 'video_game' ? 'igdb' : 'tmdb'), candidates, message, pagination);
             } catch (error) {
                 this.titleBusy = false;
+                this.titleMessage = this.labels.searchError;
+            }
+        },
+        async loadMoreResults() {
+            if (this.resultsScope !== 'title' || this.resultsLoadMoreBusy || !this.resultsPagination.hasMore || !this.resultsPagination.nextPage || !this.resultsSearchParams) {
+                return;
+            }
+
+            this.resultsLoadMoreBusy = true;
+
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+
+            try {
+                const response = await fetch(this.titleSearchUrl, {
+                    method: 'POST',
+                    headers: jsonHeaders(csrfToken),
+                    body: JSON.stringify({
+                        mode: 'title',
+                        type: this.resultsSearchParams.type,
+                        title: this.resultsSearchParams.title,
+                        release_year: this.resultsSearchParams.releaseYear,
+                        page: this.resultsPagination.nextPage,
+                    }),
+                });
+
+                const payload = await response.json().catch(() => ({}));
+                this.resultsLoadMoreBusy = false;
+
+                if (!response.ok) {
+                    this.titleMessage = payload?.message ?? this.labels.searchError;
+                    return;
+                }
+
+                const candidates = Array.isArray(payload?.data?.candidates) ? payload.data.candidates : [];
+                const pagination = payload?.data?.pagination ?? {};
+                const message = payload?.message ?? this.resultsMessage ?? this.labels.resultsFound;
+
+                this.titleMessage = message;
+                this.openResults('title', payload?.source ?? this.resultsSource, candidates, this.resultsMessage || message, pagination, { append: true });
+            } catch (error) {
+                this.resultsLoadMoreBusy = false;
                 this.titleMessage = this.labels.searchError;
             }
         },
@@ -483,7 +671,7 @@ export function metadataLookup(config = {}) {
                 return;
             }
 
-            const candidateId = candidate.tmdb_id ?? candidate.igdb_id ?? candidate.barcode ?? candidate.id ?? null;
+            const candidateId = candidate.tmdb_id ?? candidate.igdb_id ?? candidate.bgg_id ?? candidate.barcode ?? candidate.id ?? null;
             this.activeCandidateId = candidateId;
             this.importCandidate(candidate);
         },
@@ -509,8 +697,13 @@ export function metadataLookup(config = {}) {
                 }
                 : source === 'igdb'
                     ? {
-                        source: 'igdb',
-                        igdb_id: candidate?.igdb_id ?? candidate?.id ?? null,
+                    source: 'igdb',
+                    igdb_id: candidate?.igdb_id ?? candidate?.id ?? null,
+                }
+                : source === 'bgg'
+                    ? {
+                        source: 'bgg',
+                        bgg_id: candidate?.bgg_id ?? candidate?.id ?? null,
                     }
                     : {
                     source: 'tmdb',
@@ -518,7 +711,7 @@ export function metadataLookup(config = {}) {
                     type: candidate?.type ?? this.currentTypeValue(),
                 };
 
-            if (!payload.tmdb_id && !payload.igdb_id && !payload.barcode) {
+            if (!payload.tmdb_id && !payload.igdb_id && !payload.bgg_id && !payload.barcode) {
                 return;
             }
 
@@ -556,6 +749,7 @@ export function metadataLookup(config = {}) {
                     forceFilmFields: importedType === 'film' || (importedSource === 'tmdb' && !importedType),
                     forceTvSeriesFields: importedType === 'tv_series',
                     forceVideoGameFields: importedSource === 'igdb' || importedType === 'video_game',
+                    forceBoardGameFields: importedSource === 'bgg' || importedType === 'board_game',
                 });
                 this.closeResults();
 
@@ -567,7 +761,7 @@ export function metadataLookup(config = {}) {
                 this.titleMessage = this.labels.searchError;
             }
         },
-        applyImportedMetadata(data, { forceTitle = false, forceBarcode = false, forceFilmFields = false, forceTvSeriesFields = false, forceVideoGameFields = false } = {}) {
+        applyImportedMetadata(data, { forceTitle = false, forceBarcode = false, forceFilmFields = false, forceTvSeriesFields = false, forceVideoGameFields = false, forceBoardGameFields = false } = {}) {
             data = importedMetadataPayload(data);
 
             if (!data || typeof data !== 'object') {
@@ -575,22 +769,22 @@ export function metadataLookup(config = {}) {
             }
 
             if (data.type) {
-                this.setFieldValue('type', data.type, { force: forceFilmFields || forceTvSeriesFields || forceVideoGameFields || !this.currentTypeValue(), dispatchChange: true });
+                this.setFieldValue('type', data.type, { force: forceFilmFields || forceTvSeriesFields || forceVideoGameFields || forceBoardGameFields || !this.currentTypeValue(), dispatchChange: true });
                 this.syncPhysicalFormat();
             }
 
-            this.setFieldValue('title', data.title, { force: forceTitle || forceFilmFields || forceTvSeriesFields || forceVideoGameFields });
+            this.setFieldValue('title', data.title, { force: forceTitle || forceFilmFields || forceTvSeriesFields || forceVideoGameFields || forceBoardGameFields });
             this.setFieldValue('original_title', data.original_title, { force: forceFilmFields || forceTvSeriesFields });
-            this.setFieldValue('description', data.description, { force: forceFilmFields || forceTvSeriesFields || forceVideoGameFields });
+            this.setFieldValue('description', data.description, { force: forceFilmFields || forceTvSeriesFields || forceVideoGameFields || forceBoardGameFields });
             this.setFieldValue('description_original', data.description_original, { force: true });
-            this.setFieldValue('release_year', data.release_year, { force: forceFilmFields || forceTvSeriesFields || forceVideoGameFields });
+            this.setFieldValue('release_year', data.release_year, { force: forceFilmFields || forceTvSeriesFields || forceVideoGameFields || forceBoardGameFields });
             this.setFieldValue('end_year', data.end_year, { force: forceTvSeriesFields });
-            this.setFieldValue('genres', data.genres, { force: forceFilmFields || forceTvSeriesFields || forceVideoGameFields });
+            this.setFieldValue('genres', data.genres, { force: forceFilmFields || forceTvSeriesFields || forceVideoGameFields || forceBoardGameFields });
             this.setFieldValue('runtime_minutes', data.runtime_minutes, { force: forceFilmFields || forceTvSeriesFields });
             this.setFieldValue('studio', data.studio, { force: forceFilmFields || forceTvSeriesFields });
             this.setFieldValue('cast_members', data.cast_members, { force: forceFilmFields || forceTvSeriesFields });
             this.setFieldValue('director', data.director, { force: forceFilmFields });
-            this.setFieldValue('age_rating', data.age_rating, { force: forceFilmFields || forceTvSeriesFields || forceVideoGameFields });
+            this.setFieldValue('age_rating', data.age_rating, { force: forceFilmFields || forceTvSeriesFields || forceVideoGameFields || forceBoardGameFields });
             this.setFieldValue('external_tmdb_id', data.external_tmdb_id, { force: true });
             this.setFieldValue('season_count', data.season_count, { force: forceTvSeriesFields });
             this.setFieldValue('episode_count', data.episode_count, { force: forceTvSeriesFields });
@@ -599,18 +793,19 @@ export function metadataLookup(config = {}) {
             this.setFieldValue('barcode', data.barcode, { force: forceBarcode });
             this.setFieldValue('platform', data.platform, { force: forceVideoGameFields });
             this.setFieldValue('developer', data.developer, { force: forceVideoGameFields });
-            this.setFieldValue('publisher', data.publisher, { force: forceVideoGameFields });
+            this.setFieldValue('publisher', data.publisher, { force: forceVideoGameFields || forceBoardGameFields });
             this.setFieldValue('modes', data.modes, { force: forceVideoGameFields });
             this.setFieldValue('external_igdb_id', data.external_igdb_id, { force: true });
-            this.setFieldValue('min_players', data.min_players);
-            this.setFieldValue('max_players', data.max_players);
-            this.setFieldValue('play_time_minutes', data.play_time_minutes);
-            this.setFieldValue('designer', data.designer);
+            this.setFieldValue('min_players', data.min_players, { force: forceBoardGameFields });
+            this.setFieldValue('max_players', data.max_players, { force: forceBoardGameFields });
+            this.setFieldValue('play_time_minutes', data.play_time_minutes, { force: forceBoardGameFields });
+            this.setFieldValue('designer', data.designer, { force: forceBoardGameFields });
 
             if (data.cover_path && data.cover_url) {
                 this.setFieldValue('cover_path', data.cover_path, { force: true });
                 this.coverPath = normalizeLookupValue(data.cover_path);
                 this.coverPreviewUrl = normalizeLookupValue(data.cover_url);
+                this.removeCover = false;
                 this.formElement()?.dispatchEvent(
                     new CustomEvent('barcode-cover-preview', {
                         bubbles: true,

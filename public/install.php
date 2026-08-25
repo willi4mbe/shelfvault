@@ -912,6 +912,23 @@ function installer_render(string $root, array $state, array $messages, string $s
         .summary dl { margin: 0; display: grid; gap: 8px; }
         .summary dt { color: var(--muted); font-size: .78rem; font-weight: 800; text-transform: uppercase; }
         .summary dd { margin: 2px 0 0; overflow-wrap: anywhere; }
+        body { background: radial-gradient(circle at 78% 0%, rgba(255,255,255,.06), transparent 24rem), radial-gradient(circle at 12% 18%, rgba(255,255,255,.05), transparent 22rem), linear-gradient(180deg, #111217 0%, #08090c 42%, #050507 100%); }
+        .shell { grid-template-columns: 16.5rem minmax(0, 1fr); }
+        .side { padding: 1.8rem 1.25rem; border-color: rgba(255,255,255,.06); background: linear-gradient(90deg, rgba(255,255,255,.035), transparent 58%), rgba(9,12,15,.96); box-shadow: 22px 0 70px rgba(0,0,0,.38); }
+        .brand { gap: .7rem; }
+        .brand img { width: 48px; height: 48px; border-radius: .35rem; background: rgba(245,190,25,.08); box-shadow: none; }
+        .brand strong { color: #fff; font-size: 1.3rem; font-weight: 800; }
+        .brand span { margin-top: 0; color: rgba(255,255,255,.58); font-size: .82rem; }
+        .steps { gap: .5rem; border-top: 1px solid rgba(255,255,255,.08); padding-top: 1.2rem; }
+        .step { min-height: 3.25rem; display: flex; align-items: center; border: 1px solid transparent; border-radius: .45rem; background: transparent; padding: 0 .95rem; color: rgba(255,255,255,.82); font-weight: 750; }
+        .step.active { border-color: rgba(255,255,255,.08); background: rgba(255,255,255,.035); color: var(--brand); box-shadow: none; }
+        .main { align-items: flex-start; padding: 1.75rem 2.25rem; }
+        .panel { width: min(96rem, 100%); border-radius: .65rem; border-color: rgba(255,255,255,.09); background: linear-gradient(180deg, rgba(255,255,255,.072), rgba(255,255,255,.04)), rgba(255,255,255,.055); box-shadow: inset 0 1px 0 rgba(255,255,255,.055), 0 18px 42px rgba(0,0,0,.22); }
+        .panel-head { border-color: rgba(255,255,255,.08); }
+        h1 { font-size: clamp(1.75rem, 3vw, 2.35rem); font-weight: 850; }
+        input, select { border-radius: .45rem; border-color: rgba(255,255,255,.1); background: rgba(255,255,255,.075); }
+        input:focus, select:focus { outline: 3px solid rgba(249,115,22,.1); border-color: rgba(249,115,22,.42); background: rgba(255,255,255,.095); }
+        .summary section { border-radius: .55rem; background: rgba(255,255,255,.055); }
         @media (max-width: 820px) { .shell { grid-template-columns: 1fr; } .side { padding: 20px; } .main { padding: 18px; align-items: stretch; } .panel-head { display: grid; } .grid.two, .summary { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -919,7 +936,7 @@ function installer_render(string $root, array $state, array $messages, string $s
     <div class="shell">
         <aside class="side">
             <div class="brand">
-                <img src="branding/shelfvault.png" alt="ShelfVault">
+                <img src="branding/shelfvault-icon-192.png" alt="ShelfVault">
                 <div>
                     <strong>ShelfVault</strong>
                     <span><?= installer_e($messages['subtitle']) ?></span>

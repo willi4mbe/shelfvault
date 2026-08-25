@@ -2690,28 +2690,32 @@
 
     .library-dashboard-stats {
         grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
-        gap: 0.65rem;
+        gap: 0.55rem;
     }
 
     .library-dashboard-heading {
-        margin: 0 0 0.85rem;
+        margin: 0 0 0.65rem;
         color: #ffffff;
-        font-size: 1.18rem;
+        font-size: 1.08rem;
         font-weight: 850;
         letter-spacing: 0;
     }
 
     .library-dashboard-stat {
-        min-height: 5.35rem;
-        padding: 0.78rem;
+        min-height: 4.75rem;
+        padding: 0.65rem;
     }
 
     .library-dashboard-stat:hover {
         border-color: rgb(var(--library-accent) / 0.32);
     }
 
+    .library-dashboard-stat span {
+        font-size: 0.74rem;
+    }
+
     .library-dashboard-stat strong {
-        font-size: clamp(1.7rem, 3vw, 2.35rem);
+        font-size: clamp(1.5rem, 2.5vw, 2.05rem);
     }
 
     .library-dashboard-stat-loaned strong,
@@ -3362,4 +3366,267 @@
     border-color: rgba(251, 113, 133, 0.24);
     background: rgba(251, 113, 133, 0.12);
     color: #fda4af;
+}
+
+.admin-body {
+    --admin-surface: rgba(255, 255, 255, 0.055);
+    --admin-surface-strong: rgba(255, 255, 255, 0.075);
+    --admin-line: rgba(255, 255, 255, 0.09);
+    --admin-line-strong: rgba(255, 255, 255, 0.14);
+}
+
+.admin-body .admin-sidebar {
+    height: 100vh;
+    border-top: 0;
+    border-bottom: 0;
+    border-left: 0;
+}
+
+.admin-body .admin-nav-heading {
+    margin: 0 0 0.6rem 0.1rem;
+    color: rgba(255, 255, 255, 0.42);
+    font-size: 0.72rem;
+    font-weight: 750;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
+.admin-body .admin-topbar {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 1.5rem;
+}
+
+.admin-body .admin-topbar h1 {
+    color: #ffffff;
+    font-size: clamp(1.75rem, 3vw, 2.35rem);
+    font-weight: 850;
+    line-height: 1.1;
+    letter-spacing: 0;
+}
+
+.admin-body :where(h1, h2, h3, h4):not(.sr-only) {
+    color: #ffffff;
+    letter-spacing: 0;
+}
+
+.admin-body :where(.text-zinc-950, .text-zinc-900, .text-zinc-800, .text-zinc-700):not(input):not(select):not(textarea) {
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.admin-body :where(.text-zinc-600, .text-zinc-500, .text-zinc-400):not(input):not(select):not(textarea) {
+    color: rgba(255, 255, 255, 0.56);
+    letter-spacing: 0;
+}
+
+.admin-body :where(.border-zinc-100, .border-zinc-200, .border-zinc-200\/80, .border-zinc-300) {
+    border-color: var(--admin-line);
+}
+
+.admin-body :where(.bg-white, .bg-white\/75, .bg-white\/80, .bg-white\/85, .bg-white\/90, .bg-zinc-50, .bg-zinc-100) {
+    background-color: var(--admin-surface);
+}
+
+.admin-panel,
+.admin-stat-card,
+.admin-quick-card,
+.admin-empty-state,
+.admin-media-hero,
+.admin-media-section,
+.admin-media-subsection,
+.admin-media-note,
+.admin-media-cover-shell,
+.admin-media-scanner-panel,
+.admin-media-lookup-panel,
+.admin-results-modal,
+.admin-results-card {
+    border: 1px solid var(--admin-line);
+    border-radius: 0.65rem;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.072), rgba(255, 255, 255, 0.04)),
+        var(--admin-surface);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.055),
+        0 18px 42px rgba(0, 0, 0, 0.22);
+}
+
+.admin-results-modal {
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 30px 90px rgba(0, 0, 0, 0.62);
+}
+
+.admin-results-card {
+    transition:
+        border-color 160ms ease,
+        background-color 160ms ease,
+        transform 160ms ease;
+}
+
+.admin-results-card:hover {
+    transform: translateY(-2px);
+    border-color: rgb(var(--admin-accent) / 0.42);
+    background: rgba(255, 255, 255, 0.075);
+}
+
+.admin-input,
+.admin-body :where(input:not([type='checkbox']):not([type='radio']), select, textarea) {
+    border-radius: 0.45rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.075);
+    color: #ffffff;
+    box-shadow: none;
+}
+
+.admin-input::placeholder,
+.admin-body :where(input, textarea)::placeholder {
+    color: rgba(255, 255, 255, 0.42);
+}
+
+.admin-input:focus,
+.admin-body :where(input:not([type='checkbox']):not([type='radio']), select, textarea):focus {
+    border-color: rgb(var(--admin-accent) / 0.42);
+    background: rgba(255, 255, 255, 0.095);
+    box-shadow: 0 0 0 3px rgb(var(--admin-accent) / 0.1);
+    transform: none;
+}
+
+.admin-body table {
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.admin-body thead,
+.admin-body tr {
+    background: transparent;
+}
+
+.admin-body tbody tr:hover {
+    background: rgba(255, 255, 255, 0.055);
+}
+
+.admin-media-button-primary,
+.admin-body :where(a.bg-zinc-950, button.bg-zinc-950),
+.admin-body .install-button-primary {
+    border: 1px solid rgb(var(--admin-accent) / 0.18);
+    background: rgb(var(--admin-accent));
+    color: rgb(var(--admin-accent-contrast));
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        0 16px 34px rgb(var(--admin-accent) / 0.18);
+}
+
+.admin-media-button-primary:hover,
+.admin-body :where(a.bg-zinc-950, button.bg-zinc-950):hover,
+.admin-body .install-button-primary:hover {
+    background: rgb(var(--admin-accent));
+    color: rgb(var(--admin-accent-contrast));
+    filter: brightness(1.06);
+}
+
+.admin-media-button-secondary,
+.admin-body :where(a.bg-white, button.bg-white, a.bg-zinc-50, button.bg-zinc-50) {
+    border-color: rgba(255, 255, 255, 0.11);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.78);
+    box-shadow: none;
+}
+
+.admin-media-button-secondary:hover,
+.admin-body :where(a.bg-white, button.bg-white, a.bg-zinc-50, button.bg-zinc-50):hover {
+    border-color: rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+.admin-body .admin-media-cover-frame {
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 0.42rem;
+    background: #15181c;
+}
+
+.admin-body .admin-media-field::before,
+.admin-body .admin-media-hero::before,
+.admin-body .admin-media-hero::after,
+.admin-body .admin-media-section::before,
+.admin-body .admin-media-cover-shell::before,
+.admin-body .admin-media-lookup-panel::before,
+.admin-body .admin-media-scanner-panel::before {
+    content: none;
+}
+
+.admin-body .install-alert,
+.admin-body :where(.bg-rose-50) {
+    border-color: rgba(244, 63, 94, 0.28);
+    background: rgba(244, 63, 94, 0.12);
+    color: #fecdd3;
+}
+
+.admin-body :where(.bg-emerald-50) {
+    border-color: rgba(34, 197, 94, 0.26);
+    background: rgba(34, 197, 94, 0.12);
+    color: #bbf7d0;
+}
+
+.install-body {
+    color: #ffffff;
+    background:
+        radial-gradient(circle at 78% 0%, rgba(255, 255, 255, 0.06), transparent 24rem),
+        radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.05), transparent 22rem),
+        linear-gradient(180deg, #111217 0%, #08090c 42%, #050507 100%);
+}
+
+.install-frame,
+.install-brand-panel,
+.install-content-panel {
+    border-color: rgba(255, 255, 255, 0.09);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.072), rgba(255, 255, 255, 0.04)),
+        rgba(255, 255, 255, 0.055);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.055),
+        0 18px 42px rgba(0, 0, 0, 0.22);
+}
+
+.install-frame {
+    border-radius: 0.65rem;
+}
+
+.install-brand-panel,
+.install-content-panel {
+    border-radius: 0.75rem;
+}
+
+.install-logo-strip {
+    height: 3rem;
+    border: 0;
+    border-radius: 0.35rem;
+    background: rgba(245, 190, 25, 0.08);
+    box-shadow: none;
+}
+
+.install-input {
+    border-radius: 0.45rem;
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.075);
+    color: #ffffff;
+}
+
+.install-input:focus {
+    border-color: rgb(var(--library-accent) / 0.42);
+    background: rgba(255, 255, 255, 0.095);
+    box-shadow: 0 0 0 3px rgb(var(--library-accent) / 0.1);
+    transform: none;
+}
+
+.install-list,
+.install-list-row,
+.install-body :where(.bg-white, .bg-zinc-50, .bg-zinc-100) {
+    border-color: rgba(255, 255, 255, 0.09);
+    background: rgba(255, 255, 255, 0.055);
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.install-button-primary {
+    background: rgb(var(--library-accent));
+    color: rgb(var(--library-accent-contrast));
 }

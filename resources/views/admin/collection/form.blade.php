@@ -14,7 +14,7 @@
         return implode(', ', $values);
     };
 
-    $commonInputClass = 'w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-zinc-400 focus:bg-white focus:ring-4 focus:ring-zinc-100';
+    $commonInputClass = 'admin-input w-full px-4 py-3 text-sm outline-none transition';
     $coverUrl = $item->coverUrl();
     $typeConfig = match ($formType) {
         'film' => ['rgb' => '245 158 11', 'chip' => 'amber'],
@@ -54,6 +54,10 @@
             coverImported: @js(__('admin.collection.metadata.cover_imported')),
             coverNotImported: @js(__('admin.collection.metadata.cover_not_imported')),
             posterImportFailed: @js(__('admin.collection.metadata.poster_import_failed')),
+            loadMore: @js(__('admin.collection.metadata.load_more_results')),
+            allResultsShown: @js(__('admin.collection.metadata.all_results_shown')),
+            coverRemoved: @js(__('admin.collection.metadata.cover_removed')),
+            minutes: @js(__('admin.collection.unit.minutes')),
             close: @js(__('admin.collection.scanner.close')),
         },
         typeLabels: {
@@ -133,6 +137,7 @@
         <input type="hidden" name="external_igdb_id" value="{{ old('external_igdb_id', $item->external_igdb_id) }}">
         <input type="hidden" name="description_original" value="{{ old('description_original', $item->description_original) }}">
         <input type="hidden" name="cover_path" x-model="coverPath">
+        <input type="hidden" name="remove_cover" :value="removeCover ? '1' : '0'">
 
         <section class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1.95fr)]">
             <aside class="space-y-6">
@@ -200,16 +205,20 @@
                             >
                         </label>
 
+                        <div x-cloak x-show="coverPreviewUrl || coverPath" class="flex">
+                            <button
+                                type="button"
+                                class="admin-media-button admin-media-button-danger w-full justify-center sm:w-auto"
+                                @click="removeCoverImage()"
+                            >
+                                @include('admin.icon', ['name' => 'trash', 'class' => 'h-4 w-4'])
+                                <span>{{ __('admin.collection.fields.remove_cover') }}</span>
+                            </button>
+                        </div>
+
                         <p class="text-sm leading-6 text-zinc-600">
                             {{ __('admin.collection.help.cover_image') }}
                         </p>
-
-                        @if ($mode === 'edit')
-                            <label class="inline-flex items-center gap-3 rounded-full border border-zinc-200 bg-white/80 px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm">
-                                <input type="checkbox" name="remove_cover" value="1" @checked(old('remove_cover', false)) class="h-4 w-4 rounded border-zinc-300 text-zinc-950 focus:ring-zinc-500">
-                                <span>{{ __('admin.collection.fields.remove_cover') }}</span>
-                            </label>
-                        @endif
                     </div>
                 </section>
             </aside>
@@ -487,6 +496,10 @@
                                 <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.fields.publisher') }}</span>
                                 <input type="text" name="publisher" value="{{ old('publisher', $item->publisher) }}" class="{{ $commonInputClass }}">
                             </label>
+                            <label class="block space-y-2">
+                                <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.fields.age_rating') }}</span>
+                                <input type="text" name="age_rating" value="{{ old('age_rating', $item->age_rating) }}" class="{{ $commonInputClass }}">
+                            </label>
                             <label class="block space-y-2 md:col-span-2">
                                 <span class="text-sm font-semibold text-zinc-700">{{ __('admin.collection.fields.genres') }}</span>
                                 <textarea name="genres" rows="3" placeholder="{{ __('admin.collection.fields.csv_placeholder') }}" class="{{ $commonInputClass }}">{{ old('genres', $itemToText($item->genres)) }}</textarea>
@@ -524,22 +537,23 @@
         x-cloak
         x-show="resultsOpen && resultsScope === 'title'"
         x-transition.opacity
-        class="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/45 px-3 py-4 backdrop-blur-sm sm:items-center sm:p-6"
+        class="fixed inset-0 z-50 grid place-items-center bg-black/72 px-3 py-4 backdrop-blur-sm sm:p-6"
+        x-on:click.self="closeResults()"
         role="dialog"
         aria-modal="true"
         aria-labelledby="metadata-results-title"
     >
-        <div class="max-h-[88vh] w-full max-w-5xl overflow-hidden rounded-[26px] border border-white/70 bg-white shadow-2xl">
-            <div class="flex items-start justify-between gap-4 border-b border-zinc-200 bg-zinc-50 px-4 py-4 sm:px-5">
+        <div class="admin-results-modal max-h-[88vh] w-full max-w-5xl overflow-hidden">
+            <div class="flex items-start justify-between gap-4 border-b border-white/10 px-4 py-4 sm:px-5">
                 <div class="min-w-0">
-                    <h3 id="metadata-results-title" class="text-base font-semibold text-zinc-950">
+                    <h3 id="metadata-results-title" class="text-base font-semibold text-white" x-text="resultsMessage || labels.resultsFound">
                         {{ __('admin.collection.metadata.results_found') }}
                     </h3>
-                    <p class="mt-1 text-sm leading-6 text-zinc-600" x-text="resultsMessage"></p>
                 </div>
                 <button
                     type="button"
-                    class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-300 bg-white text-zinc-700 transition hover:border-zinc-400 hover:text-zinc-950"
+                    x-ref="resultsClose"
+                    class="library-icon-button shrink-0"
                     @click="closeResults()"
                     :aria-label="labels.close"
                     :title="labels.close"
@@ -550,14 +564,14 @@
 
             <div class="max-h-[calc(88vh-5.2rem)] overflow-y-auto p-4 sm:p-5">
                 <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    <template x-for="candidate in resultsCandidates" :key="candidate.tmdb_id ?? candidate.igdb_id ?? candidate.id">
-                        <article class="overflow-hidden rounded-[18px] border border-zinc-200 bg-white shadow-sm transition hover:border-zinc-300 hover:shadow-md">
+                    <template x-for="candidate in resultsCandidates" :key="candidateKey(candidate)">
+                        <article class="admin-results-card overflow-hidden">
                             <div class="flex gap-3 p-3">
                                 <template x-if="candidate.poster_url">
-                                    <img :src="candidate.poster_url" :alt="candidate.title" class="h-32 w-20 flex-none rounded-2xl object-cover shadow-sm">
+                                    <img :src="candidate.poster_url" :alt="candidate.title" class="h-32 w-20 flex-none rounded-[0.45rem] object-cover shadow-sm">
                                 </template>
                                 <template x-if="!candidate.poster_url">
-                                    <div class="flex h-32 w-20 flex-none items-center justify-center rounded-2xl border border-zinc-200 bg-zinc-100 text-zinc-400">
+                                    <div class="flex h-32 w-20 flex-none items-center justify-center rounded-[0.45rem] border border-white/10 bg-white/6 text-white/40">
                                         @include('admin.icon', ['name' => 'collection', 'class' => 'h-5 w-5'])
                                     </div>
                                 </template>
@@ -565,31 +579,47 @@
                                 <div class="min-w-0 flex-1 space-y-2">
                                     <div class="space-y-1">
                                         <div class="flex items-start gap-2">
-                                            <h4 class="min-w-0 flex-1 text-sm font-semibold leading-5 text-zinc-950" x-text="candidate.title"></h4>
-                                            <span x-cloak x-show="candidate.release_year" class="rounded-full bg-zinc-100 px-2 py-1 text-[10px] font-semibold uppercase text-zinc-600" x-text="candidate.release_year"></span>
+                                            <h4 class="min-w-0 flex-1 text-sm font-semibold leading-5 text-white" x-text="candidate.title"></h4>
+                                            <span x-cloak x-show="candidate.release_year" class="library-type-badge-static px-2 py-1 text-[10px]" x-text="candidate.release_year"></span>
                                         </div>
 
-                                        <p x-cloak x-show="candidate.original_title && candidate.original_title !== candidate.title" class="truncate text-xs text-zinc-500" x-text="candidate.original_title"></p>
-                                        <p x-cloak x-show="candidate.platforms && candidate.platforms.length" class="truncate text-xs text-zinc-500" x-text="candidate.platforms.join(', ')"></p>
-                                        <p x-cloak x-show="candidate.developer || candidate.publisher" class="truncate text-xs text-zinc-500" x-text="[candidate.developer, candidate.publisher].filter(Boolean).join(' / ')"></p>
+                                        <p x-cloak x-show="candidate.original_title && candidate.original_title !== candidate.title" class="truncate text-xs text-white/50" x-text="candidate.original_title"></p>
+                                        <p x-cloak x-show="candidate.platforms && candidate.platforms.length" class="truncate text-xs text-white/50" x-text="candidate.platforms.join(', ')"></p>
+                                        <p x-cloak x-show="candidate.min_players || candidate.max_players || candidate.play_time_minutes" class="truncate text-xs text-white/50" x-text="[candidate.min_players && candidate.max_players ? `${candidate.min_players}-${candidate.max_players}` : '', candidate.play_time_minutes ? `${candidate.play_time_minutes} ${labels.minutes}` : '', candidate.age_rating].filter(Boolean).join(' / ')"></p>
+                                        <p x-cloak x-show="candidate.developer || candidate.publisher || candidate.designer" class="truncate text-xs text-white/50" x-text="[candidate.developer || candidate.designer, candidate.publisher].filter(Boolean).join(' / ')"></p>
+                                        <p x-cloak x-show="candidate.categories && candidate.categories.length" class="truncate text-xs text-white/50" x-text="candidate.categories.join(', ')"></p>
+                                        <p x-cloak x-show="candidate.mechanisms && candidate.mechanisms.length" class="truncate text-xs text-white/50" x-text="candidate.mechanisms.join(', ')"></p>
                                     </div>
 
-                                    <p x-cloak x-show="candidate.overview" class="line-clamp-3 text-xs leading-5 text-zinc-600" x-text="candidate.overview"></p>
+                                    <p x-cloak x-show="candidate.overview" class="line-clamp-3 text-xs leading-5 text-white/62" x-text="candidate.overview"></p>
                                 </div>
                             </div>
 
-                            <div class="border-t border-zinc-100 bg-zinc-50 px-3 py-2">
+                            <div class="border-t border-white/10 bg-black/12 px-3 py-2">
                                 <button
                                     type="button"
-                                    class="inline-flex w-full items-center justify-center rounded-full bg-zinc-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-60"
+                                    class="admin-media-button admin-media-button-primary w-full text-xs disabled:opacity-60"
                                     @click="chooseCandidate(candidate)"
-                                    :disabled="importBusy && activeCandidateId !== (candidate.tmdb_id ?? candidate.igdb_id ?? candidate.id)"
+                                    :disabled="importBusy && activeCandidateId !== (candidate.tmdb_id ?? candidate.igdb_id ?? candidate.bgg_id ?? candidate.id)"
                                 >
                                     {{ __('admin.collection.lookup.choose') }}
                                 </button>
                             </div>
                         </article>
                     </template>
+                </div>
+
+                <div class="mt-5 flex flex-col items-center gap-3 border-t border-white/10 pt-4">
+                    <button
+                        x-cloak
+                        x-show="resultsPagination.hasMore"
+                        type="button"
+                        class="admin-media-button admin-media-button-secondary w-full justify-center sm:w-auto"
+                        @click="loadMoreResults()"
+                        :disabled="resultsLoadMoreBusy"
+                        x-text="resultsLoadMoreBusy ? labels.searching : labels.loadMore"
+                    ></button>
+                    <p x-cloak x-show="resultsAllShown" class="text-xs font-medium text-white/50" x-text="labels.allResultsShown"></p>
                 </div>
             </div>
         </div>

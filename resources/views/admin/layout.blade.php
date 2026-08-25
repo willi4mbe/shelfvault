@@ -18,11 +18,11 @@
     </head>
     @php($adminAccentTheme = app(\App\Services\Library\LibrarySettings::class)->accentTheme())
     <body
-        class="admin-body admin-accent-{{ $adminAccentTheme['key'] ?? 'orange' }} min-h-screen text-white antialiased"
+        class="admin-body library-body admin-accent-{{ $adminAccentTheme['key'] ?? 'orange' }} min-h-screen text-white antialiased"
         style="--library-accent: {{ $adminAccentTheme['rgb'] ?? '249 115 22' }}; --library-accent-contrast: {{ $adminAccentTheme['contrastRgb'] ?? '23 13 2' }}; --admin-accent: {{ $adminAccentTheme['rgb'] ?? '249 115 22' }}; --admin-accent-contrast: {{ $adminAccentTheme['contrastRgb'] ?? '23 13 2' }};"
     >
-        <div x-data="{ menuOpen: false }" class="min-h-screen">
-            <header class="admin-mobile-header sticky top-0 z-40 flex items-center justify-between gap-3 px-4 py-3 lg:hidden">
+        <div x-data="{ menuOpen: false }" class="min-h-screen lg:grid lg:grid-cols-[16.5rem_minmax(0,1fr)]">
+            <header class="library-mobile-header sticky top-0 z-40 flex items-center justify-between gap-3 px-4 py-3 lg:hidden">
                 <a href="{{ route('admin') }}" class="library-brand">
                     <span class="library-mobile-logo">
                         <img src="{{ asset('branding/shelfvault-icon-192.png') }}" alt="" class="h-7 w-7">
@@ -48,7 +48,7 @@
                 class="fixed inset-0 z-50 bg-black/72 lg:hidden"
                 x-on:click.self="menuOpen = false"
             >
-                <aside id="admin-mobile-menu" class="admin-drawer flex h-full w-[min(22rem,86vw)] flex-col px-5 py-5">
+                <aside id="admin-mobile-menu" class="library-drawer flex h-full w-[min(22rem,86vw)] flex-col px-5 py-5">
                     <div class="flex items-center justify-between gap-3">
                         <a href="{{ route('admin') }}" class="library-brand">
                             <span class="library-logo-mark">
@@ -75,7 +75,7 @@
                         @endif
                     </div>
 
-                    <div class="mt-4 border-t border-white/10 pt-4">
+                    <div class="library-sidebar-footer">
                         <span class="text-xs font-medium text-white/52">
                             {{ __('admin.footer.version', ['version' => config('shelfvault.version')]) }}
                         </span>
@@ -83,48 +83,38 @@
                 </aside>
             </div>
 
-            <main class="mx-auto grid min-h-[calc(100vh-4.25rem)] w-full max-w-[96rem] gap-4 px-4 py-4 sm:px-6 lg:min-h-screen lg:grid-cols-[16.5rem_minmax(0,1fr)] lg:px-8 lg:py-6">
-                <aside class="admin-sidebar hidden min-h-0 flex-col overflow-hidden rounded-[18px] p-4 sm:p-5 lg:flex lg:p-4">
-                    <div class="space-y-4">
-                        <div class="admin-logo-strip inline-flex h-14 w-fit max-w-full items-center rounded-2xl px-4 py-2">
-                            <img src="{{ asset('branding/shelfvault.png') }}" alt="{{ __('admin.brand') }}" class="block h-10 w-auto flex-none object-contain">
+            <aside class="library-sidebar admin-sidebar hidden min-h-screen flex-col overflow-hidden px-5 py-6 lg:flex">
+                <a href="{{ route('admin') }}" class="library-brand">
+                    <span class="library-logo-mark">
+                        <img src="{{ asset('branding/shelfvault-icon-192.png') }}" alt="" class="h-8 w-8">
+                    </span>
+                    <span class="min-w-0">
+                        <span class="block text-xs font-semibold uppercase text-white/46">{{ __('admin.brand') }}</span>
+                        <span class="mt-1 block truncate text-base font-semibold text-white">{{ __('admin.sidebar.title') }}</span>
+                    </span>
+                </a>
+
+                <div class="mt-6 min-h-0 flex-1 overflow-y-auto">
+                    @include('admin.partials.navigation')
+
+                    @hasSection('sidebar')
+                        <div class="mt-4">
+                            @yield('sidebar')
                         </div>
-
-                        <div class="admin-sidebar-hero rounded-[24px] p-4">
-                            <p class="admin-sidebar-title">
-                                {{ __('admin.sidebar.title') }}
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="mt-5 min-h-0 flex-1 overflow-y-auto">
-                        @include('admin.partials.navigation')
-
-                        @hasSection('sidebar')
-                            <div class="mt-4">
-                                @yield('sidebar')
-                            </div>
-                        @endif
-                    </div>
-
-                    <div class="mt-4 border-t border-white/10 pt-4">
-                        <span class="text-xs font-medium text-white/52">
-                            {{ __('admin.footer.version', ['version' => config('shelfvault.version')]) }}
-                        </span>
-                    </div>
-                </aside>
-
-                <section class="admin-main flex min-h-0 flex-col overflow-hidden rounded-[18px]">
-                    @hasSection('header')
-                        <header class="shrink-0 border-b border-zinc-200/80">
-                            @yield('header')
-                        </header>
                     @endif
+                </div>
 
-                    <div class="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5 lg:p-6">
-                        @yield('content')
-                    </div>
-                </section>
+                <div class="library-sidebar-footer">
+                    <span class="text-xs font-medium text-white/52">
+                        {{ __('admin.footer.version', ['version' => config('shelfvault.version')]) }}
+                    </span>
+                </div>
+            </aside>
+
+            <main class="min-w-0 px-4 pb-10 pt-5 sm:px-6 lg:px-9 lg:py-7">
+                <div class="mx-auto max-w-[96rem]">
+                    @yield('content')
+                </div>
             </main>
         </div>
     </body>

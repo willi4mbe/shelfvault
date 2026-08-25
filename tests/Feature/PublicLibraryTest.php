@@ -89,6 +89,111 @@ class PublicLibraryTest extends TestCase
             ->assertDontSee(route('library.type', 'board_game'), false);
     }
 
+    public function test_public_home_limits_recent_items_to_six_newest_items(): void
+    {
+        app(LibrarySettings::class)->setEnabledTypes(['film']);
+
+        foreach (range(1, 7) as $day) {
+            Item::factory()->film()->create([
+                'title' => 'Recent Film '.$day,
+                'created_at' => now()->subDays($day),
+            ]);
+        }
+
+        $this->get(route('library.home'))
+            ->assertOk()
+            ->assertViewHas('recentItems', function ($items): bool {
+                return $items->count() === 6
+                    && $items->pluck('title')->all() === [
+                        'Recent Film 1',
+                        'Recent Film 2',
+                        'Recent Film 3',
+                        'Recent Film 4',
+                        'Recent Film 5',
+                        'Recent Film 6',
+                    ];
+            })
+            ->assertSee('Recent Film 1')
+            ->assertSee('Recent Film 6')
+            ->assertDontSee('Recent Film 7');
+    }
+
+    public function test_public_home_limits_active_loans_to_six_oldest_loans_first(): void
+    {
+        $settings = app(LibrarySettings::class);
+        $settings->setEnabledTypes(['film']);
+        $settings->setLoansEnabled(true);
+
+        foreach (range(1, 6) as $day) {
+            Item::factory()->film()->create([
+                'title' => 'Fresh Film '.$day,
+                'created_at' => now()->subDays($day),
+            ]);
+        }
+
+        foreach (range(1, 7) as $day) {
+            $item = Item::factory()->film()->loaned()->create([
+                'title' => 'Loaned Film '.$day,
+                'created_at' => now()->subDays(30 + $day),
+            ]);
+
+            ItemLoan::factory()->active()->for($item)->create([
+                'borrower_name' => 'Borrower '.$day,
+                'loaned_at' => now()->subDays(20 - $day),
+            ]);
+        }
+
+        $this->get(route('library.home'))
+            ->assertOk()
+            ->assertViewHas('activeLoanItems', function ($loans): bool {
+                return $loans->count() === 6
+                    && $loans->pluck('item.title')->all() === [
+                        'Loaned Film 1',
+                        'Loaned Film 2',
+                        'Loaned Film 3',
+                        'Loaned Film 4',
+                        'Loaned Film 5',
+                        'Loaned Film 6',
+                    ];
+            })
+            ->assertSeeInOrder([
+                'Loaned Film 1',
+                'Loaned Film 2',
+                'Loaned Film 3',
+                'Loaned Film 4',
+                'Loaned Film 5',
+                'Loaned Film 6',
+            ])
+            ->assertSee(__('library.detail.loaned_since_short'))
+            ->assertDontSee('Loaned Film 7')
+            ->assertDontSee('Borrower 7');
+    }
+
+    public function test_public_home_hides_active_loans_section_when_disabled_or_empty(): void
+    {
+        $settings = app(LibrarySettings::class);
+        $settings->setEnabledTypes(['film']);
+        $settings->setLoansEnabled(false);
+
+        $item = Item::factory()->film()->loaned()->create(['title' => 'Hidden Loan']);
+        ItemLoan::factory()->active()->for($item)->create(['borrower_name' => 'Hidden Borrower']);
+
+        $this->get(route('library.home'))
+            ->assertOk()
+            ->assertViewHas('activeLoanItems', fn ($loans): bool => $loans->isEmpty())
+            ->assertDontSee(__('library.sections.loans'))
+            ->assertDontSee('Hidden Borrower');
+
+        $settings->setLoansEnabled(true);
+        $item->itemLoans()->update(['returned_at' => now()]);
+
+        $this->get(route('library.home'))
+            ->assertOk()
+            ->assertViewHas('activeLoanItems', fn ($loans): bool => $loans->isEmpty())
+            ->assertDontSee(__('library.sections.loans'))
+            ->assertDontSee('Hidden Borrower');
+    }
+
     public function test_public_home_renders_configured_accent_color(): void
     {
         $settings = app(LibrarySettings::class);
@@ -182,7 +287,8 @@ class PublicLibraryTest extends TestCase
             ->assertOk()
             ->assertSee(route('library.loans'), false)
             ->assertSee(__('library.stats.loaned'))
-            ->assertDontSee('Alex');
+            ->assertSee(__('library.sections.loans'))
+            ->assertSee('Alex');
 
         $this->get(route('library.loans'))
             ->assertOk()

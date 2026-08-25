@@ -54,6 +54,27 @@ class InstallWizardTest extends TestCase
         $this->get('/install')->assertRedirect('/install.php');
     }
 
+    public function test_local_install_preview_renders_without_touching_the_current_installation(): void
+    {
+        config(['app.env' => 'local']);
+        File::put($this->lockPath, now()->toIso8601String());
+
+        $this->get('/dev/install-preview')
+            ->assertOk()
+            ->assertSee(__('install.requirements.title'))
+            ->assertSee(__('install.requirements.ready_short'));
+
+        $this->assertFileExists($this->lockPath);
+    }
+
+    public function test_install_preview_is_not_available_outside_local_environments(): void
+    {
+        config(['app.env' => 'production']);
+        File::put($this->lockPath, now()->toIso8601String());
+
+        $this->get('/dev/install-preview')->assertNotFound();
+    }
+
     public function test_standalone_install_page_boots_without_env_file_or_app_key(): void
     {
         $fixtureRoot = $this->freshInstallFixtureRoot();

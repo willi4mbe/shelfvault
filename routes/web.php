@@ -12,6 +12,13 @@ use App\Http\Controllers\PublicLibraryController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/install', '/install.php');
+Route::prefix('dev/install-preview')->name('install.')->group(function (): void {
+    Route::get('/', [InstallController::class, 'preview'])->name('requirements');
+    Route::post('/locale', [InstallController::class, 'previewLocale'])->name('locale');
+    Route::get('/database', [InstallController::class, 'previewRedirect'])->name('database');
+    Route::post('/database', [InstallController::class, 'previewRedirect'])->name('database.store');
+    Route::post('/complete', [InstallController::class, 'previewRedirect'])->name('complete');
+});
 
 Route::get('/', [PublicLibraryController::class, 'home'])->name('library.home');
 Route::redirect('/library', '/')->name('library.index');

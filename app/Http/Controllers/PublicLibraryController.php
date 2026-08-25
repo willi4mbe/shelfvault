@@ -27,6 +27,7 @@ class PublicLibraryController extends Controller
                 'enabledTypes' => $enabledTypes,
                 'dashboardStats' => $this->emptyDashboardStats($enabledTypes, $loansEnabled),
                 'recentItems' => collect(),
+                'activeLoanItems' => collect(),
                 'loansEnabled' => $loansEnabled,
             ]);
         }
@@ -40,6 +41,7 @@ class PublicLibraryController extends Controller
             'enabledTypes' => $enabledTypes,
             'dashboardStats' => $this->dashboardStats($librarySettings, $baseQuery, $enabledTypes, $loansEnabled),
             'recentItems' => $this->recentItems($librarySettings),
+            'activeLoanItems' => $loansEnabled ? $this->dashboardActiveLoans($librarySettings) : collect(),
             'loansEnabled' => $loansEnabled,
         ]);
     }
@@ -422,7 +424,16 @@ class PublicLibraryController extends Controller
         return $this->libraryItemsQuery($librarySettings)
             ->orderByDesc('created_at')
             ->orderBy('title')
-            ->limit(10)
+            ->limit(6)
+            ->get();
+    }
+
+    private function dashboardActiveLoans(LibrarySettings $librarySettings)
+    {
+        return $this->activeLoansQuery($librarySettings)
+            ->oldest('loaned_at')
+            ->oldest('id')
+            ->limit(6)
             ->get();
     }
 
@@ -485,11 +496,16 @@ class PublicLibraryController extends Controller
 
     private function activeLoans(LibrarySettings $librarySettings): Builder
     {
+        return $this->activeLoansQuery($librarySettings)
+            ->latest('loaned_at');
+    }
+
+    private function activeLoansQuery(LibrarySettings $librarySettings): Builder
+    {
         return ItemLoan::query()
             ->with('item')
             ->active()
-            ->whereHas('item', fn (Builder $query) => $query->whereIn('type', $librarySettings->enabledTypeValues()))
-            ->latest('loaned_at');
+            ->whereHas('item', fn (Builder $query) => $query->whereIn('type', $librarySettings->enabledTypeValues()));
     }
 
     /**

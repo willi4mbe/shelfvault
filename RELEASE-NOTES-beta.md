@@ -1,4 +1,4 @@
-# ShelfVault 0.1.0-beta.5
+# ShelfVault 0.1.0-beta.6
 
 ## Included
 
@@ -18,6 +18,11 @@
 - Public/private library visibility setting in admin settings.
 - Shared-hosting update workflow based on a configurable HTTPS manifest, SHA-256 ZIP validation, private staging, automatic backup, migrations, cache clear, and file rollback.
 - Beta packaging workflow with compiled assets, `vendor` included, and generated update manifests.
+- Backend, admin, and installer screens visually realigned with the public frontend style.
+- Metadata search improvements with expanded result loading through `Afficher plus` / `Show more`.
+- BoardGameGeek metadata lookup with improved ranking and translation based on the configured ShelfVault language.
+- Cover removal support from item editing.
+- Public home page now shows up to 6 recent additions, up to 6 loaned items with the oldest loans first, and more compact library stats.
 
 ## Known limits
 

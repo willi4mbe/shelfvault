@@ -27,7 +27,7 @@
                     <aside class="install-brand-panel flex min-h-0 flex-col justify-between rounded-[28px] p-4 text-white sm:p-5 lg:p-6 xl:p-7">
                         <div class="max-w-xl">
                             <div class="install-logo-strip inline-flex h-14 w-fit max-w-full items-center rounded-2xl px-4 py-2">
-                                <img src="{{ asset('branding/shelfvault.png') }}" alt="ShelfVault" class="block h-10 w-auto flex-none object-contain">
+                                <img src="{{ asset('branding/shelfvault-icon-192.png') }}" alt="ShelfVault" class="block h-8 w-8 flex-none object-contain">
                             </div>
 
                             <div class="mt-5">
