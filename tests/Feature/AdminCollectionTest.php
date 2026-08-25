@@ -902,6 +902,63 @@ class AdminCollectionTest extends TestCase
         $this->assertFalse(Storage::disk('public')->exists('covers/remove-cover.jpg'));
     }
 
+    public function test_removing_a_shared_cover_does_not_delete_the_shared_file(): void
+    {
+        Storage::disk('public')->put('covers/shared-cover.jpg', 'shared-cover');
+
+        $first = Item::factory()->film()->create([
+            'title' => 'Shared cover first',
+            'physical_format' => 'dvd',
+            'cover_path' => 'covers/shared-cover.jpg',
+        ]);
+
+        $second = Item::factory()->film()->create([
+            'title' => 'Shared cover second',
+            'physical_format' => 'dvd',
+            'cover_path' => 'covers/shared-cover.jpg',
+        ]);
+
+        $this->actingAs(User::query()->first())
+            ->put(route('admin.collection.update', $first), [
+                'type' => 'film',
+                'title' => 'Shared cover first',
+                'status' => 'owned',
+                'condition' => 'good',
+                'physical_format' => 'dvd',
+                'remove_cover' => '1',
+            ])
+            ->assertRedirect(route('admin.collection.index'));
+
+        $first->refresh();
+        $second->refresh();
+
+        $this->assertNull($first->cover_path);
+        $this->assertSame('covers/shared-cover.jpg', $second->cover_path);
+        $this->assertTrue(Storage::disk('public')->exists('covers/shared-cover.jpg'));
+    }
+
+    public function test_remove_cover_clears_an_imported_cover_path_when_creating_an_item(): void
+    {
+        Storage::disk('public')->put('covers/imported-before-save.jpg', 'cover-bytes');
+
+        $this->actingAs(User::query()->first())
+            ->post(route('admin.collection.store'), [
+                'type' => 'film',
+                'title' => 'Imported cover removed before save',
+                'status' => 'owned',
+                'condition' => 'good',
+                'physical_format' => 'dvd',
+                'cover_path' => 'covers/imported-before-save.jpg',
+                'remove_cover' => '1',
+            ])
+            ->assertRedirect(route('admin.collection.index'));
+
+        $item = Item::query()->firstWhere('title', 'Imported cover removed before save');
+
+        $this->assertNotNull($item);
+        $this->assertNull($item->cover_path);
+    }
+
     public function test_collection_rejects_a_non_image_cover_upload(): void
     {
         $this->actingAs(User::query()->first())
@@ -1170,7 +1227,7 @@ class AdminCollectionTest extends TestCase
             ->assertSee('Jaquette')
             ->assertSee('JPG, PNG ou WEBP — max. 4 Mo.')
             ->assertSee('Recherche de métadonnées')
-            ->assertSee('Recherchez par titre pour les films et les jeux vidéo.')
+            ->assertSee('Recherchez par titre pour les films, séries TV, jeux vidéo et jeux de société quand leurs fournisseurs sont configurés.')
             ->assertSee('Champs physiques à compléter manuellement.')
             ->assertSee('Rechercher')
             ->assertDontSee('Rechercher sur TMDb')
@@ -1197,7 +1254,7 @@ class AdminCollectionTest extends TestCase
             ->assertSee('Cover')
             ->assertSee('JPG, PNG or WEBP - max. 4 MB.')
             ->assertSee('Metadata search')
-            ->assertSee('Search by title for films and video games.')
+            ->assertSee('Search by title for films, TV series, video games, and board games when their providers are configured.')
             ->assertSee('Physical details to complete manually.')
             ->assertSee('Search')
             ->assertDontSee('Search on TMDb')
@@ -1222,7 +1279,7 @@ class AdminCollectionTest extends TestCase
             ->assertSee('Film')
             ->assertSee('Remove cover')
             ->assertSee('Metadata search')
-            ->assertSee('Search by title for films and video games.')
+            ->assertSee('Search by title for films, TV series, video games, and board games when their providers are configured.')
             ->assertSee('Search')
             ->assertDontSee('Search on TMDb')
             ->assertDontSee('Search by barcode')

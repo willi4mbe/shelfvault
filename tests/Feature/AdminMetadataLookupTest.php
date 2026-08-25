@@ -50,6 +50,7 @@ class AdminMetadataLookupTest extends TestCase
             'services.igdb.client_id' => '',
             'services.igdb.client_secret' => '',
             'services.igdb.access_token' => '',
+            'services.bgg.token' => '',
             'services.translation.provider' => '',
             'services.translation.source_locale' => 'en',
             'services.translation.google.api_key' => '',
@@ -120,7 +121,7 @@ class AdminMetadataLookupTest extends TestCase
             ->assertJsonPath('message', __('admin.collection.lookup.enter_title_to_search'));
     }
 
-    public function test_title_search_rejects_unsupported_types_for_automatic_search(): void
+    public function test_board_game_search_returns_a_clear_message_when_bgg_is_not_configured(): void
     {
         $this->actingAs(User::query()->first())
             ->postJson(route('admin.collection.metadata.search'), [
@@ -128,8 +129,9 @@ class AdminMetadataLookupTest extends TestCase
                 'type' => 'board_game',
                 'title' => 'Catan',
             ])
-            ->assertStatus(422)
-            ->assertJsonPath('message', __('admin.collection.lookup.automatic_search_not_available_for_this_type'));
+            ->assertOk()
+            ->assertJsonPath('status', 'no_source')
+            ->assertJsonPath('message', __('admin.collection.metadata.bgg_not_configured'));
     }
 
     public function test_igdb_search_returns_a_clear_message_when_igdb_is_not_configured(): void
@@ -374,6 +376,442 @@ class AdminMetadataLookupTest extends TestCase
                 && str_contains($request->body(), 'search "Super Mario Galaxy";')
                 && str_contains($request->body(), 'where first_release_date >=');
         });
+    }
+
+    public function test_bgg_search_returns_normalized_board_game_candidates_when_configured(): void
+    {
+        config(['services.bgg.token' => 'bgg-test-token']);
+
+        Http::fake([
+            'https://boardgamegeek.com/xmlapi2/search*' => Http::response($this->bggSearchPayload(), 200, [
+                'Content-Type' => 'application/xml',
+            ]),
+            'https://boardgamegeek.com/xmlapi2/thing*' => Http::response($this->bggThingPayload(), 200, [
+                'Content-Type' => 'application/xml',
+            ]),
+        ]);
+
+        $this->actingAs(User::query()->first())
+            ->postJson(route('admin.collection.metadata.search'), [
+                'mode' => 'title',
+                'type' => 'board_game',
+                'title' => 'Catan',
+                'release_year' => 1995,
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'found')
+            ->assertJsonPath('source', 'bgg')
+            ->assertJsonPath('data.candidates.0.source', 'bgg')
+            ->assertJsonPath('data.candidates.0.type', 'board_game')
+            ->assertJsonPath('data.candidates.0.bgg_id', 13)
+            ->assertJsonPath('data.candidates.0.title', 'CATAN')
+            ->assertJsonPath('data.candidates.0.release_year', 1995)
+            ->assertJsonPath('data.candidates.0.poster_url', 'https://cf.geekdo-images.com/catan.jpg')
+            ->assertJsonPath('data.candidates.0.min_players', 3)
+            ->assertJsonPath('data.candidates.0.max_players', 4)
+            ->assertJsonPath('data.candidates.0.play_time_minutes', 120)
+            ->assertJsonPath('data.candidates.0.age_rating', '10+')
+            ->assertJsonPath('data.candidates.0.designer', 'Klaus Teuber')
+            ->assertJsonPath('data.candidates.0.publisher', 'Kosmos, Catan Studio')
+            ->assertJsonPath('data.candidates.0.categories', ['Negotiation', 'Economic'])
+            ->assertJsonPath('data.candidates.0.mechanisms', ['Dice Rolling', 'Trading']);
+
+        Http::assertSent(function ($request): bool {
+            return str_starts_with($request->url(), 'https://boardgamegeek.com/xmlapi2/search')
+                && $request->hasHeader('Authorization', 'Bearer bgg-test-token');
+        });
+    }
+
+    public function test_bgg_search_ranks_exact_monopoly_before_variants(): void
+    {
+        config(['services.bgg.token' => 'bgg-test-token']);
+
+        Http::fake([
+            'https://boardgamegeek.com/xmlapi2/search*' => Http::response($this->bggMonopolySearchPayload(), 200, [
+                'Content-Type' => 'application/xml',
+            ]),
+            'https://boardgamegeek.com/xmlapi2/thing*' => Http::response($this->bggMonopolyThingPayload(), 200, [
+                'Content-Type' => 'application/xml',
+            ]),
+        ]);
+
+        $this->actingAs(User::query()->first())
+            ->postJson(route('admin.collection.metadata.search'), [
+                'mode' => 'title',
+                'type' => 'board_game',
+                'title' => 'Monopoly',
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'found')
+            ->assertJsonPath('source', 'bgg')
+            ->assertJsonPath('data.candidates.0.bgg_id', 1406)
+            ->assertJsonPath('data.candidates.0.title', 'Monopoly');
+
+        Http::assertSent(function ($request): bool {
+            return str_starts_with($request->url(), 'https://boardgamegeek.com/xmlapi2/search')
+                && str_contains($request->url(), 'type=boardgame')
+                && ! str_contains($request->url(), 'boardgameexpansion');
+        });
+
+        Http::assertSent(function ($request): bool {
+            return str_starts_with($request->url(), 'https://boardgamegeek.com/xmlapi2/thing')
+                && str_contains($request->url(), 'id=1406%2C13186%2C3689%2C1932')
+                && str_contains($request->url(), 'stats=1');
+        });
+    }
+
+    public function test_tmdb_search_paginates_in_repeatable_ten_result_slices(): void
+    {
+        config(['services.tmdb.api_key' => 'test-key']);
+
+        Http::fake([
+            'https://api.themoviedb.org/3/search/movie*' => function ($request) {
+                parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+                $apiPage = (int) ($query['page'] ?? 1);
+                $start = $apiPage === 1 ? 1 : 21;
+                $count = $apiPage === 1 ? 20 : 5;
+
+                return Http::response([
+                    'page' => $apiPage,
+                    'total_pages' => 2,
+                    'results' => $this->tmdbSearchResults($start, $count),
+                ], 200);
+            },
+        ]);
+
+        $first = $this->actingAs(User::query()->first())
+            ->postJson(route('admin.collection.metadata.search'), [
+                'mode' => 'title',
+                'type' => 'film',
+                'title' => 'Matrix',
+                'page' => 1,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.candidates.0.tmdb_id', 1)
+            ->assertJsonPath('data.candidates.9.tmdb_id', 10)
+            ->assertJsonPath('data.pagination.has_more', true)
+            ->assertJsonPath('data.pagination.next_page', 2);
+
+        $this->assertCount(10, $first->json('data.candidates'));
+
+        $second = $this->actingAs(User::query()->first())
+            ->postJson(route('admin.collection.metadata.search'), [
+                'mode' => 'title',
+                'type' => 'film',
+                'title' => 'Matrix',
+                'page' => 2,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.candidates.0.tmdb_id', 11)
+            ->assertJsonPath('data.candidates.9.tmdb_id', 20)
+            ->assertJsonPath('data.pagination.has_more', true)
+            ->assertJsonPath('data.pagination.next_page', 3);
+
+        $this->assertCount(10, $second->json('data.candidates'));
+
+        $third = $this->actingAs(User::query()->first())
+            ->postJson(route('admin.collection.metadata.search'), [
+                'mode' => 'title',
+                'type' => 'film',
+                'title' => 'Matrix',
+                'page' => 3,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.candidates.0.tmdb_id', 21)
+            ->assertJsonPath('data.pagination.has_more', false)
+            ->assertJsonPath('data.pagination.next_page', null);
+
+        $this->assertCount(5, $third->json('data.candidates'));
+    }
+
+    public function test_igdb_search_paginates_with_offset_and_reports_when_finished(): void
+    {
+        config([
+            'services.igdb.client_id' => 'igdb-client',
+            'services.igdb.access_token' => 'igdb-token',
+        ]);
+
+        Http::fake([
+            'https://api.igdb.com/v4/games' => function ($request) {
+                $secondPage = str_contains($request->body(), 'offset 10;');
+                $games = [];
+                $start = $secondPage ? 11 : 1;
+                $count = $secondPage ? 3 : 11;
+
+                for ($id = $start; $id < $start + $count; $id++) {
+                    $games[] = [
+                        'id' => $id,
+                        'name' => 'Game '.$id,
+                        'first_release_date' => 1194393600,
+                    ];
+                }
+
+                return Http::response($games, 200);
+            },
+        ]);
+
+        $first = $this->actingAs(User::query()->first())
+            ->postJson(route('admin.collection.metadata.search'), [
+                'mode' => 'title',
+                'type' => 'video_game',
+                'title' => 'Game',
+                'page' => 1,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.candidates.0.igdb_id', 1)
+            ->assertJsonPath('data.candidates.9.igdb_id', 10)
+            ->assertJsonPath('data.pagination.has_more', true)
+            ->assertJsonPath('data.pagination.next_page', 2);
+
+        $this->assertCount(10, $first->json('data.candidates'));
+
+        $second = $this->actingAs(User::query()->first())
+            ->postJson(route('admin.collection.metadata.search'), [
+                'mode' => 'title',
+                'type' => 'video_game',
+                'title' => 'Game',
+                'page' => 2,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.candidates.0.igdb_id', 11)
+            ->assertJsonPath('data.pagination.has_more', false)
+            ->assertJsonPath('data.pagination.next_page', null);
+
+        $this->assertCount(3, $second->json('data.candidates'));
+
+        Http::assertSent(fn ($request): bool => str_contains($request->body(), 'limit 11; offset 10;'));
+    }
+
+    public function test_bgg_search_reveals_ranked_results_by_twelve_result_slices(): void
+    {
+        config(['services.bgg.token' => 'bgg-test-token']);
+
+        Http::fake([
+            'https://boardgamegeek.com/xmlapi2/search*' => Http::response($this->bggManySearchPayload(14), 200, [
+                'Content-Type' => 'application/xml',
+            ]),
+            'https://boardgamegeek.com/xmlapi2/thing*' => function ($request) {
+                parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+                $ids = array_map('intval', explode(',', (string) ($query['id'] ?? '')));
+
+                return Http::response($this->bggManyThingPayload($ids), 200, [
+                    'Content-Type' => 'application/xml',
+                ]);
+            },
+        ]);
+
+        $first = $this->actingAs(User::query()->first())
+            ->postJson(route('admin.collection.metadata.search'), [
+                'mode' => 'title',
+                'type' => 'board_game',
+                'title' => 'Game',
+                'page' => 1,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.candidates.0.bgg_id', 1)
+            ->assertJsonPath('data.candidates.11.bgg_id', 12)
+            ->assertJsonPath('data.pagination.has_more', true)
+            ->assertJsonPath('data.pagination.next_page', 2);
+
+        $this->assertCount(12, $first->json('data.candidates'));
+
+        $second = $this->actingAs(User::query()->first())
+            ->postJson(route('admin.collection.metadata.search'), [
+                'mode' => 'title',
+                'type' => 'board_game',
+                'title' => 'Game',
+                'page' => 2,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.candidates.0.bgg_id', 13)
+            ->assertJsonPath('data.pagination.has_more', false)
+            ->assertJsonPath('data.pagination.next_page', null);
+
+        $this->assertCount(2, $second->json('data.candidates'));
+    }
+
+    public function test_bgg_import_maps_board_game_metadata_and_imports_a_cover_locally(): void
+    {
+        config(['services.bgg.token' => 'bgg-test-token']);
+
+        Http::fake([
+            'https://boardgamegeek.com/xmlapi2/thing*' => Http::response($this->bggThingPayload(), 200, [
+                'Content-Type' => 'application/xml',
+            ]),
+            'https://cf.geekdo-images.com/catan.jpg' => Http::response('cover-bytes', 200, [
+                'Content-Type' => 'image/jpeg',
+            ]),
+        ]);
+
+        $response = $this->actingAs(User::query()->first())
+            ->postJson(route('admin.collection.metadata.import'), [
+                'source' => 'bgg',
+                'bgg_id' => 13,
+            ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('status', 'found')
+            ->assertJsonPath('source', 'bgg')
+            ->assertJsonPath('data.type', 'board_game')
+            ->assertJsonPath('data.title', 'CATAN')
+            ->assertJsonPath('data.description', 'Trade, build, and settle.')
+            ->assertJsonPath('data.release_year', 1995)
+            ->assertJsonPath('data.min_players', 3)
+            ->assertJsonPath('data.max_players', 4)
+            ->assertJsonPath('data.play_time_minutes', 120)
+            ->assertJsonPath('data.age_rating', '10+')
+            ->assertJsonPath('data.designer', 'Klaus Teuber')
+            ->assertJsonPath('data.publisher', 'Kosmos, Catan Studio')
+            ->assertJsonPath('data.genres', ['Negotiation', 'Economic', 'Dice Rolling', 'Trading'])
+            ->assertJsonMissingPath('data.bgg_id')
+            ->assertJsonMissingPath('data.poster_url');
+
+        $coverPath = $response->json('data.cover_path');
+
+        $this->assertIsString($coverPath);
+        $this->assertTrue(str_starts_with($coverPath, 'covers/'));
+        Storage::disk('public')->assertExists($coverPath);
+    }
+
+    public function test_bgg_import_translates_description_and_genres_to_the_admin_locale(): void
+    {
+        config([
+            'services.bgg.token' => 'bgg-test-token',
+            'services.translation.provider' => 'google',
+            'services.translation.google.api_key' => 'google-test-key',
+            'services.translation.google.base_url' => 'https://translation.googleapis.com/language/translate/v2',
+        ]);
+
+        $admin = User::query()->first();
+        $admin->forceFill(['preferred_locale' => 'fr'])->save();
+
+        Http::fake([
+            'https://boardgamegeek.com/xmlapi2/thing*' => Http::response($this->bggThingPayload(), 200, [
+                'Content-Type' => 'application/xml',
+            ]),
+            'https://translation.googleapis.com/language/translate/v2*' => fn ($request) => Http::response([
+                'data' => [
+                    'translations' => [
+                        [
+                            'translatedText' => $this->bggTranslatedTextFromRequest($request->body()),
+                            'detectedSourceLanguage' => 'en',
+                        ],
+                    ],
+                ],
+            ], 200),
+            'https://cf.geekdo-images.com/catan.jpg' => Http::response('cover-bytes', 200, [
+                'Content-Type' => 'image/jpeg',
+            ]),
+        ]);
+
+        $this->actingAs($admin)
+            ->postJson(route('admin.collection.metadata.import'), [
+                'source' => 'bgg',
+                'bgg_id' => 13,
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'found')
+            ->assertJsonPath('source', 'bgg')
+            ->assertJsonPath('data.title', 'CATAN')
+            ->assertJsonPath('data.description', 'Echangez, construisez et colonisez.')
+            ->assertJsonPath('data.designer', 'Klaus Teuber')
+            ->assertJsonPath('data.publisher', 'Kosmos, Catan Studio')
+            ->assertJsonPath('data.genres', ['Negociation', 'Economique', 'Lancer de des', 'Commerce']);
+
+        Http::assertSent(function ($request): bool {
+            return str_starts_with($request->url(), 'https://translation.googleapis.com/language/translate/v2?key=google-test-key')
+                && str_contains($request->body(), 'q=Trade%2C+build%2C+and+settle.')
+                && str_contains($request->body(), 'target=fr')
+                && ! str_contains($request->body(), 'source=');
+        });
+    }
+
+    public function test_bgg_import_does_not_call_translation_when_admin_locale_is_english(): void
+    {
+        config([
+            'services.bgg.token' => 'bgg-test-token',
+            'services.translation.provider' => 'google',
+            'services.translation.google.api_key' => 'google-test-key',
+            'services.translation.google.base_url' => 'https://translation.googleapis.com/language/translate/v2',
+        ]);
+
+        Http::fake([
+            'https://boardgamegeek.com/xmlapi2/thing*' => Http::response($this->bggThingPayload(), 200, [
+                'Content-Type' => 'application/xml',
+            ]),
+            'https://translation.googleapis.com/language/translate/v2*' => Http::response([], 500),
+            'https://cf.geekdo-images.com/catan.jpg' => Http::response('cover-bytes', 200, [
+                'Content-Type' => 'image/jpeg',
+            ]),
+        ]);
+
+        $this->actingAs(User::query()->first())
+            ->postJson(route('admin.collection.metadata.import'), [
+                'source' => 'bgg',
+                'bgg_id' => 13,
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'found')
+            ->assertJsonPath('data.description', 'Trade, build, and settle.')
+            ->assertJsonPath('data.genres', ['Negotiation', 'Economic', 'Dice Rolling', 'Trading']);
+
+        Http::assertNotSent(fn ($request): bool => str_starts_with($request->url(), 'https://translation.googleapis.com/language/translate/v2'));
+    }
+
+    public function test_bgg_import_keeps_original_metadata_when_translation_fails(): void
+    {
+        config([
+            'services.bgg.token' => 'bgg-test-token',
+            'services.translation.provider' => 'google',
+            'services.translation.google.api_key' => 'google-test-key',
+            'services.translation.google.base_url' => 'https://translation.googleapis.com/language/translate/v2',
+        ]);
+
+        $admin = User::query()->first();
+        $admin->forceFill(['preferred_locale' => 'fr'])->save();
+
+        Http::fake([
+            'https://boardgamegeek.com/xmlapi2/thing*' => Http::response($this->bggThingPayload(), 200, [
+                'Content-Type' => 'application/xml',
+            ]),
+            'https://translation.googleapis.com/language/translate/v2*' => Http::response([], 500),
+            'https://cf.geekdo-images.com/catan.jpg' => Http::response('cover-bytes', 200, [
+                'Content-Type' => 'image/jpeg',
+            ]),
+        ]);
+
+        $this->actingAs($admin)
+            ->postJson(route('admin.collection.metadata.import'), [
+                'source' => 'bgg',
+                'bgg_id' => 13,
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'found')
+            ->assertJsonPath('data.description', 'Trade, build, and settle.')
+            ->assertJsonPath('data.genres', ['Negotiation', 'Economic', 'Dice Rolling', 'Trading']);
+
+        Http::assertSent(fn ($request): bool => str_starts_with($request->url(), 'https://translation.googleapis.com/language/translate/v2?key=google-test-key'));
+    }
+
+    public function test_bgg_search_reports_authorization_errors_without_exposing_the_token(): void
+    {
+        config(['services.bgg.token' => 'bgg-test-token']);
+
+        Http::fake([
+            'https://boardgamegeek.com/xmlapi2/search*' => Http::response('Forbidden', 403),
+        ]);
+
+        $this->actingAs(User::query()->first())
+            ->postJson(route('admin.collection.metadata.search'), [
+                'mode' => 'title',
+                'type' => 'board_game',
+                'title' => 'Catan',
+            ])
+            ->assertStatus(403)
+            ->assertJsonPath('status', 'error')
+            ->assertJsonPath('message', __('admin.collection.metadata.bgg_forbidden'))
+            ->assertDontSee('bgg-test-token');
     }
 
     public function test_tmdb_movie_mapping_limits_cast_members_to_the_first_five_actors(): void
@@ -972,6 +1410,64 @@ class AdminMetadataLookupTest extends TestCase
     }
 
     /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function tmdbSearchResults(int $start, int $count): array
+    {
+        $results = [];
+
+        for ($id = $start; $id < $start + $count; $id++) {
+            $results[] = [
+                'id' => $id,
+                'title' => 'Movie '.$id,
+                'original_title' => 'Movie '.$id,
+                'release_date' => '1999-01-01',
+                'overview' => 'Movie overview '.$id,
+            ];
+        }
+
+        return $results;
+    }
+
+    private function bggManySearchPayload(int $count): string
+    {
+        $items = '';
+
+        for ($id = 1; $id <= $count; $id++) {
+            $items .= sprintf(
+                '    <item type="boardgame" id="%d"><name type="primary" value="Game %d" /><yearpublished value="2000" /></item>'."\n",
+                $id,
+                $id,
+            );
+        }
+
+        return "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<items total=\"{$count}\">\n{$items}</items>";
+    }
+
+    /**
+     * @param  array<int, int>  $ids
+     */
+    private function bggManyThingPayload(array $ids): string
+    {
+        $items = '';
+
+        foreach ($ids as $id) {
+            if ($id < 1) {
+                continue;
+            }
+
+            $items .= sprintf(
+                '    <item type="boardgame" id="%d"><name type="primary" value="Game %d" /><description>Game %d description.</description><yearpublished value="2000" /></item>'."\n",
+                $id,
+                $id,
+                $id,
+            );
+        }
+
+        return "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<items>\n{$items}</items>";
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function tmdbMoviePayload(): array
@@ -1061,5 +1557,119 @@ class AdminMetadataLookupTest extends TestCase
                 ],
             ],
         ];
+    }
+
+    private function bggSearchPayload(): string
+    {
+        return <<<'XML'
+<?xml version="1.0" encoding="utf-8"?>
+<items total="1">
+    <item type="boardgame" id="13">
+        <name type="primary" value="CATAN" />
+        <yearpublished value="1995" />
+    </item>
+</items>
+XML;
+    }
+
+    private function bggThingPayload(): string
+    {
+        return <<<'XML'
+<?xml version="1.0" encoding="utf-8"?>
+<items>
+    <item type="boardgame" id="13">
+        <thumbnail>https://cf.geekdo-images.com/catan-thumb.jpg</thumbnail>
+        <image>https://cf.geekdo-images.com/catan.jpg</image>
+        <name type="primary" value="CATAN" />
+        <description>Trade, build, and settle.</description>
+        <yearpublished value="1995" />
+        <minplayers value="3" />
+        <maxplayers value="4" />
+        <playingtime value="120" />
+        <minage value="10" />
+        <link type="boardgamecategory" id="1026" value="Negotiation" />
+        <link type="boardgamecategory" id="1021" value="Economic" />
+        <link type="boardgamemechanic" id="2072" value="Dice Rolling" />
+        <link type="boardgamemechanic" id="2008" value="Trading" />
+        <link type="boardgamedesigner" id="7" value="Klaus Teuber" />
+        <link type="boardgamepublisher" id="37" value="Kosmos" />
+        <link type="boardgamepublisher" id="31418" value="Catan Studio" />
+    </item>
+</items>
+XML;
+    }
+
+    private function bggTranslatedTextFromRequest(string $body): string
+    {
+        parse_str($body, $payload);
+
+        return match ($payload['q'] ?? '') {
+            'Trade, build, and settle.' => 'Echangez, construisez et colonisez.',
+            'Negotiation' => 'Negociation',
+            'Economic' => 'Economique',
+            'Dice Rolling' => 'Lancer de des',
+            'Trading' => 'Commerce',
+            default => (string) ($payload['q'] ?? ''),
+        };
+    }
+
+    private function bggMonopolySearchPayload(): string
+    {
+        return <<<'XML'
+<?xml version="1.0" encoding="utf-8"?>
+<items total="4">
+    <item type="boardgame" id="1932">
+        <name type="primary" value="Anti-Monopoly" />
+        <yearpublished value="1973" />
+    </item>
+    <item type="boardgame" id="13186">
+        <name type="primary" value="Monopoly Junior" />
+        <yearpublished value="1990" />
+    </item>
+    <item type="boardgame" id="3689">
+        <name type="primary" value="Monopoly: Star Wars" />
+        <yearpublished value="1997" />
+    </item>
+    <item type="boardgame" id="1406">
+        <name type="primary" value="Monopoly" />
+        <yearpublished value="1935" />
+    </item>
+</items>
+XML;
+    }
+
+    private function bggMonopolyThingPayload(): string
+    {
+        return <<<'XML'
+<?xml version="1.0" encoding="utf-8"?>
+<items>
+    <item type="boardgame" id="1406">
+        <thumbnail>https://cf.geekdo-images.com/monopoly-thumb.jpg</thumbnail>
+        <image>https://cf.geekdo-images.com/monopoly.jpg</image>
+        <name type="primary" value="Monopoly" />
+        <description>Buy, sell, and trade properties.</description>
+        <yearpublished value="1935" />
+        <minplayers value="2" />
+        <maxplayers value="8" />
+        <playingtime value="180" />
+        <minage value="8" />
+    </item>
+    <item type="boardgame" id="1932">
+        <name type="primary" value="Anti-Monopoly" />
+        <description>A real estate game with a twist.</description>
+        <yearpublished value="1973" />
+    </item>
+    <item type="boardgame" id="13186">
+        <name type="primary" value="Monopoly Junior" />
+        <description>A simplified version for younger players.</description>
+        <yearpublished value="1990" />
+    </item>
+    <item type="boardgame" id="3689">
+        <name type="primary" value="Monopoly: Star Wars" />
+        <description>A licensed edition.</description>
+        <yearpublished value="1997" />
+    </item>
+</items>
+XML;
     }
 }

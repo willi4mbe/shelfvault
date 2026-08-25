@@ -599,6 +599,7 @@ class AdminSettingsController extends Controller
         try {
             $response = Http::timeout(8)
                 ->accept('application/xml,text/xml,*/*')
+                ->withToken((string) $token)
                 ->get('https://boardgamegeek.com/xmlapi2/search', [
                     'query' => 'Azul',
                     'type' => 'boardgame',

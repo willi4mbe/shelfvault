@@ -172,6 +172,7 @@ return [
         'loaned_to' => 'Loaned to :name',
         'loaned_to_short' => 'Loaned to',
         'loaned_since' => 'Since :date',
+        'loaned_since_short' => 'Since',
         'expected_return' => 'Expected return :date',
         'expected_return_short' => 'Until',
     ],

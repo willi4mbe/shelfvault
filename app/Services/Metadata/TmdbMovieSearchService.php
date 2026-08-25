@@ -12,6 +12,8 @@ use Throwable;
 
 class TmdbMovieSearchService
 {
+    private const SEARCH_PAGE_SIZE = 10;
+
     public function __construct(
         private readonly MetadataImportMapper $mapper = new MetadataImportMapper(),
         private readonly ?ExternalServiceSettings $settings = null,
@@ -24,9 +26,10 @@ class TmdbMovieSearchService
             || filled($this->secret('bearer_token', 'services.tmdb.bearer_token'));
     }
 
-    public function search(string $title, ?int $releaseYear = null): MetadataLookupResult
+    public function search(string $title, ?int $releaseYear = null, int $page = 1): MetadataLookupResult
     {
         $title = trim($title);
+        $page = max(1, $page);
 
         if ($title === '') {
             return MetadataLookupResult::invalid(__('admin.collection.validation.title_required'));
@@ -45,23 +48,26 @@ class TmdbMovieSearchService
                     'language' => $this->value('language', 'services.tmdb.language', 'fr-FR'),
                     'year' => $releaseYear,
                     'primary_release_year' => $releaseYear,
+                    'page' => $this->tmdbApiPage($page),
                 ], static fn (mixed $value): bool => $value !== null && $value !== ''));
 
             if (! $response->successful()) {
                 return MetadataLookupResult::error(__('admin.collection.metadata.search_error'), $response->status());
             }
 
-            $candidates = collect($response->json('results', []))
-                ->take(10)
+            $payload = $response->json() ?? [];
+            $candidates = collect($this->pageSlice($payload['results'] ?? [], $page))
                 ->map(fn (array $candidate): array => $this->mapper->mapSearchCandidate($candidate, (string) config('services.tmdb.image_base_url')))
                 ->values()
                 ->all();
+            $pagination = $this->pagination($payload, $page);
 
             if ($candidates === []) {
                 return MetadataLookupResult::notFound(__('admin.collection.metadata.no_result_found'), [
                     'query' => $title,
                     'release_year' => $releaseYear,
                     'candidates' => [],
+                    'pagination' => $pagination,
                 ], 'tmdb');
             }
 
@@ -69,15 +75,17 @@ class TmdbMovieSearchService
                 'query' => $title,
                 'release_year' => $releaseYear,
                 'candidates' => $candidates,
+                'pagination' => $pagination,
             ], __('admin.collection.metadata.results_found'), 'tmdb');
         } catch (Throwable) {
             return MetadataLookupResult::error(__('admin.collection.metadata.search_error'));
         }
     }
 
-    public function searchTvSeries(string $title, ?int $releaseYear = null): MetadataLookupResult
+    public function searchTvSeries(string $title, ?int $releaseYear = null, int $page = 1): MetadataLookupResult
     {
         $title = trim($title);
+        $page = max(1, $page);
 
         if ($title === '') {
             return MetadataLookupResult::invalid(__('admin.collection.validation.title_required'));
@@ -95,23 +103,26 @@ class TmdbMovieSearchService
                     'include_adult' => false,
                     'language' => $this->value('language', 'services.tmdb.language', 'fr-FR'),
                     'first_air_date_year' => $releaseYear,
+                    'page' => $this->tmdbApiPage($page),
                 ], static fn (mixed $value): bool => $value !== null && $value !== ''));
 
             if (! $response->successful()) {
                 return MetadataLookupResult::error(__('admin.collection.metadata.search_error'), $response->status());
             }
 
-            $candidates = collect($response->json('results', []))
-                ->take(10)
+            $payload = $response->json() ?? [];
+            $candidates = collect($this->pageSlice($payload['results'] ?? [], $page))
                 ->map(fn (array $candidate): array => $this->mapper->mapTvSearchCandidate($candidate, (string) config('services.tmdb.image_base_url')))
                 ->values()
                 ->all();
+            $pagination = $this->pagination($payload, $page);
 
             if ($candidates === []) {
                 return MetadataLookupResult::notFound(__('admin.collection.metadata.no_result_found'), [
                     'query' => $title,
                     'release_year' => $releaseYear,
                     'candidates' => [],
+                    'pagination' => $pagination,
                 ], 'tmdb');
             }
 
@@ -119,6 +130,7 @@ class TmdbMovieSearchService
                 'query' => $title,
                 'release_year' => $releaseYear,
                 'candidates' => $candidates,
+                'pagination' => $pagination,
             ], __('admin.collection.metadata.results_found'), 'tmdb');
         } catch (Throwable) {
             return MetadataLookupResult::error(__('admin.collection.metadata.search_error'));
@@ -229,6 +241,46 @@ class TmdbMovieSearchService
         $response->throw();
 
         return $response->json() ?? [];
+    }
+
+    private function tmdbApiPage(int $page): int
+    {
+        return (int) floor(($page - 1) / 2) + 1;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function pageSlice(mixed $results, int $page): array
+    {
+        if (! is_array($results)) {
+            return [];
+        }
+
+        $offset = ($page - 1) % 2 === 0 ? 0 : self::SEARCH_PAGE_SIZE;
+
+        return array_slice($results, $offset, self::SEARCH_PAGE_SIZE);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function pagination(array $payload, int $page): array
+    {
+        $results = is_array($payload['results'] ?? null) ? $payload['results'] : [];
+        $apiPage = $this->tmdbApiPage($page);
+        $totalPages = max(1, (int) ($payload['total_pages'] ?? $apiPage));
+        $offset = ($page - 1) % 2 === 0 ? 0 : self::SEARCH_PAGE_SIZE;
+        $hasMoreInCurrentApiPage = count($results) > $offset + self::SEARCH_PAGE_SIZE;
+        $hasMore = $hasMoreInCurrentApiPage || $apiPage < $totalPages;
+
+        return [
+            'current_page' => $page,
+            'per_page' => self::SEARCH_PAGE_SIZE,
+            'has_more' => $hasMore,
+            'next_page' => $hasMore ? $page + 1 : null,
+        ];
     }
 
     /**

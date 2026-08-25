@@ -51,7 +51,7 @@
             </div>
         @endif
 
-        <section class="space-y-4">
+        <section class="flex flex-col gap-4">
             <form method="POST" action="{{ route('admin.settings.library.update') }}" class="space-y-4">
                 @csrf
                 @method('PUT')
@@ -263,7 +263,7 @@
                 };
             @endphp
 
-            <section class="admin-panel !rounded-[20px] !p-4 sm:!p-5">
+            <section class="admin-panel order-last !rounded-[20px] !p-4 sm:!p-5">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div class="min-w-0">
                         <p class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">

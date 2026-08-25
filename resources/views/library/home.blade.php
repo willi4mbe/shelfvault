@@ -53,5 +53,22 @@
                 </div>
             @endif
         </section>
+
+        @if ($loansEnabled && $activeLoanItems->isNotEmpty())
+            <section class="library-section">
+                <div class="library-section-heading">
+                    <div>
+                        <h2>{{ __('library.sections.loans') }}</h2>
+                    </div>
+                    <a href="{{ route('library.loans') }}" class="library-section-link">{{ __('library.actions.view_all') }}</a>
+                </div>
+
+                <div class="library-rail library-loans-rail">
+                    @foreach ($activeLoanItems as $loan)
+                        @include('library.partials.loan-card', ['loan' => $loan, 'dateMode' => 'loaned_at'])
+                    @endforeach
+                </div>
+            </section>
+        @endif
     </div>
 @endsection
