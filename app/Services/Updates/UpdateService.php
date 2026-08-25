@@ -282,6 +282,8 @@ final class UpdateService
 
     private function runPostUpdateCommands(ReleaseInfo $release): void
     {
+        $this->writeInstalledVersion($release->version);
+
         if ((bool) config('shelfvault.updates.skip_artisan', false)) {
             return;
         }
@@ -294,6 +296,26 @@ final class UpdateService
 
         $this->callArtisan($kernel, 'optimize:clear', ['--no-interaction' => true]);
         $this->callArtisan($kernel, 'storage:link', ['--no-interaction' => true], true);
+    }
+
+    private function writeInstalledVersion(string $version): void
+    {
+        $envPath = $this->appRoot().'/.env';
+
+        if (! is_file($envPath)) {
+            return;
+        }
+
+        $contents = (string) File::get($envPath);
+        $line = 'SHELFVAULT_VERSION='.$version;
+
+        if (preg_match('/^SHELFVAULT_VERSION=.*$/m', $contents) === 1) {
+            $contents = (string) preg_replace('/^SHELFVAULT_VERSION=.*$/m', $line, $contents);
+        } else {
+            $contents = rtrim($contents, "\r\n").PHP_EOL.$line.PHP_EOL;
+        }
+
+        File::put($envPath, $contents);
     }
 
     /**
