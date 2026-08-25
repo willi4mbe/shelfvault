@@ -131,7 +131,7 @@ class UpdateServiceTest extends TestCase
         $result = $service->install($service->check()->toArray());
 
         $this->assertSame('v1.1.0', $result['version']);
-        $this->assertSame('APP_KEY=base64:old-key', trim(File::get($this->appRoot.'/.env')));
+        $this->assertSame("APP_KEY=base64:old-key\nSHELFVAULT_VERSION=1.1.0", trim(File::get($this->appRoot.'/.env')));
         $this->assertSame('cover', File::get($this->appRoot.'/storage/app/public/covers/cover.txt'));
         $this->assertSame('linked', File::get($this->appRoot.'/public/storage/linked.txt'));
         $this->assertFileExists($this->appRoot.'/app/NewFile.php');
@@ -166,6 +166,26 @@ class UpdateServiceTest extends TestCase
         $this->assertFileDoesNotExist($this->appRoot.'/app/NewFile.php');
         $this->assertSame('APP_KEY=base64:old-key', trim(File::get($this->appRoot.'/.env')));
         $this->assertSame('cover', File::get($this->appRoot.'/storage/app/public/covers/cover.txt'));
+    }
+
+    public function test_update_install_replaces_existing_shelfvault_version_in_env(): void
+    {
+        File::put($this->appRoot.'/.env', "APP_KEY=base64:old-key\nSHELFVAULT_VERSION=1.0.0\nAPP_ENV=production\n");
+
+        $zip = $this->buildPackageZip(['VERSION' => '1.1.0']);
+
+        Http::fake([
+            'https://updates.example.test/manifest.json' => Http::response($this->manifest('1.1.0', hash('sha256', $zip)), 200),
+            'https://updates.example.test/ShelfVault-1.1.0.zip' => Http::response($zip, 200),
+        ]);
+
+        $service = app(UpdateService::class);
+        $service->install($service->check()->toArray());
+
+        $this->assertSame(
+            "APP_KEY=base64:old-key\nSHELFVAULT_VERSION=1.1.0\nAPP_ENV=production",
+            trim(File::get($this->appRoot.'/.env')),
+        );
     }
 
     private function writeInstalledAppRoot(): void
