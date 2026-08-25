@@ -1,4 +1,6 @@
-# Codex Prompts - ShelfVault
+# Assistant Prompt Archive
+
+These prompts were used during early implementation. They are internal references and should not drive the public roadmap.
 
 ## Prompt 0 - Context only
 
@@ -23,7 +25,7 @@ No business features yet.
 
 ```text
 Implement TICKET-002.
-Build a WordPress-like installer skeleton at /install.
+Build a web-based setup wizard skeleton at /install.
 It should check environment requirements, collect database config, create admin account, run migrations and lock installation.
 If full implementation is too large, implement it in safe incremental steps.
 ```

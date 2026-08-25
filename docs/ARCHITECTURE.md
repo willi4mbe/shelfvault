@@ -29,7 +29,7 @@
 
 - Upload application files
 - Point web root to `/public`
-- Open `/install`
+- Open `/install.php`
 - Configure DB and admin account
 
 ## Main modules
@@ -55,6 +55,16 @@ ShelfVault
 ### users
 
 One admin user in V1.
+
+Installer-created admin fields:
+
+- login
+- email
+- password
+- preferred_locale
+- two_factor_secret nullable, reserved for future 2FA
+- two_factor_recovery_codes nullable, reserved for future 2FA
+- two_factor_confirmed_at nullable, reserved for future 2FA
 
 ### items
 
@@ -141,7 +151,7 @@ Flexible details depending on item type.
 
 ## Installer requirements
 
-The installer must:
+The web-based setup wizard must:
 
 1. Check PHP version.
 2. Check extensions.
@@ -154,6 +164,8 @@ The installer must:
 9. Create installation lock.
 10. Redirect to admin login.
 
+The setup wizard is a standalone `public/install.php` entrypoint that runs before the Laravel bootstrap. It must not depend on Laravel sessions, cookies, Livewire, the encrypter, or a configured database for its first page. A successful setup creates `storage/app/shelfvault/installed.lock`; after that, `install.php` is blocked and normal application routes are available. `/install` is only a compatibility entrypoint that is intercepted before Laravel where possible.
+
 ## Security notes
 
 - Store API keys server-side only.
@@ -161,7 +173,7 @@ The installer must:
 - CSRF protection enabled.
 - Validate uploads by MIME and size.
 - Store uploads outside executable paths when possible.
-- Protect install route after install.
+- Protect `install.php` after install with the lock file.
 - Use signed/random share tokens.
 
 ## Barcode scanner flow

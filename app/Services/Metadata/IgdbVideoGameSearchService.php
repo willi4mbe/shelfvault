@@ -1,0 +1,391 @@
+<?php
+
+namespace App\Services\Metadata;
+
+use App\Services\ExternalServices\ExternalServiceSettings;
+use App\Services\Translation\Contracts\TextTranslationProvider;
+use App\Services\Translation\MetadataTextTranslator;
+use App\Services\Translation\Providers\NullTextTranslationProvider;
+use Illuminate\Http\Client\RequestException;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Throwable;
+
+class IgdbVideoGameSearchService
+{
+    private const SEARCH_PAGE_SIZE = 10;
+
+    public function __construct(
+        private readonly MetadataImportMapper $mapper = new MetadataImportMapper(),
+        private readonly ?TextTranslationProvider $translationProvider = null,
+        private readonly ?MetadataTextTranslator $textTranslator = null,
+        private readonly ?ExternalServiceSettings $settings = null,
+    ) {
+    }
+
+    public function configured(): bool
+    {
+        $clientId = $this->secret('client_id', 'services.igdb.client_id');
+        $accessToken = $this->secret('access_token', 'services.igdb.access_token');
+        $clientSecret = $this->secret('client_secret', 'services.igdb.client_secret');
+
+        return $clientId !== '' && ($accessToken !== '' || $clientSecret !== '');
+    }
+
+    public function search(string $title, ?int $releaseYear = null, int $page = 1): MetadataLookupResult
+    {
+        $title = trim($title);
+        $page = max(1, $page);
+
+        if ($title === '') {
+            return MetadataLookupResult::invalid(__('admin.collection.validation.title_required'));
+        }
+
+        if (! $this->configured()) {
+            return MetadataLookupResult::noSource(__('admin.collection.metadata.igdb_not_configured'));
+        }
+
+        try {
+            $games = $this->games($this->searchQuery($title, $releaseYear, $page));
+            $candidates = collect($games)
+                ->take(self::SEARCH_PAGE_SIZE)
+                ->map(fn (array $candidate): array => $this->mapper->mapIgdbSearchCandidate($candidate))
+                ->values()
+                ->all();
+            $pagination = $this->pagination($games, $page);
+
+            if ($candidates === []) {
+                return MetadataLookupResult::notFound(__('admin.collection.metadata.no_result_found'), [
+                    'query' => $title,
+                    'release_year' => $releaseYear,
+                    'candidates' => [],
+                    'pagination' => $pagination,
+                ], 'igdb');
+            }
+
+            return MetadataLookupResult::found([
+                'query' => $title,
+                'release_year' => $releaseYear,
+                'candidates' => $candidates,
+                'pagination' => $pagination,
+            ], __('admin.collection.metadata.results_found'), 'igdb');
+        } catch (Throwable) {
+            return MetadataLookupResult::error(__('admin.collection.metadata.search_error'));
+        }
+    }
+
+    public function importGame(int $igdbId, ?string $targetLocale = null): MetadataLookupResult
+    {
+        if (! $this->configured()) {
+            return MetadataLookupResult::noSource(__('admin.collection.metadata.igdb_not_configured'));
+        }
+
+        try {
+            $games = $this->games($this->importQuery($igdbId));
+            $game = $games[0] ?? [];
+
+            if ($game === []) {
+                return MetadataLookupResult::notFound(__('admin.collection.metadata.no_result_found'), [
+                    'igdb_id' => $igdbId,
+                ], 'igdb');
+            }
+
+            $data = $this->mapper->mapIgdbGame($game);
+
+            $warnings = array_filter([
+                $this->translateDescription($data, $targetLocale ?? app()->getLocale()),
+            ]);
+            $coverUrl = $this->coverUrl($game);
+
+            if ($coverUrl !== null) {
+                $coverImport = $this->importCover(
+                    $coverUrl,
+                    $igdbId,
+                    (string) ($game['name'] ?? $igdbId),
+                );
+
+                if (filled($coverImport['cover_path'] ?? null)) {
+                    $data['cover_path'] = $coverImport['cover_path'];
+                    $data['cover_url'] = $coverImport['cover_url'];
+                } elseif (filled($coverImport['warning'] ?? null)) {
+                    $warnings[] = (string) $coverImport['warning'];
+                }
+            }
+
+            return MetadataLookupResult::found($data, __('admin.collection.metadata.metadata_imported'), 'igdb', $warnings);
+        } catch (RequestException $exception) {
+            return MetadataLookupResult::error(__('admin.collection.metadata.search_error'), $exception->response->status() ?: 500);
+        } catch (Throwable) {
+            return MetadataLookupResult::error(__('admin.collection.metadata.search_error'));
+        }
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function games(string $query): array
+    {
+        $response = $this->client()
+            ->withBody($query, 'text/plain')
+            ->post('/games');
+
+        $response->throw();
+
+        $payload = $response->json();
+
+        return is_array($payload) ? $payload : [];
+    }
+
+    private function searchQuery(string $title, ?int $releaseYear, int $page): string
+    {
+        $query = sprintf(
+            'search "%s"; fields %s;',
+            $this->escapeQueryString($title),
+            $this->fields(),
+        );
+
+        if ($releaseYear !== null) {
+            $start = strtotime($releaseYear.'-01-01 00:00:00 UTC');
+            $end = strtotime(($releaseYear + 1).'-01-01 00:00:00 UTC') - 1;
+
+            if ($start !== false && $end !== false) {
+                $query .= sprintf(' where first_release_date >= %d & first_release_date <= %d;', $start, $end);
+            }
+        }
+
+        return sprintf(
+            '%s limit %d; offset %d;',
+            $query,
+            self::SEARCH_PAGE_SIZE + 1,
+            ($page - 1) * self::SEARCH_PAGE_SIZE,
+        );
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $games
+     * @return array<string, mixed>
+     */
+    private function pagination(array $games, int $page): array
+    {
+        $hasMore = count($games) > self::SEARCH_PAGE_SIZE;
+
+        return [
+            'current_page' => $page,
+            'per_page' => self::SEARCH_PAGE_SIZE,
+            'has_more' => $hasMore,
+            'next_page' => $hasMore ? $page + 1 : null,
+        ];
+    }
+
+    private function importQuery(int $igdbId): string
+    {
+        return sprintf(
+            'fields %s; where id = %d; limit 1;',
+            $this->fields(),
+            $igdbId,
+        );
+    }
+
+    private function fields(): string
+    {
+        return implode(',', [
+            'id',
+            'name',
+            'summary',
+            'storyline',
+            'first_release_date',
+            'cover.url',
+            'platforms.name',
+            'involved_companies.company.name',
+            'involved_companies.developer',
+            'involved_companies.publisher',
+            'genres.name',
+            'game_modes.name',
+            'age_ratings.rating_category.rating',
+            'age_ratings.rating_category.organization.name',
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function translateDescription(array &$data, string $targetLocale): ?string
+    {
+        $description = $data['description'] ?? null;
+
+        if (! is_string($description) || trim($description) === '') {
+            return null;
+        }
+
+        $targetLocale = trim($targetLocale) !== '' ? trim($targetLocale) : app()->getLocale();
+        $sourceLocale = trim((string) $this->settings()->get('google_translation', 'source_locale', config('services.translation.source_locale', 'en')));
+        $translator = $this->textTranslator();
+
+        if (! $translator->configured()) {
+            if ($this->samePrimaryLocale($sourceLocale, $targetLocale)) {
+                return null;
+            }
+
+            return __('admin.collection.metadata.translation_not_configured');
+        }
+
+        try {
+            $result = $translator->translate($description, $targetLocale, $sourceLocale !== '' ? $sourceLocale : null);
+        } catch (Throwable) {
+            return __('admin.collection.metadata.translation_failed');
+        }
+
+        if (! $result->translated || trim($result->text) === '') {
+            return null;
+        }
+
+        $data['description'] = $result->text;
+
+        if ($result->text !== $description) {
+            $data['description_original'] = $description;
+        }
+
+        return null;
+    }
+
+    private function translator(): TextTranslationProvider
+    {
+        return $this->translationProvider ?? app(TextTranslationProvider::class) ?? new NullTextTranslationProvider();
+    }
+
+    private function textTranslator(): MetadataTextTranslator
+    {
+        return $this->textTranslator ?? new MetadataTextTranslator($this->translator());
+    }
+
+    private function samePrimaryLocale(string $sourceLocale, string $targetLocale): bool
+    {
+        $source = strtolower(strtok(str_replace('_', '-', trim($sourceLocale)), '-') ?: '');
+        $target = strtolower(strtok(str_replace('_', '-', trim($targetLocale)), '-') ?: '');
+
+        return $source !== '' && $source === $target;
+    }
+
+    private function escapeQueryString(string $value): string
+    {
+        return str_replace(['\\', '"'], ['\\\\', '\\"'], $value);
+    }
+
+    /**
+     * @param  array<string, mixed>  $game
+     */
+    private function coverUrl(array $game): ?string
+    {
+        $url = Arr::get($game, 'cover.url');
+
+        if (! is_string($url) || trim($url) === '') {
+            return null;
+        }
+
+        $normalized = str_starts_with($url, '//') ? 'https:'.$url : $url;
+        $size = trim((string) config('services.igdb.image_size', 'cover_big'));
+
+        return preg_replace('/\/t_[^\/]+\//', '/t_'.$size.'/', $normalized) ?: $normalized;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function importCover(string $coverUrl, int $igdbId, string $title): array
+    {
+        try {
+            $response = Http::accept('image/*')
+                ->timeout((int) config('barcode.cover_timeout', 8))
+                ->get($coverUrl);
+
+            if (! $response->successful()) {
+                return ['warning' => __('admin.collection.metadata.igdb_cover_import_failed')];
+            }
+
+            $contentType = (string) $response->header('Content-Type', '');
+            $extension = $this->extensionForContentType($contentType, $coverUrl);
+            $path = sprintf(
+                'covers/igdb-%s-%s.%s',
+                Str::slug($title !== '' ? $title : (string) $igdbId),
+                Str::lower(Str::random(8)),
+                $extension,
+            );
+
+            Storage::disk('public')->put($path, $response->body());
+
+            return [
+                'cover_path' => $path,
+                'cover_url' => Storage::disk('public')->url($path),
+            ];
+        } catch (Throwable) {
+            return ['warning' => __('admin.collection.metadata.igdb_cover_import_failed')];
+        }
+    }
+
+    private function extensionForContentType(string $contentType, string $url): string
+    {
+        $normalized = strtolower(trim(strtok($contentType, ';') ?: ''));
+
+        return match ($normalized) {
+            'image/jpeg', 'image/jpg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            default => $this->extensionFromUrl($url),
+        };
+    }
+
+    private function extensionFromUrl(string $url): string
+    {
+        $path = (string) parse_url($url, PHP_URL_PATH);
+        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+
+        return in_array($extension, ['jpg', 'jpeg', 'png', 'webp'], true) ? $extension : 'jpg';
+    }
+
+    private function client(): \Illuminate\Http\Client\PendingRequest
+    {
+        return Http::baseUrl(rtrim((string) config('services.igdb.base_url'), '/'))
+            ->acceptJson()
+            ->withHeaders([
+                'Client-ID' => $this->secret('client_id', 'services.igdb.client_id'),
+                'Authorization' => 'Bearer '.$this->accessToken(),
+            ])
+            ->timeout((int) config('barcode.cover_timeout', 8));
+    }
+
+    private function accessToken(): string
+    {
+        $configuredToken = $this->secret('access_token', 'services.igdb.access_token');
+
+        if ($configuredToken !== '') {
+            return $configuredToken;
+        }
+
+        return Cache::remember('shelfvault.igdb.access_token', now()->addHours(12), function (): string {
+            $response = Http::asForm()
+                ->acceptJson()
+                ->post((string) config('services.igdb.token_url'), [
+                    'client_id' => $this->secret('client_id', 'services.igdb.client_id'),
+                    'client_secret' => $this->secret('client_secret', 'services.igdb.client_secret'),
+                    'grant_type' => 'client_credentials',
+                ]);
+
+            $response->throw();
+
+            return (string) $response->json('access_token', '');
+        });
+    }
+
+    private function secret(string $key, string $configKey): string
+    {
+        return trim((string) $this->settings()->getSecret('igdb', $key, config($configKey, '')));
+    }
+
+    private function settings(): ExternalServiceSettings
+    {
+        return $this->settings ?? app(ExternalServiceSettings::class);
+    }
+}

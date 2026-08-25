@@ -1,8 +1,10 @@
-# Codex Usage - ShelfVault
+# Assistant Workflow Notes
 
-## First prompt to Codex
+These notes are internal project history. They are kept for reference, not as public product documentation.
 
-Use this before any code change:
+## First Assistant Prompt
+
+Use this before a code change:
 
 ```text
 You are working on ShelfVault, a free self-hosted Laravel application for cataloging physical films, video games and board games.

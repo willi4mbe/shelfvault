@@ -1,72 +1,57 @@
-# GitHub Setup - ShelfVault
+# GitHub Repository Setup
 
-## Goal
+This page tracks the public repository presentation for ShelfVault.
 
-Use GitHub as the central source of truth so the project can be developed from home and work computers.
+## Recommended About Text
 
-## Recommended repository
-
-- Name: `shelfvault`
-- Visibility: private during development
-- Default branch: `main`
-- Description: `Self-hosted physical media collection manager for films, video games and board games.`
-
-## Initial setup
-
-```bash
-mkdir shelfvault
-cd shelfvault
-git init
+```text
+Self-hosted media library for movies, TV shows, video games and board games.
 ```
 
-Copy this kit into the folder, then:
+## Recommended Topics
 
-```bash
-git add .
-git commit -m "docs: add ShelfVault planning kit"
-git branch -M main
-git remote add origin git@github.com:YOUR_USERNAME/shelfvault.git
-git push -u origin main
+```text
+self-hosted
+media-library
+laravel
+php
+movies
+tv-shows
+video-games
+board-games
+homelab
+shared-hosting
+tmdb
+igdb
+boardgamegeek
 ```
 
-## Working from another computer
+## Branches
 
-```bash
-git clone git@github.com:YOUR_USERNAME/shelfvault.git
-cd shelfvault
-```
+- `develop`: active integration branch.
+- `release/beta-shared-hosting`: beta package and manifest preparation.
+- `feature/...`: focused feature work before merge.
+- `fix/...`: focused bug fixes before merge.
 
-## Daily sync
+## Release Checklist
 
-Start work:
+Before publishing a GitHub Release:
 
-```bash
-git checkout main
-git pull
-```
+- version updated in `VERSION`;
+- fallback version updated in `config/shelfvault.php`;
+- beta ZIP generated with `php scripts/build-beta-package.php`;
+- `releases/update-manifest.json` points to the correct version, ZIP URL, and SHA-256;
+- install guides mention the right beta version;
+- release notes follow [`RELEASE_TEMPLATE.md`](../RELEASE_TEMPLATE.md);
+- generated `dist/` files are not committed unless there is a deliberate release-storage decision.
 
-Create a feature branch:
-
-```bash
-git checkout -b feature/ticket-001-scaffold-laravel
-```
-
-Finish work:
-
-```bash
-git status
-git add .
-git commit -m "feat: scaffold Laravel application"
-git push -u origin feature/ticket-001-scaffold-laravel
-```
-
-Then open a Pull Request on GitHub.
-
-## Never commit
+## Never Commit
 
 - `.env`
-- passwords
-- API keys
-- database dumps with private data
+- passwords or API keys
+- database dumps
+- generated backups
+- uploaded private covers
 - personal access tokens
 - SSH private keys
+- `vendor/`, `node_modules/`, `dist/`, or `public/build/`
