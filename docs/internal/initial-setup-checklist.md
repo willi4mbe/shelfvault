@@ -1,10 +1,12 @@
-# Setup Checklist - Before Coding
+# Initial Setup Checklist
+
+This checklist belongs to the first project setup phase. It is kept for history and should be updated before being reused.
 
 ## Accounts
 
 - [ ] Create GitHub account
 - [ ] Enable 2FA on GitHub
-- [ ] Create private repository `shelfvault`
+- [ ] Create repository `shelfvault`
 
 ## Local tools
 
@@ -14,7 +16,7 @@
 - [ ] Install Composer
 - [ ] Install Node.js LTS
 - [ ] Install Docker Desktop or Docker Engine
-- [ ] Install Codex CLI or Codex IDE extension
+- [ ] Install the preferred coding assistant or editor tooling
 
 ## SSH
 
@@ -35,11 +37,11 @@
 - [ ] Do not commit `.env`
 - [ ] Do not commit passwords
 - [ ] Do not commit API keys
-- [ ] Keep repository private until ready
+- [ ] Keep secrets and private data out of the repository
 
-## First Codex session
+## First assistant session
 
-- [ ] Run Codex in repository root
+- [ ] Run the coding assistant in the repository root
 - [ ] Send Prompt 0
 - [ ] Review plan
 - [ ] Start TICKET-001

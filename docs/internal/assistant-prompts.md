@@ -1,4 +1,6 @@
-# Codex Prompts - ShelfVault
+# Assistant Prompt Archive
+
+These prompts were used during early implementation. They are internal references and should not drive the public roadmap.
 
 ## Prompt 0 - Context only
 

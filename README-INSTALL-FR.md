@@ -1,53 +1,88 @@
-# ShelfVault beta 0.1.0-beta.5 - Installation PHP + MySQL
+# ShelfVault beta.6 - Guide d'installation PHP/MySQL
 
-## Prerequis
+Ce guide concerne le paquet beta pour un hébergement PHP classique, notamment o2switch/cPanel.
 
-- PHP 8.3 ou plus recent.
-- Base MySQL ou MariaDB vide.
-- Extensions PHP : ctype, curl, dom, fileinfo, filter, hash, mbstring, openssl, pdo, pdo_mysql, session, tokenizer, xml.
-- Dossiers `storage/`, `storage/app/public/`, `storage/framework/`, `storage/logs/`, `bootstrap/cache/` et racine du projet accessibles en ecriture pendant l installation.
-- Permissions conseillees : fichiers 640/644, dossiers 755 ou 775 selon l hebergeur. Evitez 777.
+## Prérequis
 
-## Installation o2switch / cPanel
+- PHP 8.3 ou plus récent.
+- Une base MySQL ou MariaDB vide.
+- Extensions PHP : `ctype`, `curl`, `dom`, `fileinfo`, `filter`, `hash`, `mbstring`, `openssl`, `pdo`, `pdo_mysql`, `session`, `tokenizer`, `xml`.
+- Chemins accessibles en écriture pendant l'installation : `storage/`, `storage/app/public/`, `storage/framework/`, `storage/logs/`, `bootstrap/cache/` et racine du projet.
+- Permissions conseillées : fichiers `640`/`644`, dossiers `755` ou `775` selon l'hébergeur. Éviter `777`.
 
-1. Creez une base MySQL/MariaDB vide et un utilisateur MySQL dans cPanel, puis notez hote, port, base, utilisateur et mot de passe.
-2. Uploadez `ShelfVault-0.1.0-beta.5.zip` ou `ShelfVault-beta.zip`, puis extrayez l archive.
-3. Recommande : placez le projet hors du web, par exemple `~/shelfvault`, et pointez le document root du domaine vers `~/shelfvault/public`.
-4. Fallback cPanel : si l hebergeur impose `public_html`, extrayez tout le projet dans `public_html`. Le `.htaccess` racine bloque `app/`, `config/`, `database/`, les sous-dossiers sensibles de `storage/`, `vendor/`, `.env`, `composer.*` et route vers `public/`. Cette option reste moins propre que le document root vers `public/`.
-5. Ouvrez `https://votre-domaine/install.php` puis choisissez Francais ou English.
-6. Corrigez les prerequis affiches, renseignez MySQL/MariaDB, puis laissez ShelfVault tester la connexion.
-7. Renseignez `APP_URL` si la detection automatique n est pas correcte, puis creez le compte admin avec un mot de passe d au moins 12 caracteres.
-8. Validez le recapitulatif. L installateur genere une `APP_KEY` aleatoire, ecrit `.env`, lance les migrations, cree l admin, ecrit `storage/app/shelfvault/installed.lock`, puis redirige vers `/admin/login`.
+## Organisation recommandée
 
-## Jaquettes et storage
+Meilleure option :
 
-ShelfVault tente de creer le lien `public/storage` pendant l'installation. Si l'hebergement refuse les liens symboliques, les jaquettes restent servies par une route Laravel de secours `/storage/...`.
+```text
+~/shelfvault          fichiers de l'application
+~/shelfvault/public  document root du domaine
+```
 
-## Securite apres installation
+Cela garde les fichiers internes de Laravel hors du web public.
 
-Le fichier `install.php` est bloque automatiquement par `storage/app/shelfvault/installed.lock`. Vous pouvez le supprimer manuellement apres installation si vous voulez reduire la surface visible, mais ce n est pas requis pour securiser le wizard.
+Fallback cPanel :
 
-## Bibliotheque publique ou privee
+Si l'hébergeur impose `public_html`, extraire tout le projet dans `public_html`. Le `.htaccess` racine bloque les chemins sensibles comme `app/`, `config/`, `database/`, les dossiers privés de `storage/`, `vendor/`, `.env`, `composer.*`, puis redirige les requêtes vers `public/`.
 
-Dans `Admin > Parametres`, le reglage `Visibilite de la bibliotheque` propose :
+Ce fallback est utile sur les hébergements partagés contraints, mais le document root vers `public/` reste la configuration la plus propre.
 
-- `Publique` : la consultation du frontend reste accessible sans connexion.
-- `Privee` : les pages de bibliotheque redirigent vers `/admin/login`, puis reviennent a l URL demandee apres connexion. Le back-office reste protege dans tous les cas.
+## Nouvelle installation
 
-La valeur par defaut reste `public` pour ne pas casser les installations beta existantes.
+1. Créer une base MySQL/MariaDB vide et un utilisateur dans cPanel.
+2. Uploader `ShelfVault-0.1.0-beta.6.zip` ou `ShelfVault-beta.zip`.
+3. Extraire l'archive.
+4. Ouvrir `https://votre-domaine/install.php`.
+5. Choisir français ou anglais.
+6. Corriger les prérequis signalés par l'installateur.
+7. Renseigner l'hôte, le port, le nom de base, l'utilisateur et le mot de passe MySQL/MariaDB.
+8. Vérifier `APP_URL`; le corriger si la détection automatique n'est pas bonne.
+9. Créer le compte admin avec un mot de passe d'au moins 12 caractères.
+10. Valider la dernière étape.
 
-## Mises a jour o2switch
+L'installateur écrit `.env`, génère une nouvelle `APP_KEY`, lance les migrations, crée l'utilisateur admin, écrit `storage/app/shelfvault/installed.lock`, puis redirige vers `/admin/login`.
 
-1. Publiez le ZIP d une nouvelle beta sur une URL HTTPS.
-2. Publiez un manifest JSON HTTPS avec ce format :
+## Jaquettes et stockage public
+
+ShelfVault tente de créer `public/storage` pendant l'installation. Si l'hébergement bloque les liens symboliques, les jaquettes restent servies par une route Laravel de secours sous `/storage/...`.
+
+## Après installation
+
+`install.php` est bloqué automatiquement dès que `storage/app/shelfvault/installed.lock` existe.
+
+Vous pouvez supprimer `install.php` après l'installation pour réduire la surface visible, mais c'est le fichier de verrouillage qui protège réellement l'installateur.
+
+## Bibliothèque publique ou privée
+
+Dans `Admin > Paramètres`, le réglage `Visibilité de la bibliothèque` contrôle le frontend en lecture seule :
+
+- `Publique` : les visiteurs peuvent consulter la bibliothèque sans connexion.
+- `Privée` : les pages de bibliothèque redirigent vers `/admin/login`, puis reviennent à la page demandée après connexion.
+
+Le back-office reste toujours protégé.
+
+## Fournisseurs de métadonnées
+
+Les fournisseurs se configurent après installation dans `Admin > Paramètres` :
+
+- TMDb pour les films et séries.
+- IGDB pour les jeux vidéo.
+- BoardGameGeek pour les jeux de société.
+
+Les ajouts manuels fonctionnent même sans fournisseur configuré.
+
+## Mises à jour depuis l'admin
+
+1. Publier le ZIP de la prochaine beta sur une URL HTTPS.
+2. Publier un manifest JSON HTTPS correspondant :
 
 ```json
 {
-  "version": "0.1.0-beta.5",
-  "tag_name": "v0.1.0-beta.5",
-  "name": "ShelfVault 0.1.0-beta.5",
-  "html_url": "https://example.com/releases/0.1.0-beta.5",
-  "zip_url": "https://example.com/ShelfVault-0.1.0-beta.5.zip",
+  "version": "0.1.0-beta.6",
+  "tag_name": "v0.1.0-beta.6",
+  "name": "ShelfVault 0.1.0-beta.6",
+  "html_url": "https://example.com/releases/0.1.0-beta.6",
+  "zip_url": "https://example.com/ShelfVault-0.1.0-beta.6.zip",
   "sha256": "SHA256_DU_ZIP",
   "notes": "Notes de version",
   "minimum_php": "8.3.0",
@@ -55,13 +90,27 @@ La valeur par defaut reste `public` pour ne pas casser les installations beta ex
 }
 ```
 
-3. Configurez `SHELFVAULT_UPDATE_MANIFEST_URL=https://.../update-manifest.json` dans `.env`.
-4. Dans `Admin > Parametres > Mise a jour`, cliquez `Verifier les mises a jour`, puis `Telecharger et installer`.
+3. Configurer `SHELFVAULT_UPDATE_MANIFEST_URL=https://.../update-manifest.json` dans `.env`.
+4. Aller dans `Admin > Paramètres > Mises à jour`.
+5. Cliquer sur `Vérifier les mises à jour`, puis `Télécharger et installer`.
 
-Avant remplacement, ShelfVault cree une sauvegarde dans `storage/app/shelfvault/backups`. Le ZIP est telecharge dans `storage/app/shelfvault/updates`, verifie par SHA-256, extrait en staging, puis les fichiers applicatifs sont remplaces en preservant `.env`, `storage/`, `storage/app/shelfvault/installed.lock` et `public/storage`. Les migrations sont lancees avec `--force`, les caches sont nettoyes et `storage:link` est retente. En cas d echec pendant le remplacement ou les commandes post-update, les fichiers remplaces sont restaures depuis la copie rollback.
+Avant de remplacer les fichiers, ShelfVault crée une sauvegarde dans `storage/app/shelfvault/backups`, télécharge le ZIP dans `storage/app/shelfvault/updates`, vérifie le SHA-256, extrait dans un dossier privé, remplace les fichiers applicatifs, lance les migrations avec `--force`, vide les caches et retente `storage:link`.
 
-Le script `php scripts/build-beta-package.php` genere aussi `dist/update-manifest-<version>.json` et `dist/update-manifest-beta.json`. Pour publier une beta de test, lancez le script avec `SHELFVAULT_UPDATE_ZIP_URL=https://votre-url/ShelfVault-<version>.zip`, puis uploadez le ZIP et le manifest.
+Chemins préservés :
 
-## Sauvegarde et rollback
+- `.env`
+- `storage/`
+- `storage/app/shelfvault/installed.lock`
+- `public/storage`
 
-Les backups ne sont pas publics : ils restent sous `storage/app/shelfvault/backups`. Ils contiennent un dump/base SQLite ou SQL portable, `.env`, `installed.lock` et `storage/app/public`. Ne partagez jamais ces archives publiquement, car elles contiennent les secrets necessaires a une restauration fiable.
+En cas d'échec pendant le remplacement ou les commandes post-update, ShelfVault restaure les fichiers remplacés depuis la copie de rollback. La restauration de base de données reste manuelle dans cette beta.
+
+## Construire un paquet beta
+
+```bash
+SHELFVAULT_UPDATE_ZIP_URL=https://votre-url/ShelfVault-0.1.0-beta.6.zip php scripts/build-beta-package.php
+```
+
+Le script écrit le ZIP et les manifests dans `dist/`.
+
+Ne commitez pas et ne publiez pas les sauvegardes générées. Elles peuvent contenir `.env`, des dumps de base de données, des jaquettes uploadées et d'autres données privées.

@@ -2,8 +2,8 @@
     "$schema": "https://getcomposer.org/schema.json",
     "name": "shelfvault/shelfvault",
     "type": "project",
-    "description": "ShelfVault self-hosted collection manager.",
-    "keywords": ["shelfvault", "laravel", "self-hosted", "collection"],
+    "description": "Self-hosted media library for movies, TV shows, video games, and board games.",
+    "keywords": ["shelfvault", "laravel", "self-hosted", "media-library", "movies", "tv-shows", "video-games", "board-games"],
     "require": {
         "php": "^8.3",
         "laravel/framework": "^13.7",
