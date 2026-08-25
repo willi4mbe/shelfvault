@@ -335,7 +335,7 @@ class ItemUpsertRequest extends FormRequest
                 'cast_members' => null,
                 'genres' => $this->csvToArray($this->input('genres')),
                 'studio' => null,
-                'age_rating' => null,
+                'age_rating' => $this->nullableString($this->input('age_rating')),
                 'external_tmdb_id' => null,
                 'end_year' => null,
                 'description_original' => null,

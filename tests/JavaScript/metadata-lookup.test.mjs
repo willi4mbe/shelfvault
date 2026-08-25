@@ -35,10 +35,15 @@ const fields = [
     makeField('network'),
     makeField('external_igdb_id'),
     makeField('cover_path'),
+    { ...makeField('cover_image', 'selected-cover'), type: 'file' },
     makeField('platform'),
     makeField('developer'),
     makeField('publisher'),
     makeField('modes'),
+    makeField('min_players'),
+    makeField('max_players'),
+    makeField('play_time_minutes'),
+    makeField('designer'),
 ];
 
 const form = {
@@ -143,6 +148,34 @@ assert.equal(values('publisher')[0], 'Nintendo');
 assert.equal(values('modes')[0], 'Single player');
 assert.equal(values('external_igdb_id')[0], '1234');
 
+component.applyImportedMetadata({
+    type: 'board_game',
+    title: 'CATAN',
+    description: 'Trade, build, and settle.',
+    release_year: 1995,
+    genres: ['Negotiation', 'Dice Rolling'],
+    min_players: 3,
+    max_players: 4,
+    play_time_minutes: 120,
+    designer: 'Klaus Teuber',
+    publisher: 'Kosmos',
+    age_rating: '10+',
+}, {
+    forceTitle: true,
+    forceBoardGameFields: true,
+});
+
+assert.equal(values('title')[0], 'CATAN');
+assert.equal(values('description')[0], 'Trade, build, and settle.');
+assert.equal(values('release_year')[0], '1995');
+assert.deepEqual(values('genres'), ['Negotiation, Dice Rolling', 'Negotiation, Dice Rolling']);
+assert.equal(values('min_players')[0], '3');
+assert.equal(values('max_players')[0], '4');
+assert.equal(values('play_time_minutes')[0], '120');
+assert.equal(values('designer')[0], 'Klaus Teuber');
+assert.equal(values('publisher')[0], 'Kosmos');
+assert.deepEqual(values('age_rating'), ['10+', '10+']);
+
 const originalDocument = globalThis.document;
 const originalFetch = globalThis.fetch;
 
@@ -208,6 +241,56 @@ assert.equal(values('external_tmdb_id')[0], '603');
 assert.equal(component.title, 'Imported Matrix');
 assert.equal(component.originalTitle, 'The Matrix');
 
+component.resultsScope = 'title';
+component.resultsSource = 'bgg';
+
+globalThis.document = {
+    querySelector(selector) {
+        return selector === 'meta[name="csrf-token"]'
+            ? { getAttribute: () => 'csrf-token' }
+            : null;
+    },
+};
+
+globalThis.fetch = async (url, options) => {
+    assert.equal(url, '/admin/collection/metadata/import');
+    assert.equal(options.method, 'POST');
+    assert.deepEqual(JSON.parse(options.body), {
+        source: 'bgg',
+        bgg_id: 13,
+    });
+
+    return {
+        ok: true,
+        async json() {
+            return {
+                status: 'found',
+                source: 'bgg',
+                message: 'Imported',
+                data: {
+                    type: 'board_game',
+                    title: 'CATAN imported',
+                    min_players: 3,
+                    max_players: 4,
+                    play_time_minutes: 120,
+                },
+            };
+        },
+    };
+};
+
+try {
+    await component.importCandidate({ source: 'bgg', bgg_id: 13 });
+} finally {
+    globalThis.document = originalDocument;
+    globalThis.fetch = originalFetch;
+}
+
+assert.equal(values('title')[0], 'CATAN imported');
+assert.equal(values('min_players')[0], '3');
+assert.equal(values('max_players')[0], '4');
+assert.equal(values('play_time_minutes')[0], '120');
+
 const formatComponent = metadataLookup({
     type: 'film',
     physicalFormat: 'digital_copy',
@@ -250,3 +333,180 @@ try {
 } finally {
     globalThis.URL = originalUrl;
 }
+
+const scrollComponent = metadataLookup({});
+const originalWindow = globalThis.window;
+const originalScrollDocument = globalThis.document;
+const bodyStyle = {
+    position: '',
+    top: '',
+    left: '',
+    right: '',
+    width: '',
+    overflow: '',
+};
+let restoredScrollY = null;
+
+globalThis.window = {
+    scrollY: 312,
+    pageYOffset: 312,
+    scrollTo(x, y) {
+        assert.equal(x, 0);
+        restoredScrollY = y;
+    },
+};
+globalThis.document = {
+    body: {
+        style: bodyStyle,
+    },
+};
+
+try {
+    scrollComponent.openResults('title', 'bgg', [{ bgg_id: 13, title: 'CATAN' }], 'Results');
+
+    assert.equal(bodyStyle.position, 'fixed');
+    assert.equal(bodyStyle.top, '-312px');
+    assert.equal(bodyStyle.overflow, 'hidden');
+    assert.equal(scrollComponent.resultsOpen, true);
+
+    scrollComponent.closeResults();
+
+    assert.equal(bodyStyle.position, '');
+    assert.equal(bodyStyle.top, '');
+    assert.equal(bodyStyle.overflow, '');
+    assert.equal(restoredScrollY, 312);
+    assert.equal(scrollComponent.resultsOpen, false);
+} finally {
+    globalThis.window = originalWindow;
+    globalThis.document = originalScrollDocument;
+}
+
+
+const loadMoreComponent = metadataLookup({
+    type: 'film',
+    title: 'Matrix',
+    titleSearchUrl: '/admin/collection/metadata/search',
+    labels: {
+        searching: 'Searching',
+        resultsFound: 'Results found',
+        noResultFound: 'No result found',
+        searchError: 'Search error',
+        loadMore: 'Show more',
+        allResultsShown: 'All results are shown.',
+    },
+});
+loadMoreComponent.$root = root;
+loadMoreComponent.$el = component.$el;
+
+const loadRequests = [];
+const loadResponses = [
+    {
+        status: 'found',
+        source: 'tmdb',
+        message: 'Results found',
+        data: {
+            candidates: [
+                { source: 'tmdb', tmdb_id: 1, title: 'Matrix 1' },
+                { source: 'tmdb', tmdb_id: 2, title: 'Matrix 2' },
+            ],
+            pagination: { current_page: 1, per_page: 10, has_more: true, next_page: 2 },
+        },
+    },
+    {
+        status: 'found',
+        source: 'tmdb',
+        message: 'Results found',
+        data: {
+            candidates: [
+                { source: 'tmdb', tmdb_id: 2, title: 'Matrix 2 duplicate' },
+                { source: 'tmdb', tmdb_id: 3, title: 'Matrix 3' },
+            ],
+            pagination: { current_page: 2, per_page: 10, has_more: false, next_page: null },
+        },
+    },
+    {
+        status: 'found',
+        source: 'tmdb',
+        message: 'Results found',
+        data: {
+            candidates: [
+                { source: 'tmdb', tmdb_id: 4, title: 'New query result' },
+            ],
+            pagination: { current_page: 1, per_page: 10, has_more: false, next_page: null },
+        },
+    },
+];
+
+globalThis.document = {
+    querySelector(selector) {
+        return selector === 'meta[name="csrf-token"]'
+            ? { getAttribute: () => 'csrf-token' }
+            : null;
+    },
+};
+
+globalThis.fetch = async (url, options) => {
+    loadRequests.push(JSON.parse(options.body));
+
+    return {
+        ok: true,
+        status: 200,
+        async json() {
+            return loadResponses.shift();
+        },
+    };
+};
+
+try {
+    await loadMoreComponent.searchTitle();
+
+    assert.equal(loadRequests[0].title, 'Matrix');
+    assert.equal(loadRequests[0].page, 1);
+    assert.equal(loadMoreComponent.resultsCandidates.length, 2);
+    assert.equal(loadMoreComponent.resultsPagination.hasMore, true);
+    assert.equal(loadMoreComponent.resultsPagination.nextPage, 2);
+
+    loadMoreComponent.title = 'Changed while modal is open';
+    await loadMoreComponent.loadMoreResults();
+
+    assert.equal(loadRequests[1].title, 'Matrix');
+    assert.equal(loadRequests[1].page, 2);
+    assert.deepEqual(loadMoreComponent.resultsCandidates.map((candidate) => candidate.tmdb_id), [1, 2, 3]);
+    assert.equal(loadMoreComponent.resultsPagination.hasMore, false);
+    assert.equal(loadMoreComponent.resultsAllShown, true);
+
+    loadMoreComponent.title = 'New query';
+    await loadMoreComponent.searchTitle();
+
+    assert.equal(loadRequests[2].title, 'New query');
+    assert.deepEqual(loadMoreComponent.resultsCandidates.map((candidate) => candidate.tmdb_id), [4]);
+    assert.equal(loadMoreComponent.resultsPagination.hasMore, false);
+} finally {
+    globalThis.document = originalDocument;
+    globalThis.fetch = originalFetch;
+}
+
+const coverComponent = metadataLookup({
+    coverPath: 'covers/current.jpg',
+    coverPreviewUrl: '/storage/covers/current.jpg',
+    labels: { coverRemoved: 'Cover removed.' },
+});
+coverComponent.$root = root;
+coverComponent.$el = component.$el;
+
+coverComponent.removeCoverImage();
+
+assert.equal(coverComponent.coverPath, '');
+assert.equal(coverComponent.coverPreviewUrl, '');
+assert.equal(coverComponent.removeCover, true);
+assert.equal(coverComponent.importNotice, 'Cover removed.');
+assert.equal(values('cover_image')[0], '');
+
+coverComponent.applyImportedMetadata({
+    cover_path: 'covers/imported.jpg',
+    cover_url: '/storage/covers/imported.jpg',
+});
+
+assert.equal(coverComponent.coverPath, 'covers/imported.jpg');
+assert.equal(coverComponent.coverPreviewUrl, '/storage/covers/imported.jpg');
+assert.equal(coverComponent.removeCover, false);

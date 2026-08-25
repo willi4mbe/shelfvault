@@ -27,7 +27,7 @@
                     <aside class="install-brand-panel flex min-h-0 flex-col justify-between rounded-[28px] p-4 text-white sm:p-5 lg:p-6 xl:p-7">
                         <div class="max-w-xl">
                             <div class="install-logo-strip inline-flex h-14 w-fit max-w-full items-center rounded-2xl px-4 py-2">
-                                <img src="{{ asset('branding/shelfvault.png') }}" alt="ShelfVault" class="block h-10 w-auto flex-none object-contain">
+                                <img src="{{ asset('branding/shelfvault-icon-192.png') }}" alt="ShelfVault" class="block h-8 w-8 flex-none object-contain">
                             </div>
 
                             <div class="mt-5">
@@ -60,7 +60,7 @@
                             </p>
                         </div>
 
-                        <nav class="mt-5 grid gap-2 sm:grid-cols-3 lg:grid-cols-1" aria-label="Setup progress">
+                        <nav class="mt-5 grid gap-2 sm:grid-cols-3 lg:grid-cols-1" aria-label="{{ __('install.steps_label') }}">
                             @foreach ($steps as $index => $step)
                                 <div class="install-step {{ $activeStep === $step ? 'install-step-active' : '' }} flex items-center gap-3 rounded-2xl px-3 py-2">
                                     <span class="install-step-dot flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-bold">
@@ -79,7 +79,7 @@
 
                 <footer class="w-full px-2 pb-1 pt-1 sm:px-3 lg:px-1">
                     <div class="grid gap-1 border-t border-white/10 pt-3 text-xs leading-5 text-white/48 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-6">
-                        <p class="whitespace-nowrap font-medium text-white/60">{{ __('install.footer.version') }}</p>
+                        <p class="whitespace-nowrap font-medium text-white/60">{{ __('install.footer.version', ['version' => config('shelfvault.version')]) }}</p>
                         <p class="whitespace-nowrap sm:justify-self-end">{{ __('install.footer.tagline') }}</p>
                     </div>
                 </footer>

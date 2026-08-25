@@ -27,7 +27,7 @@ class AdminCollectionController extends Controller
     ): RedirectResponse|View
     {
         if (! $installationState->installed()) {
-            return redirect()->route('install.show');
+            return redirect()->to('/install.php');
         }
 
         if (! Auth::check()) {
@@ -75,7 +75,7 @@ class AdminCollectionController extends Controller
     ): RedirectResponse|View
     {
         if (! $installationState->installed()) {
-            return redirect()->route('install.show');
+            return redirect()->to('/install.php');
         }
 
         if (! Auth::check()) {
@@ -106,7 +106,7 @@ class AdminCollectionController extends Controller
     ): RedirectResponse|View
     {
         if (! $installationState->installed()) {
-            return redirect()->route('install.show');
+            return redirect()->to('/install.php');
         }
 
         if (! Auth::check()) {
@@ -125,7 +125,7 @@ class AdminCollectionController extends Controller
     public function store(InstallationState $installationState, ItemUpsertRequest $request): RedirectResponse
     {
         if (! $installationState->installed()) {
-            return redirect()->route('install.show');
+            return redirect()->to('/install.php');
         }
 
         if (! Auth::check()) {
@@ -136,6 +136,8 @@ class AdminCollectionController extends Controller
         $data['status'] = ItemStatus::Owned->value;
         if ($request->hasFile('cover_image')) {
             $data['cover_path'] = $this->storeCover($request->file('cover_image'));
+        } elseif ($request->boolean('remove_cover')) {
+            $data['cover_path'] = null;
         }
 
         $item = Item::query()->create($data);
@@ -154,7 +156,7 @@ class AdminCollectionController extends Controller
     ): RedirectResponse|View
     {
         if (! $installationState->installed()) {
-            return redirect()->route('install.show');
+            return redirect()->to('/install.php');
         }
 
         if (! Auth::check()) {
@@ -179,7 +181,7 @@ class AdminCollectionController extends Controller
     public function update(InstallationState $installationState, ItemUpsertRequest $request, Item $item): RedirectResponse
     {
         if (! $installationState->installed()) {
-            return redirect()->route('install.show');
+            return redirect()->to('/install.php');
         }
 
         if (! Auth::check()) {
@@ -214,7 +216,7 @@ class AdminCollectionController extends Controller
     public function destroy(InstallationState $installationState, Item $item): RedirectResponse
     {
         if (! $installationState->installed()) {
-            return redirect()->route('install.show');
+            return redirect()->to('/install.php');
         }
 
         if (! Auth::check()) {
@@ -222,8 +224,9 @@ class AdminCollectionController extends Controller
         }
 
         $title = $item->title;
-        $this->deleteStoredCover($item->cover_path);
+        $coverPath = $item->cover_path;
         $item->delete();
+        $this->deleteStoredCover($coverPath);
 
         return redirect()
             ->route('admin.collection.index')
@@ -257,6 +260,10 @@ class AdminCollectionController extends Controller
     private function deleteStoredCover(?string $coverPath): void
     {
         if ($coverPath === null || filter_var($coverPath, FILTER_VALIDATE_URL)) {
+            return;
+        }
+
+        if (Item::query()->where('cover_path', $coverPath)->exists()) {
             return;
         }
 

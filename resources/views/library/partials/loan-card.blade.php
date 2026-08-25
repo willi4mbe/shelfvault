@@ -2,6 +2,11 @@
     $item = $loan->item;
     $coverUrl = $item?->coverUrl();
     $type = $item?->type?->value;
+    $dateMode = $dateMode ?? 'expected_return';
+    $secondaryDate = $dateMode === 'loaned_at' ? $loan->loaned_at : $loan->expected_return_at;
+    $secondaryDateLabel = $dateMode === 'loaned_at'
+        ? __('library.detail.loaned_since_short')
+        : __('library.detail.expected_return_short');
 @endphp
 
 @if ($item)
@@ -26,10 +31,10 @@
                         <span>{{ __('library.detail.loaned_to_short') }}</span>
                         <strong>{{ $loan->borrower_name }}</strong>
                     </span>
-                    @if ($loan->expected_return_at)
+                    @if ($secondaryDate)
                         <span>
-                            <span>{{ __('library.detail.expected_return_short') }}</span>
-                            <strong>{{ $loan->expected_return_at->format('d/m/Y') }}</strong>
+                            <span>{{ $secondaryDateLabel }}</span>
+                            <strong>{{ $secondaryDate->format('d/m/Y') }}</strong>
                         </span>
                     @endif
                 </div>

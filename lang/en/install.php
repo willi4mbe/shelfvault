@@ -10,9 +10,10 @@ return [
         'database' => 'Database',
         'admin' => 'Admin account',
     ],
+    'steps_label' => 'Setup progress',
     'requirements' => [
         'title' => 'Server requirements',
-        'intro' => 'ShelfVault checks the essentials before connecting to your database.',
+        'intro' => 'ShelfVault checks the essentials for a classic PHP and MySQL hosting account before connecting to your database.',
         'system' => 'System checks',
         'writable' => 'Writable paths',
         'ready' => 'Your server is ready for setup.',
@@ -20,16 +21,19 @@ return [
         'blocked' => 'Resolve the items below before continuing.',
         'continue' => 'Continue to database',
         'php_extension' => 'PHP extension: :extension',
+        'storage_note' => 'Covers are stored in storage/app/public. ShelfVault will try to create the public storage link during setup and will use a safe Laravel fallback route if symlinks are unavailable.',
     ],
     'database' => [
         'title' => 'Connect your database',
         'intro' => 'Use a database created for ShelfVault. Credentials are tested before they are saved.',
+        'mysql_label' => 'MySQL / MariaDB',
         'submit' => 'Test connection',
-        'connection_help' => 'MariaDB uses the MySQL driver.',
+        'connection_help' => 'This beta installer targets MySQL or MariaDB on classic shared hosting.',
     ],
     'admin' => [
         'title' => 'Create the admin account',
         'intro' => 'ShelfVault V1 uses one admin account. The app language will follow the admin language for now.',
+        'password_help' => 'Use at least 12 characters. A passphrase is fine; no default password is ever created.',
         'settings_title' => 'Application settings',
         'settings_intro' => 'These defaults can be adjusted after setup. The application language is set automatically for now.',
         'submit' => 'Finish setup',
@@ -54,7 +58,7 @@ return [
         'french' => 'French',
     ],
     'footer' => [
-        'version' => 'ShelfVault v0.1.0-dev',
+        'version' => 'ShelfVault v:version',
         'tagline' => 'Private self-hosted media library',
     ],
     'errors' => [
@@ -65,6 +69,7 @@ return [
         'migration_failed' => 'ShelfVault could not prepare the database tables.',
         'admin_creation_failed' => 'ShelfVault could not create the admin account. Check the database and try again.',
         'admin_exists' => 'An admin account already exists.',
+        'storage_link_failed' => 'ShelfVault could not create the public storage link. Covers will still be served through the application fallback.',
     ],
     'status' => [
         'passed' => 'Ready',

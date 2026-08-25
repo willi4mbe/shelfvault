@@ -10,9 +10,10 @@ return [
         'database' => 'Base de données',
         'admin' => 'Compte admin',
     ],
+    'steps_label' => 'Progression de l’installation',
     'requirements' => [
         'title' => 'Prérequis serveur',
-        'intro' => 'ShelfVault vérifie les éléments essentiels avant la connexion à votre base de données.',
+        'intro' => 'ShelfVault vérifie les éléments essentiels pour un hébergement PHP et MySQL classique avant la connexion à votre base de données.',
         'system' => 'Vérifications système',
         'writable' => 'Dossiers accessibles en écriture',
         'ready' => 'Votre serveur est prêt pour la configuration.',
@@ -20,16 +21,19 @@ return [
         'blocked' => 'Corrigez les éléments ci-dessous avant de continuer.',
         'continue' => 'Continuer vers la base de données',
         'php_extension' => 'Extension PHP : :extension',
+        'storage_note' => 'Les jaquettes sont stockées dans storage/app/public. ShelfVault essaiera de créer le lien public pendant l’installation et utilisera une route Laravel sécurisée si les liens symboliques sont indisponibles.',
     ],
     'database' => [
         'title' => 'Connecter la base de données',
         'intro' => 'Utilisez une base de données créée pour ShelfVault. Les identifiants sont testés avant leur enregistrement.',
+        'mysql_label' => 'MySQL / MariaDB',
         'submit' => 'Tester la connexion',
-        'connection_help' => 'MariaDB utilise le pilote MySQL.',
+        'connection_help' => 'Cette beta cible MySQL ou MariaDB sur hébergement mutualisé classique.',
     ],
     'admin' => [
         'title' => 'Créer le compte admin',
         'intro' => 'ShelfVault V1 utilise un seul compte admin. La langue de l’application suivra pour l’instant la langue de l’admin.',
+        'password_help' => 'Utilisez au moins 12 caractères. Une phrase de passe convient ; aucun mot de passe par défaut n’est créé.',
         'settings_title' => 'Paramètres de l’application',
         'settings_intro' => 'Ces valeurs par défaut pourront être ajustées après la configuration. La langue de l’application est définie automatiquement pour l’instant.',
         'submit' => 'Terminer la configuration',
@@ -54,7 +58,7 @@ return [
         'french' => 'Français',
     ],
     'footer' => [
-        'version' => 'ShelfVault v0.1.0-dev',
+        'version' => 'ShelfVault v:version',
         'tagline' => 'Bibliothèque physique auto-hébergée',
     ],
     'errors' => [
@@ -65,6 +69,7 @@ return [
         'migration_failed' => 'ShelfVault ne parvient pas à préparer les tables de la base de données.',
         'admin_creation_failed' => 'ShelfVault ne parvient pas à créer le compte admin. Vérifiez la base de données et réessayez.',
         'admin_exists' => 'Un compte admin existe déjà.',
+        'storage_link_failed' => 'ShelfVault ne parvient pas à créer le lien public du stockage. Les jaquettes seront quand même servies par la route de secours de l’application.',
     ],
     'status' => [
         'passed' => 'Prêt',

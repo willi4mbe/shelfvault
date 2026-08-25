@@ -24,7 +24,7 @@ class EnsureApplicationInstallationState
         }
 
         if (! $installed && ! $installRoute && ! $this->isPublicApplicationAsset($request)) {
-            return redirect()->route('install.show');
+            return redirect()->to('/install.php');
         }
 
         return $next($request);

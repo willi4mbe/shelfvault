@@ -9,7 +9,7 @@ class EnvironmentChecker
      */
     public function requirements(): array
     {
-        $extensions = ['ctype', 'curl', 'dom', 'fileinfo', 'filter', 'hash', 'mbstring', 'openssl', 'pdo', 'tokenizer', 'xml'];
+        $extensions = ['ctype', 'curl', 'dom', 'fileinfo', 'filter', 'hash', 'mbstring', 'openssl', 'pdo', 'pdo_mysql', 'session', 'tokenizer', 'xml'];
 
         $checks = [
             [
@@ -44,7 +44,11 @@ class EnvironmentChecker
         return collect([
             storage_path(),
             storage_path('app'),
+            storage_path('app/public'),
             storage_path('framework'),
+            storage_path('framework/cache'),
+            storage_path('framework/sessions'),
+            storage_path('framework/views'),
             storage_path('logs'),
             base_path('bootstrap/cache'),
             base_path(),

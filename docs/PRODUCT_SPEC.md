@@ -86,7 +86,7 @@ It should feel like a professional, private, home-focused alternative to large c
 ### Installation
 
 - Docker Compose installation for NAS/server
-- Browser-based installer `/install`
+- Browser-based standalone installer `/install.php`
 - Server requirement checks
 - Database configuration
 - Admin account creation

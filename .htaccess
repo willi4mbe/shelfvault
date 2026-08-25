@@ -1,0 +1,28 @@
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    RewriteEngine On
+
+    # Never expose application internals when the whole project is placed in public_html.
+    RewriteRule ^(\.env|\.env\..*|artisan|composer\.(json|lock)|package(-lock)?\.json|vite\.config\.js|phpunit\.xml)$ - [F,L,NC]
+    RewriteRule ^(app|bootstrap|config|database|docs|docker|lang|resources|routes|scripts|tests|tickets|vendor)(/|$) - [F,L,NC]
+    RewriteRule ^storage/(app/(?!public/)|framework|logs)(/|$) - [F,L,NC]
+
+    # Standalone installer before Laravel.
+    RewriteRule ^install/?$ public/install.php [L]
+    RewriteRule ^install\.php$ public/install.php [L]
+
+    # Serve files that actually live in public/ while keeping the project root private.
+    RewriteCond %{DOCUMENT_ROOT}/public/$1 -f [OR]
+    RewriteCond %{DOCUMENT_ROOT}/public/$1 -d
+    RewriteRule ^(.+)$ public/$1 [L]
+
+    # Fallback Laravel front controller for cPanel installs that cannot point the document root at public/.
+    RewriteRule ^ public/index.php [L]
+</IfModule>
+
+<IfModule !mod_rewrite.c>
+    Options -Indexes
+</IfModule>

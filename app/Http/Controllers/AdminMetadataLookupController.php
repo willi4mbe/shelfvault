@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\ItemType;
 use App\Services\Installer\InstallationState;
 use App\Services\Metadata\BarcodeLookupService;
+use App\Services\Metadata\BoardGameGeekSearchService;
 use App\Services\Metadata\IgdbVideoGameSearchService;
 use App\Services\Metadata\MetadataLookupResult;
 use App\Services\Metadata\TmdbMovieSearchService;
@@ -20,6 +21,7 @@ class AdminMetadataLookupController extends Controller
         InstallationState $installationState,
         Request $request,
         BarcodeLookupService $barcodeLookupService,
+        BoardGameGeekSearchService $boardGameGeekSearchService,
         IgdbVideoGameSearchService $igdbVideoGameSearchService,
         TmdbMovieSearchService $tmdbMovieSearchService,
     ): JsonResponse {
@@ -35,10 +37,11 @@ class AdminMetadataLookupController extends Controller
             'title' => ['nullable', 'string', 'max:255'],
             'barcode' => ['nullable', 'string', 'max:128'],
             'release_year' => ['nullable', 'integer', 'between:1800,2100'],
+            'page' => ['nullable', 'integer', 'min:1', 'max:500'],
         ]);
 
         if ($validated['mode'] === 'title') {
-            $result = $this->searchByTitle($validated, $tmdbMovieSearchService, $igdbVideoGameSearchService);
+            $result = $this->searchByTitle($validated, $tmdbMovieSearchService, $igdbVideoGameSearchService, $boardGameGeekSearchService);
         } else {
             $result = $this->searchByBarcode($validated, $barcodeLookupService, $tmdbMovieSearchService);
         }
@@ -50,6 +53,7 @@ class AdminMetadataLookupController extends Controller
         InstallationState $installationState,
         Request $request,
         BarcodeLookupService $barcodeLookupService,
+        BoardGameGeekSearchService $boardGameGeekSearchService,
         IgdbVideoGameSearchService $igdbVideoGameSearchService,
         TmdbMovieSearchService $tmdbMovieSearchService,
     ): JsonResponse {
@@ -60,9 +64,10 @@ class AdminMetadataLookupController extends Controller
         }
 
         $validated = $request->validate([
-            'source' => ['required', Rule::in(['tmdb', 'igdb', 'barcode'])],
+            'source' => ['required', Rule::in(['tmdb', 'igdb', 'bgg', 'barcode'])],
             'tmdb_id' => ['nullable', 'integer', 'min:1'],
             'igdb_id' => ['nullable', 'integer', 'min:1'],
+            'bgg_id' => ['nullable', 'integer', 'min:1'],
             'barcode' => ['nullable', 'string', 'max:128'],
             'type' => ['nullable', 'string', 'max:32'],
         ]);
@@ -70,6 +75,7 @@ class AdminMetadataLookupController extends Controller
         $result = match ($validated['source']) {
             'barcode' => $this->importBarcodeResult($validated, $barcodeLookupService),
             'igdb' => $igdbVideoGameSearchService->importGame((int) ($validated['igdb_id'] ?? 0), app()->getLocale()),
+            'bgg' => $boardGameGeekSearchService->importGame((int) ($validated['bgg_id'] ?? 0), app()->getLocale()),
             default => $this->importTmdbResult($validated, $tmdbMovieSearchService),
         };
 
@@ -80,30 +86,33 @@ class AdminMetadataLookupController extends Controller
         InstallationState $installationState,
         Request $request,
         BarcodeLookupService $barcodeLookupService,
+        BoardGameGeekSearchService $boardGameGeekSearchService,
         IgdbVideoGameSearchService $igdbVideoGameSearchService,
         TmdbMovieSearchService $tmdbMovieSearchService,
     ): JsonResponse {
-        return $this->search($installationState, $request->merge(['mode' => 'title']), $barcodeLookupService, $igdbVideoGameSearchService, $tmdbMovieSearchService);
+        return $this->search($installationState, $request->merge(['mode' => 'title']), $barcodeLookupService, $boardGameGeekSearchService, $igdbVideoGameSearchService, $tmdbMovieSearchService);
     }
 
     public function tmdbImport(
         InstallationState $installationState,
         Request $request,
         BarcodeLookupService $barcodeLookupService,
+        BoardGameGeekSearchService $boardGameGeekSearchService,
         IgdbVideoGameSearchService $igdbVideoGameSearchService,
         TmdbMovieSearchService $tmdbMovieSearchService,
     ): JsonResponse {
-        return $this->import($installationState, $request->merge(['source' => 'tmdb']), $barcodeLookupService, $igdbVideoGameSearchService, $tmdbMovieSearchService);
+        return $this->import($installationState, $request->merge(['source' => 'tmdb']), $barcodeLookupService, $boardGameGeekSearchService, $igdbVideoGameSearchService, $tmdbMovieSearchService);
     }
 
     public function barcodeLookup(
         InstallationState $installationState,
         Request $request,
         BarcodeLookupService $barcodeLookupService,
+        BoardGameGeekSearchService $boardGameGeekSearchService,
         IgdbVideoGameSearchService $igdbVideoGameSearchService,
         TmdbMovieSearchService $tmdbMovieSearchService,
     ): JsonResponse {
-        return $this->search($installationState, $request->merge(['mode' => 'barcode']), $barcodeLookupService, $igdbVideoGameSearchService, $tmdbMovieSearchService);
+        return $this->search($installationState, $request->merge(['mode' => 'barcode']), $barcodeLookupService, $boardGameGeekSearchService, $igdbVideoGameSearchService, $tmdbMovieSearchService);
     }
 
     private function guardAdmin(InstallationState $installationState, string $notInstalledMessage): ?JsonResponse
@@ -136,11 +145,13 @@ class AdminMetadataLookupController extends Controller
         array $validated,
         TmdbMovieSearchService $tmdbMovieSearchService,
         IgdbVideoGameSearchService $igdbVideoGameSearchService,
+        BoardGameGeekSearchService $boardGameGeekSearchService,
     ): MetadataLookupResult
     {
         $type = (string) ($validated['type'] ?? '');
         $title = trim((string) ($validated['title'] ?? ''));
         $releaseYear = isset($validated['release_year']) ? (int) $validated['release_year'] : null;
+        $page = max(1, (int) ($validated['page'] ?? 1));
 
         if ($type === '') {
             return MetadataLookupResult::invalid(__('admin.collection.lookup.choose_type_before_searching'));
@@ -155,9 +166,10 @@ class AdminMetadataLookupController extends Controller
         }
 
         return match ($type) {
-            ItemType::Film->value => $tmdbMovieSearchService->search($title, $releaseYear),
-            ItemType::TvSeries->value => $tmdbMovieSearchService->searchTvSeries($title, $releaseYear),
-            ItemType::VideoGame->value => $igdbVideoGameSearchService->search($title, $releaseYear),
+            ItemType::Film->value => $tmdbMovieSearchService->search($title, $releaseYear, $page),
+            ItemType::TvSeries->value => $tmdbMovieSearchService->searchTvSeries($title, $releaseYear, $page),
+            ItemType::VideoGame->value => $igdbVideoGameSearchService->search($title, $releaseYear, $page),
+            ItemType::BoardGame->value => $boardGameGeekSearchService->search($title, $releaseYear, $page),
             default => MetadataLookupResult::invalid(__('admin.collection.lookup.automatic_search_not_available_for_this_type')),
         };
     }

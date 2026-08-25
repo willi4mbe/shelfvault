@@ -29,7 +29,7 @@
 
 - Upload application files
 - Point web root to `/public`
-- Open `/install`
+- Open `/install.php`
 - Configure DB and admin account
 
 ## Main modules
@@ -164,7 +164,7 @@ The web-based setup wizard must:
 9. Create installation lock.
 10. Redirect to admin login.
 
-The setup wizard must not depend on a configured database for session or cache storage. Before installation is locked, session and cache storage use file-backed drivers. A successful setup creates `storage/app/shelfvault/installed.lock`; after that, `/install` is blocked and normal application routes are available.
+The setup wizard is a standalone `public/install.php` entrypoint that runs before the Laravel bootstrap. It must not depend on Laravel sessions, cookies, Livewire, the encrypter, or a configured database for its first page. A successful setup creates `storage/app/shelfvault/installed.lock`; after that, `install.php` is blocked and normal application routes are available. `/install` is only a compatibility entrypoint that is intercepted before Laravel where possible.
 
 ## Security notes
 
@@ -173,7 +173,7 @@ The setup wizard must not depend on a configured database for session or cache s
 - CSRF protection enabled.
 - Validate uploads by MIME and size.
 - Store uploads outside executable paths when possible.
-- Protect install route after install.
+- Protect `install.php` after install with the lock file.
 - Use signed/random share tokens.
 
 ## Barcode scanner flow

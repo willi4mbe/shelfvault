@@ -133,7 +133,7 @@ class AdminLoanController extends Controller
     private function guardAccess(InstallationState $installationState, LibrarySettings $librarySettings): ?RedirectResponse
     {
         if (! $installationState->installed()) {
-            return redirect()->route('install.show');
+            return redirect()->to('/install.php');
         }
 
         if (! Auth::check()) {

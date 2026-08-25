@@ -19,10 +19,8 @@
             <div class="grid gap-4 sm:grid-cols-2 {{ $errors->any() ? 'mt-5' : '' }}">
                 <label class="block sm:col-span-2">
                     <span class="text-sm font-bold text-zinc-700">{{ __('install.fields.connection') }}</span>
-                    <select name="connection" class="install-input mt-2">
-                        <option value="mysql" @selected(old('connection', $database['connection']) === 'mysql')>MySQL / MariaDB</option>
-                        <option value="pgsql" @selected(old('connection', $database['connection']) === 'pgsql')>PostgreSQL</option>
-                    </select>
+                    <input type="hidden" name="connection" value="mysql">
+                    <div class="install-input mt-2 flex items-center bg-zinc-100 text-zinc-700">{{ __('install.database.mysql_label') }}</div>
                     <span class="mt-2 block text-sm text-zinc-500">{{ __('install.database.connection_help') }}</span>
                 </label>
 

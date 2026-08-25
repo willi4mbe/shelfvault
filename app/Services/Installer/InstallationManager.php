@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Encryption\Encrypter;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -55,6 +56,7 @@ class InstallationManager
             ]);
         }
 
+        $this->ensurePublicStorageAccess();
         $this->installationState->lock();
     }
 
@@ -119,7 +121,7 @@ class InstallationManager
         $this->envWriter->write([
             'APP_NAME' => $settings['app_name'],
             'APP_ENV' => 'production',
-            'APP_KEY' => config('app.key') ?: 'base64:'.base64_encode(Encrypter::generateKey(config('app.cipher'))),
+            'APP_KEY' => 'base64:'.base64_encode(Encrypter::generateKey(config('app.cipher'))),
             'APP_DEBUG' => 'false',
             'APP_URL' => $settings['app_url'],
             'APP_LOCALE' => $settings['app_locale'],
@@ -133,6 +135,27 @@ class InstallationManager
             'SESSION_DRIVER' => 'file',
             'CACHE_STORE' => 'file',
             'QUEUE_CONNECTION' => 'database',
+            'SHELFVAULT_VERSION' => config('shelfvault.version'),
         ]);
     }
+
+    private function ensurePublicStorageAccess(): void
+    {
+        if (app()->environment('testing')) {
+            return;
+        }
+
+        try {
+            Artisan::call('storage:link', [
+                '--force' => true,
+                '--no-interaction' => true,
+            ]);
+        } catch (Throwable $exception) {
+            Log::warning('ShelfVault could not create the public storage link. The route fallback will serve public uploads.', [
+                'exception' => $exception::class,
+                'message' => $exception->getMessage(),
+            ]);
+        }
+    }
+
 }

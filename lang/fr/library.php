@@ -172,6 +172,7 @@ return [
         'loaned_to' => 'Prêté à :name',
         'loaned_to_short' => 'Prêté à',
         'loaned_since' => 'Depuis le :date',
+        'loaned_since_short' => 'Depuis',
         'expected_return' => 'Retour prévu le :date',
         'expected_return_short' => 'Jusqu’au',
     ],

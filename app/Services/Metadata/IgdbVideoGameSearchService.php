@@ -4,6 +4,7 @@ namespace App\Services\Metadata;
 
 use App\Services\ExternalServices\ExternalServiceSettings;
 use App\Services\Translation\Contracts\TextTranslationProvider;
+use App\Services\Translation\MetadataTextTranslator;
 use App\Services\Translation\Providers\NullTextTranslationProvider;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Arr;
@@ -15,9 +16,12 @@ use Throwable;
 
 class IgdbVideoGameSearchService
 {
+    private const SEARCH_PAGE_SIZE = 10;
+
     public function __construct(
         private readonly MetadataImportMapper $mapper = new MetadataImportMapper(),
         private readonly ?TextTranslationProvider $translationProvider = null,
+        private readonly ?MetadataTextTranslator $textTranslator = null,
         private readonly ?ExternalServiceSettings $settings = null,
     ) {
     }
@@ -31,9 +35,10 @@ class IgdbVideoGameSearchService
         return $clientId !== '' && ($accessToken !== '' || $clientSecret !== '');
     }
 
-    public function search(string $title, ?int $releaseYear = null): MetadataLookupResult
+    public function search(string $title, ?int $releaseYear = null, int $page = 1): MetadataLookupResult
     {
         $title = trim($title);
+        $page = max(1, $page);
 
         if ($title === '') {
             return MetadataLookupResult::invalid(__('admin.collection.validation.title_required'));
@@ -44,18 +49,20 @@ class IgdbVideoGameSearchService
         }
 
         try {
-            $games = $this->games($this->searchQuery($title, $releaseYear));
+            $games = $this->games($this->searchQuery($title, $releaseYear, $page));
             $candidates = collect($games)
-                ->take(10)
+                ->take(self::SEARCH_PAGE_SIZE)
                 ->map(fn (array $candidate): array => $this->mapper->mapIgdbSearchCandidate($candidate))
                 ->values()
                 ->all();
+            $pagination = $this->pagination($games, $page);
 
             if ($candidates === []) {
                 return MetadataLookupResult::notFound(__('admin.collection.metadata.no_result_found'), [
                     'query' => $title,
                     'release_year' => $releaseYear,
                     'candidates' => [],
+                    'pagination' => $pagination,
                 ], 'igdb');
             }
 
@@ -63,6 +70,7 @@ class IgdbVideoGameSearchService
                 'query' => $title,
                 'release_year' => $releaseYear,
                 'candidates' => $candidates,
+                'pagination' => $pagination,
             ], __('admin.collection.metadata.results_found'), 'igdb');
         } catch (Throwable) {
             return MetadataLookupResult::error(__('admin.collection.metadata.search_error'));
@@ -131,7 +139,7 @@ class IgdbVideoGameSearchService
         return is_array($payload) ? $payload : [];
     }
 
-    private function searchQuery(string $title, ?int $releaseYear): string
+    private function searchQuery(string $title, ?int $releaseYear, int $page): string
     {
         $query = sprintf(
             'search "%s"; fields %s;',
@@ -148,7 +156,28 @@ class IgdbVideoGameSearchService
             }
         }
 
-        return $query.' limit 10;';
+        return sprintf(
+            '%s limit %d; offset %d;',
+            $query,
+            self::SEARCH_PAGE_SIZE + 1,
+            ($page - 1) * self::SEARCH_PAGE_SIZE,
+        );
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $games
+     * @return array<string, mixed>
+     */
+    private function pagination(array $games, int $page): array
+    {
+        $hasMore = count($games) > self::SEARCH_PAGE_SIZE;
+
+        return [
+            'current_page' => $page,
+            'per_page' => self::SEARCH_PAGE_SIZE,
+            'has_more' => $hasMore,
+            'next_page' => $hasMore ? $page + 1 : null,
+        ];
     }
 
     private function importQuery(int $igdbId): string
@@ -193,7 +222,7 @@ class IgdbVideoGameSearchService
 
         $targetLocale = trim($targetLocale) !== '' ? trim($targetLocale) : app()->getLocale();
         $sourceLocale = trim((string) $this->settings()->get('google_translation', 'source_locale', config('services.translation.source_locale', 'en')));
-        $translator = $this->translator();
+        $translator = $this->textTranslator();
 
         if (! $translator->configured()) {
             if ($this->samePrimaryLocale($sourceLocale, $targetLocale)) {
@@ -225,6 +254,11 @@ class IgdbVideoGameSearchService
     private function translator(): TextTranslationProvider
     {
         return $this->translationProvider ?? app(TextTranslationProvider::class) ?? new NullTextTranslationProvider();
+    }
+
+    private function textTranslator(): MetadataTextTranslator
+    {
+        return $this->textTranslator ?? new MetadataTextTranslator($this->translator());
     }
 
     private function samePrimaryLocale(string $sourceLocale, string $targetLocale): bool

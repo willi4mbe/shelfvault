@@ -16,7 +16,7 @@ class AdminAuthController extends Controller
     public function show(InstallationState $installationState): RedirectResponse|View
     {
         if (! $installationState->installed()) {
-            return redirect()->route('install.show');
+            return redirect()->to('/install.php');
         }
 
         if (Auth::check()) {
@@ -29,7 +29,7 @@ class AdminAuthController extends Controller
     public function store(Request $request, InstallationState $installationState): RedirectResponse
     {
         if (! $installationState->installed()) {
-            return redirect()->route('install.show');
+            return redirect()->to('/install.php');
         }
 
         if (Auth::check()) {
@@ -64,7 +64,7 @@ class AdminAuthController extends Controller
     public function destroy(Request $request, InstallationState $installationState): RedirectResponse
     {
         if (! $installationState->installed()) {
-            return redirect()->route('install.show');
+            return redirect()->to('/install.php');
         }
 
         Auth::logout();
